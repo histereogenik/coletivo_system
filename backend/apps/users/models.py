@@ -18,7 +18,7 @@ class Member(models.Model):
     address = models.TextField(blank=True)
     heard_about = models.TextField(blank=True, help_text="How the member heard about the community lunch.")
     role = models.CharField(max_length=20, choices=Role.choices)
-    diet = models.CharField(max_length=20, choices=Diet.choices, default=Diet.CARNIVORO)
+    diet = models.CharField(max_length=20, choices=Diet.choices)
     observations = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
