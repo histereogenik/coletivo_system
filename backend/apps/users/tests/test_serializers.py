@@ -27,6 +27,7 @@ def test_member_serializer_validates_and_creates_member():
     assert instance.full_name == payload["full_name"]
     assert instance.role == Member.Role.SUSTENTADOR
     assert instance.diet == Member.Diet.VEGETARIANO
+    assert instance.phone.startswith("+55")
 
 
 @pytest.mark.django_db
@@ -36,7 +37,7 @@ def test_member_serializer_rejects_duplicate_email():
     serializer = MemberSerializer(
         data={
             "full_name": "Outro Nome",
-            "phone": "12345678",
+            "phone": "+1 212 555 1234",
             "email": "DUP@example.com",
             "role": Member.Role.MENSALISTA,
             "diet": Member.Diet.CARNIVORO,
@@ -60,3 +61,21 @@ def test_member_serializer_requires_role_and_diet():
     assert not serializer.is_valid()
     assert "role" in serializer.errors
     assert "diet" in serializer.errors
+
+
+@pytest.mark.django_db
+def test_member_serializer_accepts_international_phone():
+    payload = {
+        "full_name": "Alice Smith",
+        "phone": "+1 212 555 1234",
+        "email": "alice@example.com",
+        "address": "123 5th Ave, New York",
+        "heard_about": "Friends",
+        "role": Member.Role.AVULSO,
+        "diet": Member.Diet.CARNIVORO,
+    }
+
+    serializer = MemberSerializer(data=payload)
+    assert serializer.is_valid(), serializer.errors
+    instance = serializer.save()
+    assert instance.phone.startswith("+1")

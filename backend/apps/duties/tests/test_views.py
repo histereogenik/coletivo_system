@@ -32,7 +32,7 @@ def test_superuser_can_create_duty(api_client, superuser):
     payload = {
         "name": "Organização",
         "remuneration_cents": 2000,
-        "members": [m.id for m in members],
+        "member_ids": [m.id for m in members],
     }
 
     response = api_client.post(url, payload, format="json")
