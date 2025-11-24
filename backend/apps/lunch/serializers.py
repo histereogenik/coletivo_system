@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.common.roles import promote_role
 from apps.lunch.models import Lunch
 from apps.users.models import Member
 
@@ -87,4 +88,7 @@ class LunchSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         if validated_data.get("lunch_type") == Lunch.LunchType.PACOTE:
             validated_data.setdefault("remaining_quantity", validated_data.get("quantity"))
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        if instance.lunch_type == Lunch.LunchType.PACOTE:
+            promote_role(instance.member, Member.Role.MENSALISTA)
+        return instance

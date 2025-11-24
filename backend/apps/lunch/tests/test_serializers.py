@@ -4,6 +4,7 @@ import pytest
 
 from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
+from apps.users.models import Member
 from apps.users.tests.factories import MemberFactory
 
 
@@ -51,7 +52,7 @@ def test_lunch_serializer_requires_package_fields_for_pacote():
 
 @pytest.mark.django_db
 def test_lunch_serializer_creates_pacote_when_fields_present():
-    member = MemberFactory()
+    member = MemberFactory(role=Member.Role.AVULSO)
     payload = {
         "member": member.id,
         "value_cents": 5000,
@@ -67,6 +68,8 @@ def test_lunch_serializer_creates_pacote_when_fields_present():
     assert serializer.is_valid(), serializer.errors
     instance = serializer.save()
 
+    member.refresh_from_db()
+    assert member.role == Member.Role.MENSALISTA
     assert instance.quantity == payload["quantity"]
     assert instance.package_expiration == payload["package_expiration"]
     assert instance.package_status == payload["package_status"]
