@@ -29,7 +29,7 @@ def test_anonymous_cannot_access_members(api_client):
     url = reverse("member-list")
     response = api_client.get(url)
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
