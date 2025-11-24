@@ -7,15 +7,51 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = "^3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "django (>=5.2.8,<6.0.0)",
     "djangorestframework (>=3.16.1,<4.0.0)",
     "django-cors-headers (>=4.9.0,<5.0.0)",
-    "psycopg2-binary (>=2.9.11,<3.0.0)"
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+    "djangorestframework-simplejwt (>=5.5.1,<6.0.0)",
+    "rest-framework-simplejwt (>=0.0.2,<0.0.3)",
+    "black (>=25.11.0,<26.0.0)",
+    "isort (>=7.0.0,<8.0.0)",
+    "ruff (>=0.14.6,<0.15.0)",
+    "django-filter (>=25.2,<26.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.1"
+pytest-django = "^4.11.1"
+factory-boy = "^3.3.3"
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = "/migrations"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_glob = ["*/migrations/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["apps", "ventus_backend"]
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
