@@ -6,7 +6,6 @@ from rest_framework.test import APIClient
 from apps.duties.tests.factories import DutyFactory
 from apps.users.tests.factories import MemberFactory
 
-
 User = get_user_model()
 
 

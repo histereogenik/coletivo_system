@@ -1,6 +1,5 @@
 from apps.users.models import Member
 
-
 ROLE_PRIORITY = {
     Member.Role.AVULSO: 0,
     Member.Role.MENSALISTA: 1,

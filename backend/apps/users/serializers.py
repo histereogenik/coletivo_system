@@ -1,7 +1,6 @@
 import re
 
 import phonenumbers
-
 from rest_framework import serializers
 
 from apps.users.models import Member
@@ -76,11 +75,15 @@ class MemberSerializer(serializers.ModelSerializer):
         region = None if value.strip().startswith("+") else "BR"
         try:
             parsed = phonenumbers.parse(value, region)
-        except phonenumbers.NumberParseException:
-            raise serializers.ValidationError("Telefone inválido. Use o formato internacional com código do país.")
+        except phonenumbers.NumberParseException as exc:
+            raise serializers.ValidationError(
+                "Telefone inválido. Use o formato internacional com código do país."
+            ) from exc
 
         if not phonenumbers.is_valid_number(parsed):
-            raise serializers.ValidationError("Telefone inválido. Use o formato internacional com código do país.")
+            raise serializers.ValidationError(
+                "Telefone inválido. Use o formato internacional com código do país."
+            )
 
         return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 

@@ -20,6 +20,15 @@ class DutySerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    members_input = serializers.PrimaryKeyRelatedField(
+        source="members",
+        queryset=Member.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+        allow_empty=True,
+        help_text="Alias para member_ids; aceita lista de IDs.",
+    )
 
     class Meta:
         model = Duty
@@ -29,6 +38,7 @@ class DutySerializer(serializers.ModelSerializer):
             "remuneration_cents",
             "members",
             "member_ids",
+            "members_input",
             "created_at",
             "updated_at",
         ]
@@ -46,20 +56,23 @@ class DutySerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        members = validated_data.pop("members", [])
-        member_ids = validated_data.pop("member_ids", [])
+        member_ids = validated_data.pop("member_ids", None)
+        members_from_alias = validated_data.pop("members", None)  # from members_input
+        selected = member_ids if member_ids is not None else members_from_alias
         duty = super().create(validated_data)
-        if member_ids:
-            duty.members.set(member_ids)
-            for member in member_ids:
+        if selected:
+            duty.members.set(selected)
+            for member in duty.members.all():
                 promote_role(member, Member.Role.SUSTENTADOR)
         return duty
 
     def update(self, instance, validated_data):
         member_ids = validated_data.pop("member_ids", None)
+        members_from_alias = validated_data.pop("members", None)  # from members_input
+        selected = member_ids if member_ids is not None else members_from_alias
         duty = super().update(instance, validated_data)
-        if member_ids is not None:
-            duty.members.set(member_ids)
-            for member in member_ids:
+        if selected is not None:
+            duty.members.set(selected)
+            for member in duty.members.all():
                 promote_role(member, Member.Role.SUSTENTADOR)
         return duty
