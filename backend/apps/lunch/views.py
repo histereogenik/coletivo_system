@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
+from rest_framework.response import Response
 
 from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
@@ -56,7 +56,9 @@ class LunchViewSet(viewsets.ModelViewSet):
             lunch.remaining_quantity = lunch.quantity
         target = lunch.remaining_quantity + amount
         if lunch.quantity is not None and target > lunch.quantity:
-            return Response({"detail": "Não é possível exceder a quantidade total do pacote."}, status=400)
+            return Response(
+                {"detail": "Não é possível exceder a quantidade total do pacote."}, status=400
+            )
 
         lunch.remaining_quantity = target
         lunch.save(update_fields=["remaining_quantity", "updated_at"])

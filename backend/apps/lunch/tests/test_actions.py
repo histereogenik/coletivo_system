@@ -6,7 +6,6 @@ from rest_framework.test import APIClient
 from apps.lunch.models import Lunch
 from apps.lunch.tests.factories import LunchFactory
 
-
 User = get_user_model()
 
 

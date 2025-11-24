@@ -35,14 +35,20 @@ class LunchSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         lunch_type = attrs.get("lunch_type") or getattr(self.instance, "lunch_type", None)
-        quantity = attrs.get("quantity") if "quantity" in attrs else getattr(self.instance, "quantity", None)
+        quantity = (
+            attrs.get("quantity")
+            if "quantity" in attrs
+            else getattr(self.instance, "quantity", None)
+        )
         package_expiration = (
             attrs.get("package_expiration")
             if "package_expiration" in attrs
             else getattr(self.instance, "package_expiration", None)
         )
         package_status = (
-            attrs.get("package_status") if "package_status" in attrs else getattr(self.instance, "package_status", None)
+            attrs.get("package_status")
+            if "package_status" in attrs
+            else getattr(self.instance, "package_status", None)
         )
 
         if lunch_type == Lunch.LunchType.PACOTE:
@@ -59,8 +65,14 @@ class LunchSerializer(serializers.ModelSerializer):
                 if "remaining_quantity" in attrs
                 else getattr(self.instance, "remaining_quantity", None)
             )
-            if remaining_quantity is not None and quantity is not None and remaining_quantity > quantity:
-                errors["remaining_quantity"] = "Saldo de refeições não pode exceder a quantidade do pacote."
+            if (
+                remaining_quantity is not None
+                and quantity is not None
+                and remaining_quantity > quantity
+            ):
+                errors["remaining_quantity"] = (
+                    "Saldo de refeições não pode exceder a quantidade do pacote."
+                )
             if errors:
                 raise serializers.ValidationError(errors)
         else:

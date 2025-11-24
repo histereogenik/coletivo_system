@@ -7,7 +7,6 @@ from apps.lunch.models import Lunch
 from apps.lunch.tests.factories import LunchFactory
 from apps.users.tests.factories import MemberFactory
 
-
 User = get_user_model()
 
 

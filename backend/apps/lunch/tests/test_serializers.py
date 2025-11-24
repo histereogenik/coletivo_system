@@ -4,7 +4,6 @@ import pytest
 
 from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
-from apps.lunch.tests.factories import LunchFactory
 from apps.users.tests.factories import MemberFactory
 
 

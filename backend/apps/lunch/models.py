@@ -25,7 +25,9 @@ class Lunch(models.Model):
     quantity = models.PositiveIntegerField(null=True, blank=True)
     remaining_quantity = models.PositiveIntegerField(null=True, blank=True)
     package_expiration = models.DateField(null=True, blank=True)
-    package_status = models.CharField(max_length=10, choices=PackageStatus.choices, null=True, blank=True)
+    package_status = models.CharField(
+        max_length=10, choices=PackageStatus.choices, null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -43,8 +45,14 @@ class Lunch(models.Model):
                 missing["package_status"] = "Status do pacote é obrigatório."
             if self.remaining_quantity is None:
                 self.remaining_quantity = self.quantity
-            if self.remaining_quantity is not None and self.quantity is not None and self.remaining_quantity > self.quantity:
-                missing["remaining_quantity"] = "Saldo de refeições não pode exceder a quantidade do pacote."
+            if (
+                self.remaining_quantity is not None
+                and self.quantity is not None
+                and self.remaining_quantity > self.quantity
+            ):
+                missing["remaining_quantity"] = (
+                    "Saldo de refeições não pode exceder a quantidade do pacote."
+                )
             if missing:
                 raise ValidationError(missing)
         else:
