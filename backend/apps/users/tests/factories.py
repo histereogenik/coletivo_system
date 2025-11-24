@@ -8,7 +8,7 @@ class MemberFactory(factory.django.DjangoModelFactory):
         model = Member
 
     full_name = factory.Faker("name")
-    phone = factory.Faker("phone_number")
+    phone = factory.Faker("numerify", text="+55###########")  # keep <= 20 chars
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     address = factory.Faker("address")
     heard_about = factory.Faker("sentence")
