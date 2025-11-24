@@ -1,12 +1,7 @@
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
@@ -25,8 +20,6 @@ SITE_NAME = "coletivo_system"
 
 # Application definition
 
-# Application definition
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -41,6 +34,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.authentication",
     "apps.lunch",
+    "apps.duties",
 ]
 
 MIDDLEWARE = [
