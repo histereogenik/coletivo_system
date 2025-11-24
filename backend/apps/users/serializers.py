@@ -4,7 +4,6 @@ from rest_framework import serializers
 
 from apps.users.models import Member
 
-
 PHONE_REGEX = re.compile(r"^[0-9+().\-\s]{7,20}$")
 
 
@@ -69,7 +68,9 @@ class MemberSerializer(serializers.ModelSerializer):
 
     def validate_phone(self, value: str) -> str:
         if value and not PHONE_REGEX.match(value):
-            raise serializers.ValidationError("Telefone deve conter apenas dígitos e os símbolos + ( ) - . ou espaços.")
+            raise serializers.ValidationError(
+                "Telefone deve conter apenas dígitos e os símbolos + ( ) - . ou espaços."
+            )
         return value.strip() if value else value
 
     def validate(self, attrs):

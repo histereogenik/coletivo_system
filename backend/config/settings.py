@@ -154,9 +154,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
-    origin
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
-    if origin.strip()
+    origin for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()
 ]
 
 SIMPLE_JWT = {

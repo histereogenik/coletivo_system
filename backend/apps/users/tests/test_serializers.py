@@ -31,7 +31,7 @@ def test_member_serializer_validates_and_creates_member():
 
 @pytest.mark.django_db
 def test_member_serializer_rejects_duplicate_email():
-    member = MemberFactory(email="dup@example.com")
+    MemberFactory(email="dup@example.com")
 
     serializer = MemberSerializer(
         data={
