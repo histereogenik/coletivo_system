@@ -6,17 +6,21 @@ from apps.users.models import Member
 
 class LunchSerializer(serializers.ModelSerializer):
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
+    member_name = serializers.CharField(source="member.full_name", read_only=True)
+    remaining_quantity = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Lunch
         fields = [
             "id",
             "member",
+            "member_name",
             "value_cents",
             "date",
             "lunch_type",
             "payment_status",
             "quantity",
+            "remaining_quantity",
             "package_expiration",
             "package_status",
             "created_at",
@@ -49,6 +53,14 @@ class LunchSerializer(serializers.ModelSerializer):
                 errors["package_expiration"] = "Validade do pacote é obrigatória."
             if not package_status:
                 errors["package_status"] = "Status do pacote é obrigatório."
+            # Keep remaining_quantity within bounds when updating.
+            remaining_quantity = (
+                attrs.get("remaining_quantity")
+                if "remaining_quantity" in attrs
+                else getattr(self.instance, "remaining_quantity", None)
+            )
+            if remaining_quantity is not None and quantity is not None and remaining_quantity > quantity:
+                errors["remaining_quantity"] = "Saldo de refeições não pode exceder a quantidade do pacote."
             if errors:
                 raise serializers.ValidationError(errors)
         else:
@@ -56,5 +68,11 @@ class LunchSerializer(serializers.ModelSerializer):
             attrs["quantity"] = None
             attrs["package_expiration"] = None
             attrs["package_status"] = None
+            attrs["remaining_quantity"] = None
 
         return attrs
+
+    def create(self, validated_data):
+        if validated_data.get("lunch_type") == Lunch.LunchType.PACOTE:
+            validated_data.setdefault("remaining_quantity", validated_data.get("quantity"))
+        return super().create(validated_data)
