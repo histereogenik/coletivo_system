@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.common.roles import promote_role
 from apps.duties.models import Duty
 from apps.users.models import Member
 
@@ -50,6 +51,8 @@ class DutySerializer(serializers.ModelSerializer):
         duty = super().create(validated_data)
         if member_ids:
             duty.members.set(member_ids)
+            for member in member_ids:
+                promote_role(member, Member.Role.SUSTENTADOR)
         return duty
 
     def update(self, instance, validated_data):
@@ -57,4 +60,6 @@ class DutySerializer(serializers.ModelSerializer):
         duty = super().update(instance, validated_data)
         if member_ids is not None:
             duty.members.set(member_ids)
+            for member in member_ids:
+                promote_role(member, Member.Role.SUSTENTADOR)
         return duty

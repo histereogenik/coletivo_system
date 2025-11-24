@@ -27,6 +27,8 @@ def superuser():
 @pytest.mark.django_db
 def test_superuser_can_create_duty(api_client, superuser):
     members = [MemberFactory(), MemberFactory()]
+    for m in members:
+        assert m.role == m.Role.MENSALISTA
     api_client.force_authenticate(user=superuser)
     url = reverse("duty-list")
     payload = {
@@ -40,6 +42,9 @@ def test_superuser_can_create_duty(api_client, superuser):
     assert response.status_code == 201
     assert response.data["name"] == "Organização"
     assert len(response.data["members"]) == 2
+    for m in members:
+        m.refresh_from_db()
+        assert m.role == m.Role.SUSTENTADOR
 
 
 @pytest.mark.django_db
