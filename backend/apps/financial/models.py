@@ -15,6 +15,7 @@ class FinancialEntry(models.Model):
         NOTA = "NOTA", "Compra / Nota fiscal"
         STAFF = "STAFF", "Pagamento de equipe"
         DESPESA = "DESPESA", "Despesa"
+        ESTORNO = "ESTORNO", "Estorno"
 
     entry_type = models.CharField(max_length=10, choices=EntryType.choices)
     category = models.CharField(max_length=20, choices=EntryCategory.choices)
@@ -36,7 +37,12 @@ class FinancialEntry(models.Model):
 
     def clean(self):
         entrada_cats = {self.EntryCategory.ALMOCO, self.EntryCategory.DOACAO}
-        saida_cats = {self.EntryCategory.NOTA, self.EntryCategory.STAFF, self.EntryCategory.DESPESA}
+        saida_cats = {
+            self.EntryCategory.NOTA,
+            self.EntryCategory.STAFF,
+            self.EntryCategory.DESPESA,
+            self.EntryCategory.ESTORNO,
+        }
 
         if self.entry_type == self.EntryType.ENTRADA and self.category not in entrada_cats:
             raise ValidationError({"category": "Categoria incompatível com entrada."})

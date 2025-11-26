@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     "apps.duties",
     "apps.agenda",
     "apps.financial",
+    "apps.common",
+    "apps.dashboard",
 ]
 
 MIDDLEWARE = [
