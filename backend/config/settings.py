@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.authentication",
     "apps.lunch",
     "apps.duties",
+    "apps.agenda",
 ]
 
 MIDDLEWARE = [
