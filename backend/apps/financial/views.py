@@ -1,0 +1,24 @@
+import django_filters
+from rest_framework import viewsets
+
+from apps.common.permissions import SuperuserOnly
+from apps.financial.models import FinancialEntry
+from apps.financial.serializers import FinancialEntrySerializer
+
+
+class FinancialEntryFilter(django_filters.FilterSet):
+    date = django_filters.DateFilter()
+    date_range = django_filters.DateFromToRangeFilter(field_name="date")
+    entry_type = django_filters.CharFilter(field_name="entry_type")
+    category = django_filters.CharFilter(field_name="category")
+
+    class Meta:
+        model = FinancialEntry
+        fields = ["date", "entry_type", "category", "date_range"]
+
+
+class FinancialEntryViewSet(viewsets.ModelViewSet):
+    queryset = FinancialEntry.objects.all().order_by("-date", "-created_at")
+    serializer_class = FinancialEntrySerializer
+    permission_classes = [SuperuserOnly]
+    filterset_class = FinancialEntryFilter
