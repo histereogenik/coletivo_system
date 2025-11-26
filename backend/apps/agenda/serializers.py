@@ -76,7 +76,33 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
                     }
                 )
             attrs["_selected_members"] = members
+        else:
+            attrs["_selected_members"] = None
 
+        # Check overlapping schedules for selected members on the same date.
+        date = attrs.get("date") or getattr(self.instance, "date", None)
+        selected_members = attrs.get("_selected_members")
+        new_start = start
+        new_end = end or start
+        conflicts = []
+        if date and selected_members:
+            for member in selected_members:
+                qs = AgendaEntry.objects.filter(date=date, members=member)
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                for existing in qs:
+                    existing_start = existing.start_time
+                    existing_end = existing.end_time or existing.start_time
+                    # overlap if not (new_end <= existing_start or existing_end <= new_start)
+                    if not (new_end <= existing_start or existing_end <= new_start):
+                        conflicts.append({"member": member.id, "agenda_entry": existing.id})
+            if conflicts:
+                raise serializers.ValidationError(
+                    {
+                        "member_ids": "Conflito de horário para um ou mais membros.",
+                        "member_conflicts": conflicts,
+                    }
+                )
         return attrs
 
     def _sync_members(self, instance, selected):

@@ -80,3 +80,32 @@ def test_agenda_entry_rejects_unknown_member_id():
     assert "member_ids_invalid" in serializer.errors
     invalid_ids = {str(item) for item in serializer.errors["member_ids_invalid"]}
     assert "999" in invalid_ids
+
+
+@pytest.mark.django_db
+def test_agenda_entry_rejects_time_conflict_for_member():
+    duty = DutyFactory()
+    member = MemberFactory()
+    duty.members.add(member)
+    # Existing entry 09:00-10:00
+    existing_payload = {
+        "date": "2025-12-04",
+        "start_time": "09:00",
+        "end_time": "10:00",
+        "duty": duty,
+        "status": "PLANEJADO",
+    }
+    AgendaEntrySerializer().Meta.model.objects.create(**existing_payload).members.add(member)
+
+    # New entry overlapping 09:30-10:30
+    payload = {
+        "date": "2025-12-04",
+        "start_time": "09:30",
+        "end_time": "10:30",
+        "duty": duty.id,
+        "member_ids": [member.id],
+    }
+
+    serializer = AgendaEntrySerializer(data=payload)
+    assert not serializer.is_valid()
+    assert "member_conflicts" in serializer.errors
