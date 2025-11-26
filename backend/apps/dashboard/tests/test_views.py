@@ -63,7 +63,6 @@ def test_dashboard_summary(api_client, superuser):
     LunchFactory(date=today, payment_status="PAGO")
     LunchFactory(date=today - timedelta(days=1), payment_status="EM_ABERTO")
 
-    api_client.force_authenticate(user=superuser)
     url = reverse("dashboard-summary")
     response = api_client.get(url)
 

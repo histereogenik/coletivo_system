@@ -3,7 +3,7 @@ from rest_framework import viewsets
 
 from apps.agenda.models import AgendaEntry
 from apps.agenda.serializers import AgendaEntrySerializer
-from apps.common.permissions import SuperuserOnly
+from apps.common.permissions import SuperuserOrReadOnly
 
 
 class AgendaEntryFilter(django_filters.FilterSet):
@@ -25,5 +25,5 @@ class AgendaEntryViewSet(viewsets.ModelViewSet):
         .order_by("date", "start_time", "duty__name")
     )
     serializer_class = AgendaEntrySerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [SuperuserOrReadOnly]
     filterset_class = AgendaEntryFilter

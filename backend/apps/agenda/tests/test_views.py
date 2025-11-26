@@ -50,7 +50,7 @@ def test_non_superuser_forbidden(api_client):
     api_client.force_authenticate(user=user)
     url = reverse("agenda-entry-list")
 
-    response = api_client.get(url)
+    response = api_client.post(url, {"date": "2025-12-02"}, format="json")
 
     assert response.status_code == 403
 
@@ -66,3 +66,14 @@ def test_filter_by_date(api_client, superuser):
 
     assert response.status_code == 200
     assert len(response.data) == 1
+
+
+@pytest.mark.django_db
+def test_anonymous_can_list_agenda(api_client):
+    AgendaEntryFactory(date="2025-12-07")
+    url = reverse("agenda-entry-list")
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert len(response.data) >= 1

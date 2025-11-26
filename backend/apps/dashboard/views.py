@@ -1,19 +1,17 @@
 from datetime import timedelta
 
-from django.utils import timezone
 from django.db import models
-from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.permissions import SuperuserOnly
 from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch
 from apps.users.models import Member
 
 
 class DashboardSummaryView(APIView):
-    permission_classes = [IsAuthenticated, SuperuserOnly]
+    permission_classes = []  # Public GET
 
     def get(self, request):
         today = timezone.now().date()

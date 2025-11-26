@@ -48,9 +48,29 @@ def test_non_superuser_forbidden(api_client):
     api_client.force_authenticate(user=user)
     url = reverse("financial-entry-list")
 
-    response = api_client.get(url)
+    response = api_client.post(
+        url,
+        {
+            "entry_type": FinancialEntry.EntryType.ENTRADA,
+            "category": FinancialEntry.EntryCategory.ALMOCO,
+            "description": "Teste",
+            "value_cents": 1000,
+            "date": "2025-12-10",
+        },
+        format="json",
+    )
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_anonymous_can_list_entries(api_client):
+    FinancialEntryFactory()
+    url = reverse("financial-entry-list")
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert len(response.data) >= 1
 
 
 @pytest.mark.django_db
