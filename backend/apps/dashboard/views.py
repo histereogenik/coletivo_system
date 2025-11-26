@@ -19,12 +19,18 @@ class DashboardSummaryView(APIView):
 
         # Monthly balance
         monthly_entries = FinancialEntry.objects.filter(date__gte=start_month, date__lte=today)
-        entradas = monthly_entries.filter(entry_type=FinancialEntry.EntryType.ENTRADA).aggregate(
-            total=models.Sum("value_cents")
-        )["total"] or 0
-        saidas = monthly_entries.filter(entry_type=FinancialEntry.EntryType.SAIDA).aggregate(
-            total=models.Sum("value_cents")
-        )["total"] or 0
+        entradas = (
+            monthly_entries.filter(entry_type=FinancialEntry.EntryType.ENTRADA).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
+        saidas = (
+            monthly_entries.filter(entry_type=FinancialEntry.EntryType.SAIDA).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
         monthly_balance = entradas - saidas
 
         # Members stats
@@ -39,7 +45,9 @@ class DashboardSummaryView(APIView):
         total_lunches_last_30 = lunches_last_30.count()
         avg_lunches_last_30 = total_lunches_last_30 / 30.0
 
-        total_lunches_open = Lunch.objects.filter(payment_status=Lunch.PaymentStatus.EM_ABERTO).count()
+        total_lunches_open = Lunch.objects.filter(
+            payment_status=Lunch.PaymentStatus.EM_ABERTO
+        ).count()
         total_lunches = Lunch.objects.count()
 
         data = {
