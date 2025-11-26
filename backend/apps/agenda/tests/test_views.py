@@ -7,7 +7,6 @@ from apps.agenda.tests.factories import AgendaEntryFactory
 from apps.duties.tests.factories import DutyFactory
 from apps.users.tests.factories import MemberFactory
 
-
 User = get_user_model()
 
 

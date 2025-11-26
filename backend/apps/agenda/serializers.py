@@ -52,9 +52,10 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
         start = attrs.get("start_time") or getattr(self.instance, "start_time", None)
         end = attrs.get("end_time") or getattr(self.instance, "end_time", None)
         if start and end and end <= start:
-            raise serializers.ValidationError({"end_time": "Horário de término deve ser após o início."})
+            raise serializers.ValidationError(
+                {"end_time": "Horário de término deve ser após o início."}
+            )
 
-        duty = attrs.get("duty") or getattr(self.instance, "duty", None)
         selected_ids = None
         if "member_ids" in attrs:
             selected_ids = attrs.get("member_ids")

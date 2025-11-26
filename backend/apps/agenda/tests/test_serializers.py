@@ -29,6 +29,7 @@ def test_agenda_entry_serializer_creates_with_members_and_valid_times():
         m.refresh_from_db()
         assert m.role == Member.Role.SUSTENTADOR
 
+
 @pytest.mark.django_db
 def test_agenda_entry_serializer_rejects_end_before_start():
     duty = DutyFactory()
