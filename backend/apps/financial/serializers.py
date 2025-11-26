@@ -7,6 +7,7 @@ SAIDA_CATEGORIES = {
     FinancialEntry.EntryCategory.NOTA,
     FinancialEntry.EntryCategory.STAFF,
     FinancialEntry.EntryCategory.DESPESA,
+    FinancialEntry.EntryCategory.ESTORNO,
 }
 
 
