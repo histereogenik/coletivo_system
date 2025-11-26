@@ -10,7 +10,7 @@ def test_duty_serializer_valid_payload():
     payload = {
         "name": "Cozinha",
         "remuneration_cents": 1500,
-        "members": [m.id for m in members],
+        "member_ids": [m.id for m in members],
     }
 
     serializer = DutySerializer(data=payload)

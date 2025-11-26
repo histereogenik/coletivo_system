@@ -1,5 +1,6 @@
 import re
 
+import phonenumbers
 from rest_framework import serializers
 
 from apps.users.models import Member
@@ -67,11 +68,24 @@ class MemberSerializer(serializers.ModelSerializer):
         return email
 
     def validate_phone(self, value: str) -> str:
-        if value and not PHONE_REGEX.match(value):
+        if not value:
+            return value
+
+        # Se começar com "+", assume formato internacional; caso contrário, tenta BR como padrão.
+        region = None if value.strip().startswith("+") else "BR"
+        try:
+            parsed = phonenumbers.parse(value, region)
+        except phonenumbers.NumberParseException as exc:
             raise serializers.ValidationError(
-                "Telefone deve conter apenas dígitos e os símbolos + ( ) - . ou espaços."
+                "Telefone inválido. Use o formato internacional com código do país."
+            ) from exc
+
+        if not phonenumbers.is_valid_number(parsed):
+            raise serializers.ValidationError(
+                "Telefone inválido. Use o formato internacional com código do país."
             )
-        return value.strip() if value else value
+
+        return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
     def validate(self, attrs):
         # Ensure role/diet provided; choices safeguard values but we confirm presence.

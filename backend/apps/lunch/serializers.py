@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.common.roles import promote_role
+from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch
 from apps.users.models import Member
 
@@ -87,4 +89,51 @@ class LunchSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         if validated_data.get("lunch_type") == Lunch.LunchType.PACOTE:
             validated_data.setdefault("remaining_quantity", validated_data.get("quantity"))
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        if instance.lunch_type == Lunch.LunchType.PACOTE:
+            promote_role(instance.member, Member.Role.MENSALISTA)
+        self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
+        return instance
+
+    def update(self, instance, validated_data):
+        if validated_data.get("lunch_type") == Lunch.LunchType.PACOTE:
+            validated_data.setdefault("remaining_quantity", validated_data.get("quantity"))
+        prev_status = instance.payment_status
+        prev_value = instance.value_cents
+        prev_date = instance.date
+        instance = super().update(instance, validated_data)
+        self._sync_financial_entry(
+            instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date
+        )
+        return instance
+
+    def _sync_financial_entry(self, instance, prev_status, prev_value, prev_date):
+        entry = getattr(instance, "financial_entry", None)
+        is_paid_now = instance.payment_status == Lunch.PaymentStatus.PAGO
+        was_paid = prev_status == Lunch.PaymentStatus.PAGO
+
+        if is_paid_now:
+            description = f"Pagamento almoço - {instance.member.full_name} - {instance.date}"
+            if entry:
+                if (
+                    (prev_value != instance.value_cents)
+                    or (prev_date != instance.date)
+                    or (entry.description != description)
+                ):
+                    entry.value_cents = instance.value_cents
+                    entry.date = instance.date
+                    entry.description = description
+                    entry.entry_type = FinancialEntry.EntryType.ENTRADA
+                    entry.category = FinancialEntry.EntryCategory.ALMOCO
+                    entry.save()
+            else:
+                FinancialEntry.objects.create(
+                    entry_type=FinancialEntry.EntryType.ENTRADA,
+                    category=FinancialEntry.EntryCategory.ALMOCO,
+                    description=description,
+                    value_cents=instance.value_cents,
+                    date=instance.date,
+                    lunch=instance,
+                )
+        elif was_paid and entry:
+            entry.delete()
