@@ -48,4 +48,6 @@ class FinancialEntry(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_entry_type_display()} - {self.get_category_display()} - {self.value_cents}c"
+        return (
+            f"{self.get_entry_type_display()} - {self.get_category_display()} - {self.value_cents}c"
+        )

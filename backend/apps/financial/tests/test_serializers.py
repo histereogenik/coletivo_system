@@ -2,7 +2,6 @@ import pytest
 
 from apps.financial.models import FinancialEntry
 from apps.financial.serializers import FinancialEntrySerializer
-from apps.financial.tests.factories import FinancialEntryFactory
 
 
 @pytest.mark.django_db

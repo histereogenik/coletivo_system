@@ -44,7 +44,9 @@ def test_updating_to_paid_creates_financial_entry():
     instance = serializer.save()
     assert FinancialEntry.objects.filter(lunch=instance).count() == 0
 
-    update_serializer = LunchSerializer(instance, data={"payment_status": Lunch.PaymentStatus.PAGO}, partial=True)
+    update_serializer = LunchSerializer(
+        instance, data={"payment_status": Lunch.PaymentStatus.PAGO}, partial=True
+    )
     assert update_serializer.is_valid(), update_serializer.errors
     updated = update_serializer.save()
 

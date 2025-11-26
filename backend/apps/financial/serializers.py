@@ -2,9 +2,12 @@ from rest_framework import serializers
 
 from apps.financial.models import FinancialEntry
 
-
 ENTRADA_CATEGORIES = {FinancialEntry.EntryCategory.ALMOCO, FinancialEntry.EntryCategory.DOACAO}
-SAIDA_CATEGORIES = {FinancialEntry.EntryCategory.NOTA, FinancialEntry.EntryCategory.STAFF, FinancialEntry.EntryCategory.DESPESA}
+SAIDA_CATEGORIES = {
+    FinancialEntry.EntryCategory.NOTA,
+    FinancialEntry.EntryCategory.STAFF,
+    FinancialEntry.EntryCategory.DESPESA,
+}
 
 
 class FinancialEntrySerializer(serializers.ModelSerializer):

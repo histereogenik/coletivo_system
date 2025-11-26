@@ -102,7 +102,9 @@ class LunchSerializer(serializers.ModelSerializer):
         prev_value = instance.value_cents
         prev_date = instance.date
         instance = super().update(instance, validated_data)
-        self._sync_financial_entry(instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date)
+        self._sync_financial_entry(
+            instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date
+        )
         return instance
 
     def _sync_financial_entry(self, instance, prev_status, prev_value, prev_date):
@@ -113,8 +115,10 @@ class LunchSerializer(serializers.ModelSerializer):
         if is_paid_now:
             description = f"Pagamento almoço - {instance.member.full_name} - {instance.date}"
             if entry:
-                if (prev_value != instance.value_cents) or (prev_date != instance.date) or (
-                    entry.description != description
+                if (
+                    (prev_value != instance.value_cents)
+                    or (prev_date != instance.date)
+                    or (entry.description != description)
                 ):
                     entry.value_cents = instance.value_cents
                     entry.date = instance.date

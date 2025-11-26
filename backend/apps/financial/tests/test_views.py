@@ -6,7 +6,6 @@ from rest_framework.test import APIClient
 from apps.financial.models import FinancialEntry
 from apps.financial.tests.factories import FinancialEntryFactory
 
-
 User = get_user_model()
 
 
@@ -57,7 +56,9 @@ def test_non_superuser_forbidden(api_client):
 @pytest.mark.django_db
 def test_filter_by_entry_type(api_client, superuser):
     FinancialEntryFactory(entry_type=FinancialEntry.EntryType.ENTRADA)
-    FinancialEntryFactory(entry_type=FinancialEntry.EntryType.SAIDA, category=FinancialEntry.EntryCategory.DESPESA)
+    FinancialEntryFactory(
+        entry_type=FinancialEntry.EntryType.SAIDA, category=FinancialEntry.EntryCategory.DESPESA
+    )
 
     api_client.force_authenticate(user=superuser)
     url = reverse("financial-entry-list")
