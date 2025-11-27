@@ -9,16 +9,16 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { Notifications } from "@mantine/notifications";
-import { IconChartBar, IconCurrencyDollar, IconUsers } from "@tabler/icons-react";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
+import { Notifications } from "@mantine/notifications";
+import { IconChartBar, IconCurrencyDollar, IconUsers } from "@tabler/icons-react";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import "./App.css";
+import { SummaryCard } from "./components/SummaryCard";
 import { api } from "./lib/api";
-
-const queryClient = new QueryClient();
+import { queryClient } from "./lib/queryClient";
 
 type DashboardSummary = {
   monthly_balance_cents: number;
@@ -46,35 +46,6 @@ function useDashboardSummary() {
       return data;
     },
   });
-}
-
-function SummaryCard({
-  title,
-  value,
-  icon,
-  subtitle,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <Card withBorder shadow="sm" padding="lg" radius="md">
-      <Group justify="space-between" mb="sm">
-        <Text size="sm" c="dimmed">
-          {title}
-        </Text>
-        {icon}
-      </Group>
-      <Title order={3}>{value}</Title>
-      {subtitle && (
-        <Text size="sm" c="dimmed" mt="xs">
-          {subtitle}
-        </Text>
-      )}
-    </Card>
-  );
 }
 
 function Dashboard() {
