@@ -9,8 +9,9 @@ import { Layout } from "./components/Layout";
 import { AgendaPage } from "./features/agenda/AgendaPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { FinancialPage } from "./features/financial/FinancialPage";
-import { queryClient } from "./lib/queryClient";
-import { theme } from "./lib/theme";
+import { LoginPage } from "./features/auth/LoginPage";
+import { queryClient } from "./shared/queryClient";
+import { theme } from "./shared/theme";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/financeiro" element={<FinancialPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Text>Página não encontrada.</Text>} />
           </Routes>
         </Layout>

@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api } from "../../shared/api";
 import { DashboardSummary } from "./types";
 
 export async function fetchDashboardSummary() {

@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api } from "../../shared/api";
 
 export type AgendaEntry = {
   id: number;
