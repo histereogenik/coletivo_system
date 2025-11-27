@@ -26,5 +26,12 @@ services:
     ports:
       - "5433:5432"
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4173:80"
+
 volumes:
   postgres_data:
