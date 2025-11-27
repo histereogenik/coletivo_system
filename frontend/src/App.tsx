@@ -1,24 +1,16 @@
-import {
-  AppShell,
-  Burger,
-  Card,
-  Container,
-  Group,
-  MantineProvider,
-  SimpleGrid,
-  Text,
-  Title,
-} from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { Card, Container, MantineProvider, SimpleGrid, Text, Title } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { Notifications } from "@mantine/notifications";
 import { IconChartBar, IconCurrencyDollar, IconUsers } from "@tabler/icons-react";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { Route, Routes } from "react-router-dom";
 import "./App.css";
+import { Layout } from "./components/Layout";
 import { SummaryCard } from "./components/SummaryCard";
 import { api } from "./lib/api";
 import { queryClient } from "./lib/queryClient";
+import { theme } from "./lib/theme";
 
 type DashboardSummary = {
   monthly_balance_cents: number;
@@ -90,33 +82,18 @@ function Dashboard() {
 }
 
 function App() {
-  const [opened, { toggle }] = useDisclosure();
-
   return (
-    <MantineProvider defaultColorScheme="light">
+    <MantineProvider defaultColorScheme="light" theme={theme}>
       <Notifications />
       <QueryClientProvider client={queryClient}>
-        <AppShell
-          header={{ height: 60 }}
-          navbar={{
-            width: 0,
-            breakpoint: "sm",
-            collapsed: { mobile: !opened },
-          }}
-          padding="md"
-        >
-          <AppShell.Header>
-            <Group h="100%" px="md" justify="space-between">
-              <Group gap="sm">
-                <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                <Title order={3}>Coletivo Dashboard</Title>
-              </Group>
-            </Group>
-          </AppShell.Header>
-          <AppShell.Main>
-            <Dashboard />
-          </AppShell.Main>
-        </AppShell>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/agenda" element={<Text>Agenda (em breve)</Text>} />
+            <Route path="/financeiro" element={<Text>Financeiro (em breve)</Text>} />
+            <Route path="*" element={<Text>Página não encontrada.</Text>} />
+          </Routes>
+        </Layout>
       </QueryClientProvider>
     </MantineProvider>
   );
