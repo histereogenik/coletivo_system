@@ -1,39 +1,40 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { clearTokens, updateAccessToken } from "../shared/auth";
+import { api } from "../shared/api";
+import { fetchAuthStatus } from "../shared/authStatus";
 
 type AuthContextType = {
-  token: string | null;
-  refresh: string | null;
-  login: (access: string) => void;
+  isAuthenticated: boolean;
+  login: () => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(null);
-  const [refresh, setRefreshState] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = (access: string) => {
-    updateAccessToken(access);
-    setTokenState(access);
+  const login = () => {
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
-    clearTokens();
-    setTokenState(null);
-    setRefreshState(null);
+    setIsAuthenticated(false);
+    void api.post("/api/auth/logout/", {}, { withCredentials: true }).catch(() => {});
   };
 
-  const value = useMemo(() => ({ token, refresh, login, logout }), [token, refresh]);
+  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated]);
 
+  // Hydrate auth status from cookie on load
   useEffect(() => {
-    const stored = localStorage.getItem("jwt_token");
-    if (stored !== token) {
-      setTokenState(stored);
-    }
-  }, [token]);
+    fetchAuthStatus()
+      .then(() => {
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        setIsAuthenticated(false);
+      });
+  }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

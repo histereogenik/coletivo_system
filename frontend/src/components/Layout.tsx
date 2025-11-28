@@ -16,7 +16,7 @@ const navItems = [
 export function Layout({ children }: LayoutProps) {
   const [opened, { toggle }] = useDisclosure();
   const location = useLocation();
-  const { token, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <AppShell
@@ -35,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
             <Title order={3}>Coletivo Dashboard</Title>
           </Group>
           <Group gap="sm">
-            {token ? (
+            {isAuthenticated ? (
               <>
                 <Text size="sm" c="dimmed">
                   Logado
