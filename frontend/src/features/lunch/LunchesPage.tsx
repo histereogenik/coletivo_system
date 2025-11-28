@@ -26,6 +26,23 @@ import "dayjs/locale/pt-br";
 import { createLunch, deleteLunch, fetchLunches, markLunchPaid, updateLunch, Lunch } from "./api";
 import { fetchMembers, MemberOption } from "./membersApi";
 
+const toIsoDate = (val: DateValue) => {
+  if (!val) return undefined;
+  if (typeof val === "string") return val;
+  // use local date to avoid timezone shifts
+  return val.toLocaleDateString("en-CA");
+};
+
+const formatPtDate = (value?: string | null) => {
+  if (!value) return "";
+  const parts = value.split("-");
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
+  return value;
+};
+
 const paymentLabels: Record<string, string> = {
   PAGO: "Pago",
   EM_ABERTO: "Em aberto",
@@ -50,10 +67,37 @@ export function LunchesPage() {
   });
   const [valueReais, setValueReais] = useState<string>("0");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
+  const [filters, setFilters] = useState<{
+    member: string | null;
+    payment_status: string | null;
+    lunch_type: string | null;
+    date_from: DateValue;
+    date_to: DateValue;
+  }>({
+    member: null,
+    payment_status: null,
+    lunch_type: null,
+    date_from: null,
+    date_to: null,
+  });
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["lunches"],
-    queryFn: () => fetchLunches(),
+    queryKey: [
+      "lunches",
+      filters.member,
+      filters.payment_status,
+      filters.lunch_type,
+      toIsoDate(filters.date_from) ?? null,
+      toIsoDate(filters.date_to) ?? null,
+    ],
+    queryFn: () =>
+      fetchLunches({
+        member: filters.member ? Number(filters.member) : undefined,
+        payment_status: filters.payment_status || undefined,
+        lunch_type: filters.lunch_type || undefined,
+        date_from: toIsoDate(filters.date_from),
+        date_to: toIsoDate(filters.date_to),
+      }),
     enabled: isAuthenticated,
   });
 
@@ -107,7 +151,7 @@ export function LunchesPage() {
       return;
     }
     const parsedValue = parseFloat(valueReais.replace(/\./g, "").replace(",", "."));
-    const dateIso = dateValue ? new Date(dateValue as Date).toISOString().slice(0, 10) : "";
+    const dateIso = toIsoDate(dateValue) || "";
     const payload: Partial<Lunch> = {
       ...formState,
       value_cents: Number.isNaN(parsedValue) ? 0 : Math.round(parsedValue * 100),
@@ -183,6 +227,15 @@ export function LunchesPage() {
     label: m.full_name,
   }));
 
+  const clearFilters = () =>
+    setFilters({
+      member: null,
+      payment_status: null,
+      lunch_type: null,
+      date_from: null,
+      date_to: null,
+    });
+
   return (
     <Container size="xl" py="md">
       <Group mb="md">
@@ -190,6 +243,53 @@ export function LunchesPage() {
         <Title order={3}>Almoços</Title>
         <Button onClick={openNew} ml="auto">
           Novo almoço
+        </Button>
+      </Group>
+      <Group gap="sm" align="flex-end" mb="md">
+        <Select
+          label="Membro"
+          data={memberOptions}
+          searchable
+          clearable
+          value={filters.member}
+          onChange={(val) => setFilters((prev) => ({ ...prev, member: val }))}
+        />
+        <Select
+          label="Pagamento"
+          data={[
+            { value: "PAGO", label: "Pago" },
+            { value: "EM_ABERTO", label: "Em aberto" },
+          ]}
+          clearable
+          value={filters.payment_status}
+          onChange={(val) => setFilters((prev) => ({ ...prev, payment_status: val }))}
+        />
+        <Select
+          label="Tipo"
+          data={[
+            { value: "AVULSO", label: "Avulso" },
+            { value: "PACOTE", label: "Pacote" },
+          ]}
+          clearable
+          value={filters.lunch_type}
+          onChange={(val) => setFilters((prev) => ({ ...prev, lunch_type: val }))}
+        />
+        <DateInput
+          label="De"
+          value={filters.date_from}
+          onChange={(val) => setFilters((prev) => ({ ...prev, date_from: val }))}
+          valueFormat="DD/MM/YYYY"
+          locale="pt-br"
+        />
+        <DateInput
+          label="Até"
+          value={filters.date_to}
+          onChange={(val) => setFilters((prev) => ({ ...prev, date_to: val }))}
+          valueFormat="DD/MM/YYYY"
+          locale="pt-br"
+        />
+        <Button variant="outline" onClick={clearFilters}>
+          Limpar
         </Button>
       </Group>
       <ScrollArea>
@@ -207,8 +307,12 @@ export function LunchesPage() {
           <Table.Tbody>
             {data.map((item) => (
               <Table.Tr key={item.id}>
-                <Table.Td>{item.date}</Table.Td>
-                <Table.Td>{typeLabels[item.lunch_type] || item.lunch_type}</Table.Td>
+                <Table.Td>{formatPtDate(item.date)}</Table.Td>
+                <Table.Td>
+                  <Badge color={item.lunch_type === "PACOTE" ? "grape" : "blue"}>
+                    {typeLabels[item.lunch_type] || item.lunch_type}
+                  </Badge>
+                </Table.Td>
                 <Table.Td>{item.member_name || `#${item.member}`}</Table.Td>
                 <Table.Td>
                   <Badge color={item.payment_status === "PAGO" ? "green" : "orange"}>
