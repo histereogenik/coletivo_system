@@ -11,10 +11,11 @@ import {
   Text,
   Title,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconSoup } from "@tabler/icons-react";
+import { IconSoup, IconCheck, IconPencil, IconTrash } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -218,27 +219,36 @@ export function LunchesPage() {
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end">
                     {canMarkPaid(item) && (
+                      <Tooltip label="Marcar pago">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          loading={mutation.isPending && mutation.variables === item.id}
+                          onClick={() => mutation.mutate(item.id)}
+                          leftSection={<IconCheck size={16} />}
+                          aria-label="Marcar pago"
+                        >
+                          PG
+                        </Button>
+                      </Tooltip>
+                    )}
+                    <Tooltip label="Editar">
+                      <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                        <IconPencil size={16} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Remover">
                       <Button
                         size="xs"
-                        variant="light"
-                        loading={mutation.isPending && mutation.variables === item.id}
-                        onClick={() => mutation.mutate(item.id)}
+                        variant="outline"
+                        color="red"
+                        loading={deleteMutation.isPending && deleteMutation.variables === item.id}
+                        onClick={() => deleteMutation.mutate(item.id)}
+                        aria-label="Remover"
                       >
-                        Marcar pago
+                        <IconTrash size={16} />
                       </Button>
-                    )}
-                    <Button size="xs" variant="subtle" onClick={() => openEdit(item)}>
-                      Editar
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      color="red"
-                      loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                      onClick={() => deleteMutation.mutate(item.id)}
-                    >
-                      Remover
-                    </Button>
+                    </Tooltip>
                   </Group>
                 </Table.Td>
               </Table.Tr>
