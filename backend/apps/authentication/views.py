@@ -44,7 +44,7 @@ class CookieTokenRefreshView(TokenRefreshView):
         access = serializer.validated_data.get("access")
         response = Response(serializer.validated_data, status=status.HTTP_200_OK)
         if access:
-            set_auth_cookies(response, access)
+            set_auth_cookies(response, access, refresh_token)
         return response
 
 

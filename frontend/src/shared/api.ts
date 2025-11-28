@@ -16,7 +16,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const hasAuth = sessionStorage.getItem("hasAuth");
+    if (error.response?.status === 401 && hasAuth && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve) => {
           pendingRequests.push(() => {
