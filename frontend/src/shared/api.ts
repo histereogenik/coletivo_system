@@ -32,6 +32,16 @@ api.interceptors.response.use(
         pendingRequests = [];
         return api(originalRequest);
       } catch (refreshErr) {
+        // Clear cookies server-side and retry GETs without auth to allow public access
+        try {
+          await api.post("/api/auth/logout/", {}, { withCredentials: true });
+        } catch (_) {
+          // ignore logout errors
+        }
+        pendingRequests = [];
+        if (originalRequest.method?.toLowerCase() === "get") {
+          return api(originalRequest);
+        }
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

@@ -16,10 +16,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = () => {
     setIsAuthenticated(true);
+    sessionStorage.setItem("hasAuth", "true");
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    sessionStorage.removeItem("hasAuth");
     void api.post("/api/auth/logout/", {}, { withCredentials: true }).catch(() => {});
   };
 
@@ -27,13 +29,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate auth status from cookie on load
   useEffect(() => {
-    fetchAuthStatus()
-      .then(() => {
-        setIsAuthenticated(true);
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-      });
+    if (sessionStorage.getItem("hasAuth")) {
+      fetchAuthStatus()
+        .then(() => {
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem("hasAuth");
+        });
+    }
   }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
