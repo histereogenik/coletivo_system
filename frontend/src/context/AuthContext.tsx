@@ -1,36 +1,53 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { clearToken, getToken, setToken } from "../shared/auth";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { notifications } from "@mantine/notifications";
+import { useNavigate } from "react-router-dom";
+import { api } from "../shared/api";
+import { fetchAuthStatus } from "../shared/authStatus";
 
 type AuthContextType = {
-  token: string | null;
-  login: (token: string) => void;
+  isAuthenticated: boolean;
+  login: () => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(getToken());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const hydrated = useRef(false);
+  const navigate = useNavigate();
 
-  const login = (newToken: string) => {
-    setToken(newToken);
-    setTokenState(newToken);
-  };
+  const login = useCallback(() => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem("hasAuth", "true");
+  }, []);
 
-  const logout = () => {
-    clearToken();
-    setTokenState(null);
-  };
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem("hasAuth");
+    void api.post("/api/auth/logout/", {}, { withCredentials: true }).catch(() => {});
+    notifications.show({ message: "Sessão encerrada.", color: "blue" });
+    navigate("/login");
+  }, [navigate]);
 
-  const value = useMemo(() => ({ token, login, logout }), [token]);
+  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated, login, logout]);
 
+  // Hydrate auth status from cookie on load
   useEffect(() => {
-    const stored = getToken();
-    if (stored !== token) {
-      setTokenState(stored);
+    if (hydrated.current) return;
+    if (sessionStorage.getItem("hasAuth")) {
+      fetchAuthStatus()
+        .then(() => {
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem("hasAuth");
+        });
     }
-  }, [token]);
+    hydrated.current = true;
+  }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

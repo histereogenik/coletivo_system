@@ -1,4 +1,4 @@
-import { AppShell, Burger, Button, Group, Title } from "@mantine/core";
+import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -11,13 +11,12 @@ const navItems = [
   { label: "Dashboard", to: "/" },
   { label: "Agenda", to: "/agenda" },
   { label: "Financeiro", to: "/financeiro" },
-  { label: "Login", to: "/login" },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const [opened, { toggle }] = useDisclosure();
   const location = useLocation();
-  const { token, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <AppShell
@@ -36,12 +35,17 @@ export function Layout({ children }: LayoutProps) {
             <Title order={3}>Coletivo Dashboard</Title>
           </Group>
           <Group gap="sm">
-            {token ? (
-              <Button variant="light" onClick={logout}>
-                Sair
-              </Button>
+            {isAuthenticated ? (
+              <>
+                <Text size="sm" c="dimmed">
+                  Logado
+                </Text>
+                <Button variant="light" onClick={logout}>
+                  Sair
+                </Button>
+              </>
             ) : (
-              <Button component={Link} to="/login" variant="subtle">
+              <Button component={Link} to="/login" variant="light">
                 Entrar
               </Button>
             )}

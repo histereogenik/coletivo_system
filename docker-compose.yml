@@ -6,7 +6,7 @@ services:
     volumes:
       - ./backend:/opt/app
     env_file:
-      - .env.dev
+      - ./backend/.env.dev
     depends_on:
       - db
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
@@ -16,7 +16,7 @@ services:
   db:
     image: postgres:16-alpine
     env_file:
-      - .env.dev
+      - ./backend/.env.dev
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-coletivo}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
