@@ -1,5 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { notifications } from "@mantine/notifications";
+import { useNavigate } from "react-router-dom";
 import { api } from "../shared/api";
 import { fetchAuthStatus } from "../shared/authStatus";
 
@@ -13,22 +15,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const hydrated = useRef(false);
+  const navigate = useNavigate();
 
-  const login = () => {
+  const login = useCallback(() => {
     setIsAuthenticated(true);
     sessionStorage.setItem("hasAuth", "true");
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setIsAuthenticated(false);
     sessionStorage.removeItem("hasAuth");
     void api.post("/api/auth/logout/", {}, { withCredentials: true }).catch(() => {});
-  };
+    notifications.show({ message: "Sessão encerrada.", color: "blue" });
+    navigate("/login");
+  }, [navigate]);
 
-  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated]);
+  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated, login, logout]);
 
   // Hydrate auth status from cookie on load
   useEffect(() => {
+    if (hydrated.current) return;
     if (sessionStorage.getItem("hasAuth")) {
       fetchAuthStatus()
         .then(() => {
@@ -39,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sessionStorage.removeItem("hasAuth");
         });
     }
+    hydrated.current = true;
   }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
