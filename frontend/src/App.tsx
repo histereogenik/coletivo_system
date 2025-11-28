@@ -10,6 +10,7 @@ import { AgendaPage } from "./features/agenda/AgendaPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { FinancialPage } from "./features/financial/FinancialPage";
 import { LoginPage } from "./features/auth/LoginPage";
+import { LunchesPage } from "./features/lunch/LunchesPage";
 import { queryClient } from "./shared/queryClient";
 import { theme } from "./shared/theme";
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/financeiro" element={<FinancialPage />} />
+            <Route path="/lunches" element={<LunchesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Text>Página não encontrada.</Text>} />
           </Routes>

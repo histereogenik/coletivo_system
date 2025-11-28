@@ -11,6 +11,7 @@ const navItems = [
   { label: "Dashboard", to: "/" },
   { label: "Agenda", to: "/agenda" },
   { label: "Financeiro", to: "/financeiro" },
+  { label: "Almoços", to: "/lunches" },
 ];
 
 export function Layout({ children }: LayoutProps) {
