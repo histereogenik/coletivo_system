@@ -25,3 +25,17 @@ export async function markLunchPaid(id: number) {
   });
   return data;
 }
+
+export async function createLunch(payload: Partial<Lunch>) {
+  const { data } = await api.post<Lunch>("/api/lunch/lunches/", payload);
+  return data;
+}
+
+export async function updateLunch(id: number, payload: Partial<Lunch>) {
+  const { data } = await api.patch<Lunch>(`/api/lunch/lunches/${id}/`, payload);
+  return data;
+}
+
+export async function deleteLunch(id: number) {
+  await api.delete(`/api/lunch/lunches/${id}/`);
+}
