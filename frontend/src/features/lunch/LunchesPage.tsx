@@ -33,6 +33,15 @@ const toIsoDate = (val: DateValue) => {
   return val.toLocaleDateString("en-CA");
 };
 
+const parseIsoAsLocalDate = (value?: string | null) => {
+  if (!value) return null;
+  const parts = value.split("-");
+  if (parts.length !== 3) return null;
+  const [y, m, d] = parts.map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+};
+
 const formatPtDate = (value?: string | null) => {
   if (!value) return "";
   const parts = value.split("-");
@@ -111,6 +120,8 @@ export function LunchesPage() {
     mutationFn: (id: number) => markLunchPaid(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["financial"] });
       notifications.show({ message: "Pagamento marcado.", color: "green" });
     },
     onError: () => notifications.show({ message: "Erro ao marcar pago.", color: "red" }),
@@ -120,6 +131,8 @@ export function LunchesPage() {
     mutationFn: (payload: Partial<Lunch>) => createLunch(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["financial"] });
       notifications.show({ message: "Almoço criado.", color: "green" });
       modalHandlers.close();
     },
@@ -130,6 +143,8 @@ export function LunchesPage() {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Lunch> }) => updateLunch(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["financial"] });
       notifications.show({ message: "Almoço atualizado.", color: "green" });
       modalHandlers.close();
     },
@@ -140,6 +155,8 @@ export function LunchesPage() {
     mutationFn: (id: number) => deleteLunch(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["financial"] });
       notifications.show({ message: "Almoço removido.", color: "green" });
     },
     onError: () => notifications.show({ message: "Erro ao remover almoço.", color: "red" }),
@@ -194,7 +211,7 @@ export function LunchesPage() {
       package_status: item.package_status ?? undefined,
     });
     setValueReais((item.value_cents / 100).toString());
-    setDateValue(item.date ? new Date(item.date) : null);
+    setDateValue(parseIsoAsLocalDate(item.date));
     modalHandlers.open();
   };
 
