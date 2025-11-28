@@ -26,11 +26,10 @@ export function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const { data } = await api.post<{ access: string; refresh: string }>(
-        "/api/auth/token/",
-        values
-      );
-      login(data.access, data.refresh);
+      const { data } = await api.post<{ access: string }>("/api/auth/cookie/token/", values, {
+        withCredentials: true,
+      });
+      login(data.access);
       notifications.show({ message: "Login realizado com sucesso.", color: "green" });
       navigate("/");
     } catch (err) {
