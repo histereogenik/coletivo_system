@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Card, Container, PasswordInput, TextInput, Title } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -29,10 +30,12 @@ export function LoginPage() {
         "/api/auth/token/",
         values
       );
-      login(data.access);
+      login(data.access, data.refresh);
+      notifications.show({ message: "Login realizado com sucesso.", color: "green" });
       navigate("/");
     } catch (err) {
       setError("password", { message: "Usuário ou senha inválidos" });
+      notifications.show({ message: "Usuário ou senha inválidos.", color: "red" });
     }
   };
 

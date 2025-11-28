@@ -1,36 +1,46 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { clearToken, getToken, setToken } from "../shared/auth";
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "../shared/auth";
 
 type AuthContextType = {
   token: string | null;
-  login: (token: string) => void;
+  refresh: string | null;
+  login: (access: string, refreshToken?: string) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(getToken());
+  const [token, setTokenState] = useState<string | null>(getAccessToken());
+  const [refresh, setRefreshState] = useState<string | null>(getRefreshToken());
 
-  const login = (newToken: string) => {
-    setToken(newToken);
-    setTokenState(newToken);
+  const login = (access: string, refreshToken?: string) => {
+    if (refreshToken) {
+      setTokens(access, refreshToken);
+      setRefreshState(refreshToken);
+    }
+    setTokenState(access);
   };
 
   const logout = () => {
-    clearToken();
+    clearTokens();
     setTokenState(null);
+    setRefreshState(null);
   };
 
-  const value = useMemo(() => ({ token, login, logout }), [token]);
+  const value = useMemo(() => ({ token, refresh, login, logout }), [token, refresh]);
 
   useEffect(() => {
-    const stored = getToken();
+    const stored = getAccessToken();
+    const storedRefresh = getRefreshToken();
     if (stored !== token) {
       setTokenState(stored);
     }
-  }, [token]);
+    if (storedRefresh !== refresh) {
+      setRefreshState(storedRefresh);
+    }
+  }, [token, refresh]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
