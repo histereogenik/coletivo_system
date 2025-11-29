@@ -14,7 +14,7 @@ class Member(models.Model):
 
     full_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, null=True, blank=True)
     address = models.TextField(blank=True)
     heard_about = models.TextField(
         blank=True, help_text="How the member heard about the community lunch."

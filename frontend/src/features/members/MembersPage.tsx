@@ -11,8 +11,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { DateInput, type DateValue } from "@mantine/dates";
-import { IconUsers, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconUsers, IconPencil, IconPlus, IconTrash, IconEye } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,6 +47,17 @@ const formatPhone = (value: string) => {
   return (withPlus ? "+" : "+") + formatted.trim();
 };
 
+const formatPhoneDisplay = (value?: string) => {
+  if (!value) return "";
+  const digits = value.replace(/[^\d]/g, "");
+  if (digits.length < 10) return value;
+  const cc = digits.slice(0, 2);
+  const ddd = digits.slice(2, 4);
+  const part1 = digits.slice(4, digits.length - 4);
+  const part2 = digits.slice(-4);
+  return `+${cc} ${ddd} ${part1}-${part2}`.replace(/\s+/g, " ").trim();
+};
+
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email.trim());
 
@@ -57,18 +67,11 @@ const normalizePhoneForSubmit = (value: string) => {
   return digits.startsWith("+") ? digits : `+${digits}`;
 };
 
-const toIsoDate = (val: DateValue) => {
-  if (!val) return undefined;
-  if (typeof val === "string") return val;
-  return val.toLocaleDateString("en-CA");
-};
-
-const formatPtDate = (value?: string | null) => {
-  if (!value) return "";
-  const parts = value.split("-");
-  if (parts.length === 3) {
-    const [y, m, d] = parts;
-    return `${d}/${m}/${y}`;
+const formatDateReadable = (value?: string | null) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString("pt-BR");
   }
   return value;
 };
@@ -91,29 +94,26 @@ export function MembersPage() {
   const [filters, setFilters] = useState<{
     role: Member["role"] | null;
     diet: Member["diet"] | null;
-    created_from: DateValue;
-    created_to: DateValue;
+    search: string;
   }>({
     role: null,
     diet: null,
-    created_from: null,
-    created_to: null,
+    search: "",
   });
+  const [selected, setSelected] = useState<Member | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "members",
       filters.role,
       filters.diet,
-      toIsoDate(filters.created_from) ?? null,
-      toIsoDate(filters.created_to) ?? null,
+      filters.search,
     ],
     queryFn: () =>
       fetchMembers({
         role: filters.role || undefined,
         diet: filters.diet || undefined,
-        created_from: toIsoDate(filters.created_from),
-        created_to: toIsoDate(filters.created_to),
+        search: filters.search || undefined,
       }),
     enabled: isAuthenticated,
   });
@@ -157,19 +157,26 @@ export function MembersPage() {
   });
 
   const handleSubmit = () => {
-    if (!formState.full_name || !formState.phone || !formState.email) {
-      notifications.show({ message: "Preencha nome, telefone e email.", color: "red" });
+    if (!formState.full_name) {
+      notifications.show({ message: "Preencha o nome.", color: "red" });
       return;
     }
-    if (!isValidEmail(formState.email)) {
+    if (formState.email && !isValidEmail(formState.email)) {
       notifications.show({ message: "Email inválido.", color: "red" });
       return;
     }
-    const phoneNormalized = normalizePhoneForSubmit(formState.phone);
-    if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
-      notifications.show({ message: "Telefone inválido. Use o formato internacional com código do país.", color: "red" });
-      return;
+    let phoneNormalized: string | undefined = undefined;
+    if (formState.phone) {
+      phoneNormalized = normalizePhoneForSubmit(formState.phone);
+      if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
+        notifications.show({
+          message: "Telefone inválido. Use o formato internacional com código do país.",
+          color: "red",
+        });
+        return;
+      }
     }
+
     const payload = { ...formState, phone: phoneNormalized };
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
@@ -203,8 +210,7 @@ export function MembersPage() {
     setFilters({
       role: null,
       diet: null,
-      created_from: null,
-      created_to: null,
+      search: "",
     });
 
   if (!isAuthenticated) {
@@ -222,22 +228,29 @@ export function MembersPage() {
     );
   }
 
-  if (isLoading) return <Text>Carregando...</Text>;
-  if (isError || !data) return <Text c="red">Erro ao carregar integrantes.</Text>;
+  const members = data ?? [];
 
   return (
     <Container size="xl" py="md">
       <Group mb="md">
         <IconUsers size={20} />
         <Title order={3}>Integrantes</Title>
+        {isLoading && <Text size="sm" c="dimmed">Carregando...</Text>}
+        {isError && <Text c="red" size="sm">Erro ao carregar integrantes.</Text>}
         <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
           Novo integrante
         </Button>
       </Group>
 
       <Group gap="sm" align="flex-end" mb="md">
+        <TextInput
+          label="Busca por nome"
+          value={filters.search}
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.currentTarget.value }))}
+          placeholder="Digite o nome"
+        />
         <Select
-          label="Função"
+          label="Categoria"
           data={[
             { value: "SUSTENTADOR", label: "Sustentador" },
             { value: "MENSALISTA", label: "Mensalista" },
@@ -262,57 +275,59 @@ export function MembersPage() {
             setFilters((prev) => ({ ...prev, diet: (val as Member["diet"] | null) ?? null }))
           }
         />
-        <DateInput
-          label="Cadastrado de"
-          value={filters.created_from}
-          onChange={(val) => setFilters((prev) => ({ ...prev, created_from: val }))}
-          valueFormat="DD/MM/YYYY"
-          locale="pt-br"
-        />
-        <DateInput
-          label="Cadastrado até"
-          value={filters.created_to}
-          onChange={(val) => setFilters((prev) => ({ ...prev, created_to: val }))}
-          valueFormat="DD/MM/YYYY"
-          locale="pt-br"
-        />
         <Button variant="outline" onClick={clearFilters}>
           Limpar
         </Button>
       </Group>
 
-      <ScrollArea>
-        <Table highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Nome</Table.Th>
-              <Table.Th>Telefone</Table.Th>
-              <Table.Th>Email</Table.Th>
-              <Table.Th>Função</Table.Th>
-              <Table.Th>Dieta</Table.Th>
-              <Table.Th>Origem</Table.Th>
-              <Table.Th>Cadastro</Table.Th>
-              <Table.Th>Obs</Table.Th>
-              <Table.Th ta="right">Ações</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.map((item) => (
+        <ScrollArea>
+          <Table highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Nome</Table.Th>
+                <Table.Th>Telefone</Table.Th>
+                <Table.Th>Categoria</Table.Th>
+                <Table.Th>Dieta</Table.Th>
+                <Table.Th ta="right">Ações</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+            {members.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{item.full_name}</Table.Td>
-                <Table.Td>{item.phone}</Table.Td>
-                <Table.Td>{item.email}</Table.Td>
+                <Table.Td>{formatPhoneDisplay(item.phone)}</Table.Td>
                 <Table.Td>
-                  <Badge color="blue">{roleLabels[item.role] || item.role}</Badge>
+                  <Badge
+                    color={
+                      item.role === "SUSTENTADOR"
+                        ? "indigo"
+                        : item.role === "MENSALISTA"
+                        ? "cyan"
+                        : "gray"
+                    }
+                  >
+                    {roleLabels[item.role] || item.role}
+                  </Badge>
                 </Table.Td>
                 <Table.Td>
-                  <Badge color="teal">{dietLabels[item.diet] || item.diet}</Badge>
+                  <Badge
+                    color={
+                      item.diet === "VEGANO" ? "green" : item.diet === "VEGETARIANO" ? "yellow" : "orange"
+                    }
+                  >
+                    {dietLabels[item.diet] || item.diet}
+                  </Badge>
                 </Table.Td>
-                <Table.Td>{item.heard_about}</Table.Td>
-                <Table.Td>{formatPtDate(item.created_at)}</Table.Td>
-                <Table.Td>{item.observations}</Table.Td>
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      onClick={() => setSelected(item)}
+                      aria-label="Ver detalhes"
+                    >
+                      <IconEye size={16} />
+                    </Button>
                     <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
                       <IconPencil size={16} />
                     </Button>
@@ -372,7 +387,7 @@ export function MembersPage() {
             onChange={(e) => setFormState((prev) => ({ ...prev, heard_about: e.currentTarget.value }))}
           />
           <Select
-            label="Função"
+            label="Categoria"
             data={[
               { value: "SUSTENTADOR", label: "Sustentador" },
               { value: "MENSALISTA", label: "Mensalista" },
@@ -404,6 +419,22 @@ export function MembersPage() {
             </Button>
           </Group>
         </div>
+      </Modal>
+
+      <Modal opened={!!selected} onClose={() => setSelected(null)} title="Dados do integrante">
+        {selected && (
+          <div className="flex flex-col gap-2">
+            <Text fw={600}>{selected.full_name}</Text>
+            <Text size="sm">Telefone: {formatPhoneDisplay(selected.phone)}</Text>
+            <Text size="sm">Email: {selected.email}</Text>
+            <Text size="sm">Endereço: {selected.address}</Text>
+            <Text size="sm">Origem: {selected.heard_about}</Text>
+            <Text size="sm">Categoria: {roleLabels[selected.role]}</Text>
+            <Text size="sm">Dieta: {dietLabels[selected.diet]}</Text>
+            <Text size="sm">Cadastro: {formatDateReadable(selected.created_at)}</Text>
+            {selected.observations ? <Text size="sm">Obs: {selected.observations}</Text> : null}
+          </div>
+        )}
       </Modal>
     </Container>
   );

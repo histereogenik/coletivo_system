@@ -32,12 +32,7 @@ class MemberSerializer(serializers.ModelSerializer):
                     "blank": "Nome não pode ficar em branco.",
                 }
             },
-            "email": {
-                "error_messages": {
-                    "required": "Campo obrigatório.",
-                    "invalid": "Informe um e-mail válido.",
-                }
-            },
+            "email": {"required": False, "allow_null": True, "allow_blank": True},
             "role": {
                 "error_messages": {
                     "required": "Campo obrigatório.",
@@ -59,6 +54,8 @@ class MemberSerializer(serializers.ModelSerializer):
         return cleaned
 
     def validate_email(self, value: str) -> str:
+        if value in (None, ""):
+            return value
         email = value.lower().strip()
         qs = Member.objects.filter(email__iexact=email)
         if self.instance:
@@ -70,8 +67,6 @@ class MemberSerializer(serializers.ModelSerializer):
     def validate_phone(self, value: str) -> str:
         if not value:
             return value
-
-        # Se começar com "+", assume formato internacional; caso contrário, tenta BR como padrão.
         region = None if value.strip().startswith("+") else "BR"
         try:
             parsed = phonenumbers.parse(value, region)
@@ -88,7 +83,6 @@ class MemberSerializer(serializers.ModelSerializer):
         return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
     def validate(self, attrs):
-        # Ensure role/diet provided; choices safeguard values but we confirm presence.
         for field in ("role", "diet"):
             if not attrs.get(field) and not getattr(self.instance, field, None):
                 raise serializers.ValidationError({field: "Este campo é obrigatório."})
