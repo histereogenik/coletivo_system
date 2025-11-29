@@ -30,7 +30,7 @@ export function DashboardPage() {
           icon={<IconCurrencyDollar size={20} />}
         />
         <SummaryCard
-          title="Membros"
+          title="Integrantes"
           value={`${data.members.total}`}
           subtitle={`Sustentadores ${data.members.sustentadores} • Mensalistas ${data.members.mensalistas} • Avulsos ${data.members.avulsos}`}
           icon={<IconUsers size={20} />}

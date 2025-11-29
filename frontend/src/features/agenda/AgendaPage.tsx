@@ -32,7 +32,7 @@ export function AgendaPage() {
               {entry.duty_name || `Função #${entry.duty}`}
             </Text>
             <Text size="sm" mt="xs">
-              Membros:{" "}
+              Integrantes:{" "}
               {entry.members && entry.members.length > 0
                 ? entry.members.map((m) => m.full_name).join(", ")
                 : "—"}

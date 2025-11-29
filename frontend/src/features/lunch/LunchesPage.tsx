@@ -164,15 +164,31 @@ export function LunchesPage() {
 
   const handleSubmit = () => {
     if (!formState.member || !valueReais || !dateValue || !formState.lunch_type) {
-      notifications.show({ message: "Preencha membro, valor, data e tipo.", color: "red" });
+      notifications.show({ message: "Preencha integrante, valor, data e tipo.", color: "red" });
       return;
     }
     const parsedValue = parseFloat(valueReais.replace(/\./g, "").replace(",", "."));
     const dateIso = toIsoDate(dateValue) || "";
+    const packageExpirationIso =
+      formState.package_expiration ||
+      (formState.lunch_type === "PACOTE" ? toIsoDate(formState.package_expiration as DateValue) : undefined);
+    if (formState.lunch_type === "PACOTE") {
+      if (!packageExpirationIso) {
+        notifications.show({ message: "Informe a validade do pacote.", color: "red" });
+        return;
+      }
+      const baseDate = parseIsoAsLocalDate(dateIso);
+      const expDate = parseIsoAsLocalDate(packageExpirationIso);
+      if (baseDate && expDate && expDate < baseDate) {
+        notifications.show({ message: "Validade do pacote não pode ser anterior à data do almoço.", color: "red" });
+        return;
+      }
+    }
     const payload: Partial<Lunch> = {
       ...formState,
       value_cents: Number.isNaN(parsedValue) ? 0 : Math.round(parsedValue * 100),
       date: dateIso,
+      package_expiration: packageExpirationIso ?? formState.package_expiration,
     };
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
@@ -210,7 +226,7 @@ export function LunchesPage() {
       package_expiration: item.package_expiration ?? undefined,
       package_status: item.package_status ?? undefined,
     });
-    setValueReais((item.value_cents / 100).toString());
+    setValueReais((item.value_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     setDateValue(parseIsoAsLocalDate(item.date));
     modalHandlers.open();
   };
@@ -264,7 +280,7 @@ export function LunchesPage() {
       </Group>
       <Group gap="sm" align="flex-end" mb="md">
         <Select
-          label="Membro"
+          label="Integrante"
           data={memberOptions}
           searchable
           clearable
@@ -315,7 +331,7 @@ export function LunchesPage() {
             <Table.Tr>
               <Table.Th>Data</Table.Th>
               <Table.Th>Tipo</Table.Th>
-              <Table.Th>Membro</Table.Th>
+              <Table.Th>Integrante</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th ta="right">Valor</Table.Th>
               <Table.Th ta="right">Ações</Table.Th>
@@ -384,10 +400,10 @@ export function LunchesPage() {
       >
         <div className="flex flex-col gap-3">
           <Select
-            label="Membro"
+            label="Integrante"
             data={memberOptions}
             searchable
-            nothingFoundMessage="Nenhum membro"
+            nothingFoundMessage="Nenhum Integrante"
             value={formState.member ? formState.member.toString() : null}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
           />
@@ -433,11 +449,11 @@ export function LunchesPage() {
               />
               <DateInput
                 label="Validade do pacote"
-                value={formState.package_expiration ? new Date(formState.package_expiration) : null}
+                value={formState.package_expiration ? parseIsoAsLocalDate(formState.package_expiration) : null}
                 onChange={(val) =>
                   setFormState((prev) => ({
                     ...prev,
-                    package_expiration: val ? new Date(val).toISOString().slice(0, 10) : undefined,
+                    package_expiration: val ? toIsoDate(val) : undefined,
                   }))
                 }
                 valueFormat="DD/MM/YYYY"
