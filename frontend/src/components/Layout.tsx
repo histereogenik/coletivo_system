@@ -12,6 +12,7 @@ const navItems = [
   { label: "Agenda", to: "/agenda" },
   { label: "Financeiro", to: "/financeiro" },
   { label: "Almoços", to: "/lunches" },
+  { label: "Integrantes", to: "/integrantes" },
 ];
 
 export function Layout({ children }: LayoutProps) {
