@@ -228,7 +228,7 @@ export function MembersPage() {
     );
   }
 
-  const members = data ?? [];
+  const members = data ? [...data].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")) : [];
 
   return (
     <Container size="xl" py="md">

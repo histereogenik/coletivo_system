@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconSoup, IconCheck, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -274,7 +274,7 @@ export function LunchesPage() {
       <Group mb="md">
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
-        <Button onClick={openNew} ml="auto">
+        <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
           Novo almoço
         </Button>
       </Group>
