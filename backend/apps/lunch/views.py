@@ -41,6 +41,13 @@ class LunchViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(lunch)
         return Response(serializer.data)
 
+    def perform_destroy(self, instance):
+        # remove o lançamento financeiro vinculado ao almoço para manter o financeiro consistente
+        entry = getattr(instance, "financial_entry", None)
+        if entry:
+            entry.delete()
+        super().perform_destroy(instance)
+
     @action(detail=True, methods=["post"], url_path="increment")
     def increment(self, request, pk=None):
         lunch = self.get_object()
