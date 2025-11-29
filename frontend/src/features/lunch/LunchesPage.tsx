@@ -74,7 +74,7 @@ export function LunchesPage() {
     lunch_type: "AVULSO",
     payment_status: "EM_ABERTO",
   });
-  const [valueReais, setValueReais] = useState<string>("0");
+  const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
   const [filters, setFilters] = useState<{
     member: string | null;
@@ -209,7 +209,7 @@ export function LunchesPage() {
       package_expiration: undefined,
       package_status: undefined,
     });
-    setValueReais("0");
+    setValueReais("");
     setDateValue(new Date());
     modalHandlers.open();
   };
