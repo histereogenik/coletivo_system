@@ -12,9 +12,11 @@ def set_auth_cookies(response: Response, access: str, refresh: str | None = None
         "secure": settings.AUTH_COOKIE_SECURE,
         "samesite": settings.AUTH_COOKIE_SAMESITE,
     }
-    response.set_cookie("access_token", access, **cookie_params)
+    access_max_age = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
+    response.set_cookie("access_token", access, max_age=access_max_age, **cookie_params)
     if refresh:
-        response.set_cookie("refresh_token", refresh, **cookie_params)
+        refresh_max_age = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
+        response.set_cookie("refresh_token", refresh, max_age=refresh_max_age, **cookie_params)
 
 
 def clear_auth_cookies(response: Response):
@@ -42,9 +44,10 @@ class CookieTokenRefreshView(TokenRefreshView):
         serializer = self.get_serializer(data={"refresh": refresh_token})
         serializer.is_valid(raise_exception=True)
         access = serializer.validated_data.get("access")
+        new_refresh = serializer.validated_data.get("refresh") or refresh_token
         response = Response(serializer.validated_data, status=status.HTTP_200_OK)
         if access:
-            set_auth_cookies(response, access, refresh_token)
+            set_auth_cookies(response, access, new_refresh)
         return response
 
 
