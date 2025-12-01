@@ -21,6 +21,7 @@ class LunchSerializer(serializers.ModelSerializer):
             "date",
             "lunch_type",
             "payment_status",
+            "payment_mode",
             "quantity",
             "remaining_quantity",
             "package_expiration",

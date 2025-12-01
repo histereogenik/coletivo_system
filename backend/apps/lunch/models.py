@@ -13,6 +13,11 @@ class Lunch(models.Model):
         PAGO = "PAGO", "Pago"
         EM_ABERTO = "EM_ABERTO", "Em aberto"
 
+    class PaymentMode(models.TextChoices):
+        PIX = "PIX", "Pix"
+        CARTAO = "CARTAO", "Cartao"
+        DINHEIRO = "DINHEIRO", "Dinheiro"
+
     class PackageStatus(models.TextChoices):
         EXPIRADO = "EXPIRADO", "Expirado"
         VALIDO = "VALIDO", "Válido"
@@ -22,6 +27,11 @@ class Lunch(models.Model):
     date = models.DateField()
     lunch_type = models.CharField(max_length=10, choices=LunchType.choices)
     payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices)
+    payment_mode = models.CharField(
+        max_length=10,
+        choices=PaymentMode.choices,
+        default=PaymentMode.PIX,
+    )
     quantity = models.PositiveIntegerField(null=True, blank=True)
     remaining_quantity = models.PositiveIntegerField(null=True, blank=True)
     package_expiration = models.DateField(null=True, blank=True)
@@ -38,11 +48,11 @@ class Lunch(models.Model):
         if self.lunch_type == self.LunchType.PACOTE:
             missing = {}
             if not self.quantity:
-                missing["quantity"] = "Quantidade é obrigatória para pacote."
+                missing["quantity"] = "Quantidade eh obrigatoria para pacote."
             if not self.package_expiration:
-                missing["package_expiration"] = "Validade do pacote é obrigatória."
+                missing["package_expiration"] = "Validade do pacote eh obrigatoria."
             if not self.package_status:
-                missing["package_status"] = "Status do pacote é obrigatório."
+                missing["package_status"] = "Status do pacote eh obrigatorio."
             if self.remaining_quantity is None:
                 self.remaining_quantity = self.quantity
             if (
@@ -51,7 +61,7 @@ class Lunch(models.Model):
                 and self.remaining_quantity > self.quantity
             ):
                 missing["remaining_quantity"] = (
-                    "Saldo de refeições não pode exceder a quantidade do pacote."
+                    "Saldo de refeicoes nao pode exceder a quantidade do pacote."
                 )
             if missing:
                 raise ValidationError(missing)

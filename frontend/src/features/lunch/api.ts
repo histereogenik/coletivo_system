@@ -12,6 +12,7 @@ export type Lunch = {
   remaining_quantity?: number | null;
   package_expiration?: string | null;
   package_status?: string | null;
+  payment_mode?: string | null;
 };
 
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {

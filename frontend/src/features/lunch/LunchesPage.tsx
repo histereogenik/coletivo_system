@@ -58,6 +58,12 @@ const paymentLabels: Record<string, string> = {
   EM_ABERTO: "Em aberto",
 };
 
+const paymentModeLabels: Record<string, string> = {
+  PIX: "Pix",
+  CARTAO: "Cartão",
+  DINHEIRO: "Dinheiro",
+};
+
 const typeLabels: Record<string, string> = {
   AVULSO: "Avulso",
   PACOTE: "Pacote",
@@ -74,6 +80,7 @@ export function LunchesPage() {
     date: new Date().toISOString().slice(0, 10),
     lunch_type: "AVULSO",
     payment_status: "EM_ABERTO",
+    payment_mode: "PIX",
   });
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
@@ -210,6 +217,7 @@ export function LunchesPage() {
       date: new Date().toISOString().slice(0, 10),
       lunch_type: "AVULSO",
       payment_status: "EM_ABERTO",
+      payment_mode: "PIX",
       quantity: undefined,
       package_expiration: undefined,
       package_status: undefined,
@@ -227,6 +235,7 @@ export function LunchesPage() {
       date: item.date,
       lunch_type: item.lunch_type,
       payment_status: item.payment_status,
+      payment_mode: item.payment_mode ?? "PIX",
       quantity: item.quantity ?? undefined,
       package_expiration: item.package_expiration ?? undefined,
       package_status: item.package_status ?? undefined,
@@ -361,6 +370,7 @@ export function LunchesPage() {
               <Table.Th>Tipo</Table.Th>
               <Table.Th>Integrante</Table.Th>
               <Table.Th>Status</Table.Th>
+              <Table.Th>Pagamento</Table.Th>
               <Table.Th ta="right">Valor</Table.Th>
               <Table.Th ta="right">Ações</Table.Th>
             </Table.Tr>
@@ -380,6 +390,7 @@ export function LunchesPage() {
                     {paymentLabels[item.payment_status] || item.payment_status}
                   </Badge>
                 </Table.Td>
+                <Table.Td>{paymentModeLabels[item.payment_mode || ""] || "—"}</Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end">
@@ -470,6 +481,16 @@ export function LunchesPage() {
             ]}
             value={formState.payment_status}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
+          />
+          <Select
+            label="Modo de pagamento"
+            data={[
+              { value: "PIX", label: "Pix" },
+              { value: "CARTAO", label: "Cartão" },
+              { value: "DINHEIRO", label: "Dinheiro" },
+            ]}
+            value={formState.payment_mode}
+            onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           {formState.lunch_type === "PACOTE" && (
             <>
