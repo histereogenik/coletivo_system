@@ -12,6 +12,7 @@ export type Lunch = {
   remaining_quantity?: number | null;
   package_expiration?: string | null;
   package_status?: string | null;
+  payment_mode?: string | null;
 };
 
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {
@@ -38,4 +39,14 @@ export async function updateLunch(id: number, payload: Partial<Lunch>) {
 
 export async function deleteLunch(id: number) {
   await api.delete(`/api/lunch/lunches/${id}/`);
+}
+
+export async function decrementLunch(id: number, amount = 1) {
+  const { data } = await api.post<Lunch>(`/api/lunch/lunches/${id}/decrement/`, { amount });
+  return data;
+}
+
+export async function incrementLunch(id: number, amount = 1) {
+  const { data } = await api.post<Lunch>(`/api/lunch/lunches/${id}/increment/`, { amount });
+  return data;
 }

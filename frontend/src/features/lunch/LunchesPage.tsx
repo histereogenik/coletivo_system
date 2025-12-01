@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus } from "@tabler/icons-react";
+import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus, IconMinus } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import "dayjs/locale/pt-br";
-import { createLunch, deleteLunch, fetchLunches, markLunchPaid, updateLunch, Lunch } from "./api";
+import {
+  createLunch,
+  deleteLunch,
+  fetchLunches,
+  markLunchPaid,
+  updateLunch,
+  decrementLunch,
+  incrementLunch,
+  Lunch,
+} from "./api";
 import { fetchMembers, MemberOption } from "./membersApi";
 
 const toIsoDate = (val: DateValue) => {
@@ -58,6 +67,12 @@ const paymentLabels: Record<string, string> = {
   EM_ABERTO: "Em aberto",
 };
 
+const paymentModeLabels: Record<string, string> = {
+  PIX: "Pix",
+  CARTAO: "Cartão",
+  DINHEIRO: "Dinheiro",
+};
+
 const typeLabels: Record<string, string> = {
   AVULSO: "Avulso",
   PACOTE: "Pacote",
@@ -74,6 +89,7 @@ export function LunchesPage() {
     date: new Date().toISOString().slice(0, 10),
     lunch_type: "AVULSO",
     payment_status: "EM_ABERTO",
+    payment_mode: "PIX",
   });
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
@@ -167,6 +183,44 @@ export function LunchesPage() {
     onError: () => notifications.show({ message: "Erro ao remover almoço.", color: "red" }),
   });
 
+  const decrementMutation = useMutation({
+    mutationFn: ({ id, amount }: { id: number; amount: number }) => decrementLunch(id, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      notifications.show({ message: "Pacote atualizado.", color: "green" });
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: unknown } })?.response?.data;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
+          ? (detail as { detail: string }).detail
+          : JSON.stringify(detail || "Erro ao atualizar pacote.");
+      notifications.show({ message: msg, color: "red" });
+    },
+  });
+
+  const incrementMutation = useMutation({
+    mutationFn: ({ id, amount }: { id: number; amount: number }) => incrementLunch(id, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      notifications.show({ message: "Pacote ajustado.", color: "green" });
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: unknown } })?.response?.data;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
+          ? (detail as { detail: string }).detail
+          : JSON.stringify(detail || "Erro ao ajustar pacote.");
+      notifications.show({ message: msg, color: "red" });
+    },
+  });
+
   const handleSubmit = () => {
     if (!formState.member || !valueReais || !dateValue || !formState.lunch_type) {
       notifications.show({ message: "Preencha integrante, valor, data e tipo.", color: "red" });
@@ -210,6 +264,7 @@ export function LunchesPage() {
       date: new Date().toISOString().slice(0, 10),
       lunch_type: "AVULSO",
       payment_status: "EM_ABERTO",
+      payment_mode: "PIX",
       quantity: undefined,
       package_expiration: undefined,
       package_status: undefined,
@@ -227,6 +282,7 @@ export function LunchesPage() {
       date: item.date,
       lunch_type: item.lunch_type,
       payment_status: item.payment_status,
+      payment_mode: item.payment_mode ?? "PIX",
       quantity: item.quantity ?? undefined,
       package_expiration: item.package_expiration ?? undefined,
       package_status: item.package_status ?? undefined,
@@ -361,6 +417,7 @@ export function LunchesPage() {
               <Table.Th>Tipo</Table.Th>
               <Table.Th>Integrante</Table.Th>
               <Table.Th>Status</Table.Th>
+              <Table.Th>Pagamento</Table.Th>
               <Table.Th ta="right">Valor</Table.Th>
               <Table.Th ta="right">Ações</Table.Th>
             </Table.Tr>
@@ -380,9 +437,36 @@ export function LunchesPage() {
                     {paymentLabels[item.payment_status] || item.payment_status}
                   </Badge>
                 </Table.Td>
+                <Table.Td>{paymentModeLabels[item.payment_mode || ""] || "—"}</Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end">
+                    {item.lunch_type === "PACOTE" && (
+                      <Group gap="xs" align="center">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="orange"
+                          onClick={() => decrementMutation.mutate({ id: item.id, amount: 1 })}
+                          loading={decrementMutation.isPending}
+                          aria-label="Deduzir 1"
+                        >
+                          -1
+                        </Button>
+                        <Text size="xs" fw={600} miw={72} ta="center">
+                          {`${item.remaining_quantity ?? 0}/${item.quantity ?? 0}`}
+                        </Text>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => incrementMutation.mutate({ id: item.id, amount: 1 })}
+                          loading={incrementMutation.isPending}
+                          aria-label="Adicionar 1"
+                        >
+                          +1
+                        </Button>
+                      </Group>
+                    )}
                     {canMarkPaid(item) && (
                       <Tooltip label="Marcar pago">
                         <Button
@@ -470,6 +554,16 @@ export function LunchesPage() {
             ]}
             value={formState.payment_status}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
+          />
+          <Select
+            label="Modo de pagamento"
+            data={[
+              { value: "PIX", label: "Pix" },
+              { value: "CARTAO", label: "Cartão" },
+              { value: "DINHEIRO", label: "Dinheiro" },
+            ]}
+            value={formState.payment_mode}
+            onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           {formState.lunch_type === "PACOTE" && (
             <>
