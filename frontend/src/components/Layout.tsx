@@ -17,7 +17,7 @@ const navItems = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const [opened, { toggle }] = useDisclosure();
+  const [opened, { toggle, close }] = useDisclosure();
   const isMobile = useMediaQuery("(max-width: 640px)");
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
@@ -72,6 +72,7 @@ export function Layout({ children }: LayoutProps) {
                 className={`rounded px-3 py-2 text-sm font-medium ${
                   active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"
                 }`}
+                onClick={close}
               >
                 {item.label}
               </Link>
