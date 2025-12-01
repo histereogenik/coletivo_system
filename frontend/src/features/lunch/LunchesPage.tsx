@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus } from "@tabler/icons-react";
+import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus, IconMinus } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import "dayjs/locale/pt-br";
-import { createLunch, deleteLunch, fetchLunches, markLunchPaid, updateLunch, Lunch } from "./api";
+import {
+  createLunch,
+  deleteLunch,
+  fetchLunches,
+  markLunchPaid,
+  updateLunch,
+  decrementLunch,
+  incrementLunch,
+  Lunch,
+} from "./api";
 import { fetchMembers, MemberOption } from "./membersApi";
 
 const toIsoDate = (val: DateValue) => {
@@ -172,6 +181,44 @@ export function LunchesPage() {
       notifications.show({ message: "Almoço removido.", color: "green" });
     },
     onError: () => notifications.show({ message: "Erro ao remover almoço.", color: "red" }),
+  });
+
+  const decrementMutation = useMutation({
+    mutationFn: ({ id, amount }: { id: number; amount: number }) => decrementLunch(id, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      notifications.show({ message: "Pacote atualizado.", color: "green" });
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: unknown } })?.response?.data;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
+          ? (detail as { detail: string }).detail
+          : JSON.stringify(detail || "Erro ao atualizar pacote.");
+      notifications.show({ message: msg, color: "red" });
+    },
+  });
+
+  const incrementMutation = useMutation({
+    mutationFn: ({ id, amount }: { id: number; amount: number }) => incrementLunch(id, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lunches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      notifications.show({ message: "Pacote ajustado.", color: "green" });
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: unknown } })?.response?.data;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
+          ? (detail as { detail: string }).detail
+          : JSON.stringify(detail || "Erro ao ajustar pacote.");
+      notifications.show({ message: msg, color: "red" });
+    },
   });
 
   const handleSubmit = () => {
@@ -394,6 +441,32 @@ export function LunchesPage() {
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end">
+                    {item.lunch_type === "PACOTE" && (
+                      <Group gap="xs" align="center">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="orange"
+                          onClick={() => decrementMutation.mutate({ id: item.id, amount: 1 })}
+                          loading={decrementMutation.isPending}
+                          aria-label="Deduzir 1"
+                        >
+                          -1
+                        </Button>
+                        <Text size="xs" fw={600} miw={72} ta="center">
+                          {`${item.remaining_quantity ?? 0}/${item.quantity ?? 0}`}
+                        </Text>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => incrementMutation.mutate({ id: item.id, amount: 1 })}
+                          loading={incrementMutation.isPending}
+                          aria-label="Adicionar 1"
+                        >
+                          +1
+                        </Button>
+                      </Group>
+                    )}
                     {canMarkPaid(item) && (
                       <Tooltip label="Marcar pago">
                         <Button

@@ -40,3 +40,13 @@ export async function updateLunch(id: number, payload: Partial<Lunch>) {
 export async function deleteLunch(id: number) {
   await api.delete(`/api/lunch/lunches/${id}/`);
 }
+
+export async function decrementLunch(id: number, amount = 1) {
+  const { data } = await api.post<Lunch>(`/api/lunch/lunches/${id}/decrement/`, { amount });
+  return data;
+}
+
+export async function incrementLunch(id: number, amount = 1) {
+  const { data } = await api.post<Lunch>(`/api/lunch/lunches/${id}/increment/`, { amount });
+  return data;
+}
