@@ -1,5 +1,5 @@
 import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,6 +18,7 @@ const navItems = [
 
 export function Layout({ children }: LayoutProps) {
   const [opened, { toggle }] = useDisclosure();
+  const isMobile = useMediaQuery("(max-width: 640px)");
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
 
@@ -32,23 +33,27 @@ export function Layout({ children }: LayoutProps) {
       padding="md"
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group gap="sm">
+        <Group h="100%" px="md" justify="space-between" gap="sm" wrap="wrap">
+          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={3}>Coletivo Dashboard</Title>
+            <Title order={isMobile ? 4 : 3} lineClamp={1}>
+              Coletivo Dashboard
+            </Title>
           </Group>
-          <Group gap="sm">
+          <Group gap={isMobile ? "xs" : "sm"} wrap="wrap">
             {isAuthenticated ? (
               <>
-                <Text size="sm" c="dimmed">
-                  Logado
-                </Text>
-                <Button variant="light" onClick={logout}>
+                {!isMobile && (
+                  <Text size="sm" c="dimmed">
+                    Logado
+                  </Text>
+                )}
+                <Button variant="light" size={isMobile ? "xs" : "sm"} onClick={logout} miw={72}>
                   Sair
                 </Button>
               </>
             ) : (
-              <Button component={Link} to="/login" variant="light">
+              <Button component={Link} to="/login" variant="light" size={isMobile ? "xs" : "sm"} miw={72}>
                 Entrar
               </Button>
             )}
