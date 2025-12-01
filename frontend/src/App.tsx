@@ -13,6 +13,7 @@ import { FinancialPage } from "./features/financial/FinancialPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { LunchesPage } from "./features/lunch/LunchesPage";
 import { MembersPage } from "./features/members/MembersPage";
+import { DutiesPage } from "./features/duties/DutiesPage";
 import { queryClient } from "./shared/queryClient";
 import { theme } from "./shared/theme";
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/financeiro" element={<FinancialPage />} />
             <Route path="/lunches" element={<LunchesPage />} />
             <Route path="/integrantes" element={<MembersPage />} />
+            <Route path="/funcoes" element={<DutiesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Text>Página não encontrada.</Text>} />
           </Routes>
