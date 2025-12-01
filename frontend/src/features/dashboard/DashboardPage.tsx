@@ -1,7 +1,9 @@
-import { Card, Container, SimpleGrid, Text, Title } from "@mantine/core";
-import { IconChartBar, IconCurrencyDollar, IconUsers } from "@tabler/icons-react";
+import { Button, Card, Container, SimpleGrid, Text, Title } from "@mantine/core";
+import { IconChartBar, IconCurrencyDollar, IconSoup, IconUsers, IconUserPlus } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { SummaryCard } from "../../components/SummaryCard";
+import { useAuth } from "../../context/AuthContext";
 import { fetchDashboardSummary } from "./api";
 
 function useDashboardSummary() {
@@ -13,6 +15,7 @@ function useDashboardSummary() {
 
 export function DashboardPage() {
   const { data, isLoading, isError } = useDashboardSummary();
+  const { isAuthenticated } = useAuth();
 
   if (isLoading) return <Text>Carregando...</Text>;
   if (isError || !data) return <Text c="red">Erro ao carregar dashboard.</Text>;
@@ -22,6 +25,38 @@ export function DashboardPage() {
 
   return (
     <Container size="xl" py="md">
+      {isAuthenticated && (
+        <SimpleGrid cols={2} spacing="md" mb="md">
+          <Button
+            component={Link}
+            to="/integrantes?novo=1"
+            leftSection={<IconUserPlus size={18} />}
+            fullWidth
+            size="lg"
+            color="indigo"
+            radius="md"
+            variant="gradient"
+            gradient={{ from: "indigo", to: "cyan" }}
+            style={{ height: "100%" }}
+          >
+            + Novo integrante
+          </Button>
+          <Button
+            component={Link}
+            to="/lunches?novo=1"
+            leftSection={<IconSoup size={18} />}
+            fullWidth
+            size="lg"
+            color="teal"
+            radius="md"
+            variant="gradient"
+            gradient={{ from: "teal", to: "green" }}
+            style={{ height: "100%" }}
+          >
+            + Novo almoço
+          </Button>
+        </SimpleGrid>
+      )}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="md">
         <SummaryCard
           title="Balanço mensal"
