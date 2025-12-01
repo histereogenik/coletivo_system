@@ -1,3 +1,4 @@
+import django_filters
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,17 +8,20 @@ from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
 
 
+class LunchFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
+    date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+
+    class Meta:
+        model = Lunch
+        fields = ["payment_status", "date", "member", "package_status", "lunch_type"]
+
+
 class LunchViewSet(viewsets.ModelViewSet):
     queryset = Lunch.objects.select_related("member").order_by("-date", "-created_at")
     serializer_class = LunchSerializer
     permission_classes = [SuperuserOnly]
-    filterset_fields = [
-        "payment_status",
-        "date",
-        "member",
-        "package_status",
-        "lunch_type",
-    ]
+    filterset_class = LunchFilter
 
     @action(detail=True, methods=["post"], url_path="decrement")
     def decrement(self, request, pk=None):
@@ -36,6 +40,13 @@ class LunchViewSet(viewsets.ModelViewSet):
         lunch.save(update_fields=["remaining_quantity", "updated_at"])
         serializer = self.get_serializer(lunch)
         return Response(serializer.data)
+
+    def perform_destroy(self, instance):
+        # remove o lançamento financeiro vinculado ao almoço para manter o financeiro consistente
+        entry = getattr(instance, "financial_entry", None)
+        if entry:
+            entry.delete()
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=["post"], url_path="increment")
     def increment(self, request, pk=None):

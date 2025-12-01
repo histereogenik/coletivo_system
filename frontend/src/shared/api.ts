@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8001",
@@ -11,12 +11,35 @@ api.interceptors.request.use((config) => {
 
 let isRefreshing = false;
 let pendingRequests: Array<() => void> = [];
+const logoutAndClear = async () => {
+  try {
+    await api.post("/api/auth/logout/", {}, { withCredentials: true });
+  } catch {
+    // ignore logout errors
+  }
+  sessionStorage.removeItem("hasAuth");
+  pendingRequests = [];
+  isRefreshing = false;
+};
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const hasAuth = sessionStorage.getItem("hasAuth");
+    const code = error.response?.data?.code;
+    const method = originalRequest?.method?.toLowerCase();
+
+    // If token is explicitly invalid, logout and retry GETs as public
+    if (error.response?.status === 401 && code === "token_not_valid") {
+      await logoutAndClear();
+      if (method === "get") {
+        return api(originalRequest);
+      }
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && hasAuth && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve) => {
           pendingRequests.push(() => {
@@ -32,14 +55,8 @@ api.interceptors.response.use(
         pendingRequests = [];
         return api(originalRequest);
       } catch (refreshErr) {
-        // Clear cookies server-side and retry GETs without auth to allow public access
-        try {
-          await api.post("/api/auth/logout/", {}, { withCredentials: true });
-        } catch (_) {
-          // ignore logout errors
-        }
-        pendingRequests = [];
-        if (originalRequest.method?.toLowerCase() === "get") {
+        await logoutAndClear();
+        if (method === "get") {
           return api(originalRequest);
         }
         return Promise.reject(refreshErr);

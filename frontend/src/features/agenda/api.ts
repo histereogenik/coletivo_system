@@ -16,3 +16,20 @@ export async function fetchAgenda(params?: Record<string, string | number | unde
   const { data } = await api.get<AgendaEntry[]>("/api/agenda/entries/", { params });
   return data;
 }
+
+export async function createAgendaEntry(payload: Partial<AgendaEntry> & { member_ids?: number[] }) {
+  const { data } = await api.post<AgendaEntry>("/api/agenda/entries/", payload);
+  return data;
+}
+
+export async function updateAgendaEntry(
+  id: number,
+  payload: Partial<AgendaEntry> & { member_ids?: number[] }
+) {
+  const { data } = await api.patch<AgendaEntry>(`/api/agenda/entries/${id}/`, payload);
+  return data;
+}
+
+export async function deleteAgendaEntry(id: number) {
+  await api.delete(`/api/agenda/entries/${id}/`);
+}
