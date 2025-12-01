@@ -12,6 +12,7 @@ import {
   Title,
   TextInput,
   Tooltip,
+  Pagination,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
@@ -91,6 +92,8 @@ export function LunchesPage() {
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -245,6 +248,17 @@ export function LunchesPage() {
     }
   }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
+  const dataLength = data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters.member, filters.payment_status, filters.lunch_type, filters.date_from, filters.date_to, dataLength]);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   if (!isAuthenticated) {
     return (
       <Container size="xl" py="md">
@@ -352,7 +366,7 @@ export function LunchesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.map((item) => (
+            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -407,6 +421,11 @@ export function LunchesPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
+      {data.length > 0 && (
+        <Group justify="center" mt="md">
+          <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+        </Group>
+      )}
       <Modal
         opened={modalOpened}
         onClose={modalHandlers.close}

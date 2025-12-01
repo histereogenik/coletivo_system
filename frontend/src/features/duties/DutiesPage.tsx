@@ -4,6 +4,7 @@ import {
   Group,
   Modal,
   MultiSelect,
+  Pagination,
   Table,
   Text,
   TextInput,
@@ -13,7 +14,7 @@ import { IconTools, IconPlus, IconPencil, IconTrash } from "@tabler/icons-react"
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchMembers } from "../lunch/membersApi";
 import { createDuty, deleteDuty, fetchDuties, updateDuty, type Duty } from "./api";
@@ -28,6 +29,8 @@ export function DutiesPage() {
     remuneration_cents: 0,
     member_ids: [],
   });
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const dutiesQuery = useQuery({
     queryKey: ["duties"],
@@ -118,6 +121,21 @@ export function DutiesPage() {
     }
   };
 
+  const duties = dutiesQuery.data ?? [];
+  const dutiesLength = duties.length;
+  const totalPages = Math.max(1, Math.ceil(dutiesLength / pageSize));
+
+  useEffect(() => {
+    setPage(1);
+  }, [dutiesLength]);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const visibleDuties = duties.slice((page - 1) * pageSize, page * pageSize);
+
+
   if (!isAuthenticated) {
     return (
       <Container size="xl" py="md">
@@ -129,8 +147,6 @@ export function DutiesPage() {
       </Container>
     );
   }
-
-  const duties = dutiesQuery.data ?? [];
 
   return (
     <Container size="xl" py="md">
@@ -157,7 +173,7 @@ export function DutiesPage() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {duties.map((duty) => (
+          {visibleDuties.map((duty) => (
             <Table.Tr key={duty.id}>
               <Table.Td>{duty.name}</Table.Td>
               <Table.Td>
@@ -192,6 +208,11 @@ export function DutiesPage() {
           ))}
         </Table.Tbody>
       </Table>
+      {duties.length > 0 && (
+        <Group justify="center" mt="md">
+          <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+        </Group>
+      )}
 
       <Modal opened={modalOpened} onClose={modalHandlers.close} title={editing ? "Editar função" : "Nova função"}>
         <div className="flex flex-col gap-3">

@@ -4,6 +4,7 @@ import {
   Container,
   Group,
   Modal,
+  Pagination,
   ScrollArea,
   Select,
   Table,
@@ -103,6 +104,8 @@ export function MembersPage() {
   const [selected, setSelected] = useState<Member | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -227,6 +230,17 @@ export function MembersPage() {
     }
   }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
+  const membersLength = data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(membersLength / pageSize));
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters.role, filters.diet, filters.search]);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   if (!isAuthenticated) {
     return (
       <Container size="xl" py="md">
@@ -243,6 +257,7 @@ export function MembersPage() {
   }
 
   const members = data ? [...data].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")) : [];
+  const visibleMembers = members.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <Container size="xl" py="md">
@@ -306,7 +321,7 @@ export function MembersPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-            {members.map((item) => (
+            {visibleMembers.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{item.full_name}</Table.Td>
                 <Table.Td>{formatPhoneDisplay(item.phone)}</Table.Td>
@@ -362,6 +377,12 @@ export function MembersPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
+
+      {members.length > 0 && (
+        <Group justify="center" mt="md">
+          <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+        </Group>
+      )}
 
       <Modal
         opened={modalOpened}
