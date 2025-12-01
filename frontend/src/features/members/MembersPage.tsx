@@ -105,7 +105,7 @@ export function MembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [

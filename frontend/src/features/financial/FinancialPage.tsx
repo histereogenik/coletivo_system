@@ -4,6 +4,7 @@ import {
   Container,
   Group,
   Modal,
+  Pagination,
   ScrollArea,
   Select,
   Table,
@@ -16,7 +17,7 @@ import { IconCurrencyDollar, IconPencil, IconPlus, IconTrash } from "@tabler/ico
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import {
   createFinancialEntry,
@@ -83,6 +84,8 @@ export function FinancialPage() {
   });
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const [filters, setFilters] = useState<{
     entry_type: "ENTRADA" | "SAIDA" | null;
     category: string | null;
@@ -146,6 +149,17 @@ export function FinancialPage() {
     },
     onError: () => notifications.show({ message: "Erro ao remover lançamento.", color: "red" }),
   });
+
+  const dataLength = data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters.entry_type, filters.category, filters.date_from, filters.date_to, dataLength]);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const handleSubmit = () => {
     if (!formState.entry_type || !formState.category || !valueReais || !dateValue) {
@@ -280,7 +294,7 @@ export function FinancialPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.map((item) => (
+            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -315,6 +329,11 @@ export function FinancialPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
+      {data.length > 0 && (
+        <Group justify="center" mt="md">
+          <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+        </Group>
+      )}
 
       <Modal
         opened={modalOpened}

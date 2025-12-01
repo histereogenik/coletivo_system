@@ -30,7 +30,7 @@ export function DutiesPage() {
     member_ids: [],
   });
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   const dutiesQuery = useQuery({
     queryKey: ["duties"],
