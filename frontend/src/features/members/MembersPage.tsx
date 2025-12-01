@@ -15,8 +15,8 @@ import { IconUsers, IconPencil, IconPlus, IconTrash, IconEye } from "@tabler/ico
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { createMember, deleteMember, fetchMembers, updateMember, type Member } from "./api";
 
@@ -101,6 +101,8 @@ export function MembersPage() {
     search: "",
   });
   const [selected, setSelected] = useState<Member | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processedNovoRef = useRef(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -185,7 +187,7 @@ export function MembersPage() {
     }
   };
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     setEditing(null);
     setFormState({
       full_name: "",
@@ -198,7 +200,7 @@ export function MembersPage() {
       observations: "",
     });
     modalHandlers.open();
-  };
+  }, [modalHandlers]);
 
   const openEdit = (item: Member) => {
     setEditing(item);
@@ -212,6 +214,18 @@ export function MembersPage() {
       diet: null,
       search: "",
     });
+
+  useEffect(() => {
+    if (processedNovoRef.current) return;
+    if (!isAuthenticated) return;
+    if (searchParams.get("novo") === "1") {
+      processedNovoRef.current = true;
+      openNew();
+      const next = new URLSearchParams(searchParams);
+      next.delete("novo");
+      setSearchParams(next, { replace: true });
+    }
+  }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
   if (!isAuthenticated) {
     return (

@@ -35,11 +35,10 @@ export function DashboardPage() {
             size="lg"
             color="indigo"
             radius="md"
-            variant="gradient"
-            gradient={{ from: "indigo", to: "cyan" }}
-            style={{ height: "100%" }}
+            variant="filled"
+            style={{ height: "135.391px", justifyContent: "center", whiteSpace: "normal", lineHeight: 1.2 }}
           >
-            + Novo integrante
+            <span style={{ display: "block", textAlign: "center" }}>+ Novo integrante</span>
           </Button>
           <Button
             component={Link}
@@ -49,11 +48,10 @@ export function DashboardPage() {
             size="lg"
             color="teal"
             radius="md"
-            variant="gradient"
-            gradient={{ from: "teal", to: "green" }}
-            style={{ height: "100%" }}
+            variant="filled"
+            style={{ height: "135.391px", justifyContent: "center", whiteSpace: "normal", lineHeight: 1.2 }}
           >
-            + Novo almoço
+            <span style={{ display: "block", textAlign: "center" }}>+ Novo almo?o</span>
           </Button>
         </SimpleGrid>
       )}

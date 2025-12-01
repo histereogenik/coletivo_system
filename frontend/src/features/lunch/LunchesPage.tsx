@@ -19,8 +19,8 @@ import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus } from "@tabler/ic
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import "dayjs/locale/pt-br";
 import { createLunch, deleteLunch, fetchLunches, markLunchPaid, updateLunch, Lunch } from "./api";
@@ -89,6 +89,8 @@ export function LunchesPage() {
     date_from: null,
     date_to: null,
   });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processedNovoRef = useRef(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -197,7 +199,7 @@ export function LunchesPage() {
     }
   };
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     setEditing(null);
     setFormState({
       member: undefined,
@@ -212,7 +214,7 @@ export function LunchesPage() {
     setValueReais("");
     setDateValue(new Date());
     modalHandlers.open();
-  };
+  }, [modalHandlers]);
 
   const openEdit = (item: Lunch) => {
     setEditing(item);
@@ -230,6 +232,18 @@ export function LunchesPage() {
     setDateValue(parseIsoAsLocalDate(item.date));
     modalHandlers.open();
   };
+
+  useEffect(() => {
+    if (processedNovoRef.current) return;
+    if (!isAuthenticated) return;
+    if (searchParams.get("novo") === "1") {
+      processedNovoRef.current = true;
+      openNew();
+      const next = new URLSearchParams(searchParams);
+      next.delete("novo");
+      setSearchParams(next, { replace: true });
+    }
+  }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
   if (!isAuthenticated) {
     return (
