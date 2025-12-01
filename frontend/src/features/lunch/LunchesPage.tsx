@@ -275,7 +275,7 @@ export function LunchesPage() {
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
         <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo almoço
+          Novo
         </Button>
       </Group>
       <Group gap="sm" align="flex-end" mb="md">

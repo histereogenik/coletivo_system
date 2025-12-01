@@ -238,7 +238,7 @@ export function MembersPage() {
         {isLoading && <Text size="sm" c="dimmed">Carregando...</Text>}
         {isError && <Text c="red" size="sm">Erro ao carregar integrantes.</Text>}
         <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo integrante
+          Novo
         </Button>
       </Group>
 

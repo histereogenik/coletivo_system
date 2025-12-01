@@ -1,5 +1,5 @@
 import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
-import { DateInput, type DateValue } from "@mantine/dates";
+import { DateInput, TimeInput, type DateValue } from "@mantine/dates";
 import { IconCalendar, IconPlus } from "@tabler/icons-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -38,6 +38,34 @@ const parseIsoAsLocalDate = (value?: string | null) => {
 };
 
 export function AgendaPage() {
+  const calendarToolbarStyles = `
+    .agenda-calendar .fc-toolbar {
+      gap: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .agenda-calendar .fc-toolbar {
+        flex-wrap: wrap;
+      }
+
+      .agenda-calendar .fc-toolbar-chunk {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .agenda-calendar .fc-toolbar-chunk:nth-child(1) {
+        order: 1;
+      }
+
+      .agenda-calendar .fc-toolbar-chunk:nth-child(2) {
+        order: 2;
+      }
+
+      .agenda-calendar .fc-toolbar-chunk:nth-child(3) {
+        order: 3;
+      }
+    }
+  `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
@@ -223,6 +251,7 @@ export function AgendaPage() {
 
   return (
     <Container size="xl" py="md">
+      <style>{calendarToolbarStyles}</style>
       <Group mb="md" justify="space-between">
         <Group>
           <IconCalendar size={20} />
@@ -230,32 +259,34 @@ export function AgendaPage() {
         </Group>
         {isAuthenticated && (
           <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-            Novo registro
+            Novo
           </Button>
         )}
       </Group>
 
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        locale="pt-br"
-        height="auto"
-        selectable={isAuthenticated}
-        selectMirror
-        events={events}
-        select={isAuthenticated ? handleSelect : undefined}
-        eventClick={isAuthenticated ? handleEventClick : undefined}
-        datesSet={handleDatesSet}
-        nowIndicator
-        slotMinTime="07:00:00"
-        slotMaxTime="22:00:00"
-        eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
-      />
+      <div className="agenda-calendar">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          locale="pt-br"
+          height="auto"
+          selectable={isAuthenticated}
+          selectMirror
+          events={events}
+          select={isAuthenticated ? handleSelect : undefined}
+          eventClick={isAuthenticated ? handleEventClick : undefined}
+          datesSet={handleDatesSet}
+          nowIndicator
+          slotMinTime="07:00:00"
+          slotMaxTime="22:00:00"
+          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+        />
+      </div>
 
       <Modal
         opened={modalOpened}
@@ -274,15 +305,22 @@ export function AgendaPage() {
             locale="pt-br"
           />
           <Group grow>
-            <TextInput
-              label="Início (HH:MM)"
+            <TimeInput
+              label="Início"
               value={formState.start_time ?? ""}
-              onChange={(e) => setFormState((prev) => ({ ...prev, start_time: e.currentTarget.value }))}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, start_time: event.currentTarget.value || "" }))
+              }
+              withSeconds={false}
+              placeholder="09:00"
             />
-            <TextInput
-              label="Término (HH:MM)"
+            <TimeInput
+              label="Término"
               value={formState.end_time ?? ""}
-              onChange={(e) => setFormState((prev) => ({ ...prev, end_time: e.currentTarget.value }))}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, end_time: event.currentTarget.value || "" }))
+              }
+              withSeconds={false}
               placeholder="Opcional"
             />
           </Group>

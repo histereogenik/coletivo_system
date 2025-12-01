@@ -220,7 +220,7 @@ export function FinancialPage() {
         <Title order={3}>Financeiro</Title>
         {isAuthenticated && (
           <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-            Novo lançamento
+            Novo
           </Button>
         )}
       </Group>

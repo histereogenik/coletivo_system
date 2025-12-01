@@ -140,7 +140,7 @@ export function DutiesPage() {
           <Title order={3}>Funções</Title>
         </Group>
         <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-          Nova função
+          Nova
         </Button>
       </Group>
 
