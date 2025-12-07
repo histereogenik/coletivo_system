@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { extractErrorMessage } from "../../shared/errors";
 import { createMember, deleteMember, fetchMembers, updateMember, type Member } from "./api";
 
 const roleLabels: Record<Member["role"], string> = {
@@ -66,35 +67,6 @@ const normalizePhoneForSubmit = (value: string) => {
   const digits = value.replace(/[^\d]/g, "");
   if (!digits) return "";
   return digits.startsWith("+") ? digits : `+${digits}`;
-};
-
-const extractErrorMessage = (err: unknown, fallback: string) => {
-  const detail = (err as { response?: { data?: unknown } })?.response?.data;
-  if (Array.isArray(detail)) {
-    const msgs = detail.filter((v): v is string => typeof v === "string");
-    if (msgs.length) return msgs.join(" ");
-  }
-  if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object") {
-    if ("detail" in detail && typeof (detail as { detail?: unknown }).detail === "string") {
-      return (detail as { detail: string }).detail;
-    }
-    const parts: string[] = [];
-    Object.values(detail as Record<string, unknown>).forEach((val) => {
-      if (typeof val === "string") parts.push(val);
-      else if (Array.isArray(val)) {
-        const inner = val.filter((v): v is string => typeof v === "string");
-        if (inner.length) parts.push(inner.join(" "));
-      }
-    });
-    if (parts.length) return parts.join(" ");
-    try {
-      return JSON.stringify(detail);
-    } catch {
-      /* ignore stringify errors */
-    }
-  }
-  return fallback;
 };
 
 const formatDateReadable = (value?: string | null) => {

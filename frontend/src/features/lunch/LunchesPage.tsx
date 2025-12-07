@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
   createLunch,
@@ -76,16 +77,6 @@ const paymentModeLabels: Record<string, string> = {
 const typeLabels: Record<string, string> = {
   AVULSO: "Avulso",
   PACOTE: "Pacote",
-};
-
-const extractErrorMessage = (err: unknown, fallback: string) => {
-  const detail = (err as { response?: { data?: unknown } })?.response?.data;
-  if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object" && "detail" in detail) {
-    const d = (detail as { detail?: unknown }).detail;
-    if (typeof d === "string") return d;
-  }
-  return fallback;
 };
 
 export function LunchesPage() {
