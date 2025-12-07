@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus, IconMinus } from "@tabler/icons-react";
+import { IconSoup, IconCheck, IconPencil, IconTrash, IconPlus } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -78,7 +78,36 @@ const typeLabels: Record<string, string> = {
   PACOTE: "Pacote",
 };
 
+const extractErrorMessage = (err: unknown, fallback: string) => {
+  const detail = (err as { response?: { data?: unknown } })?.response?.data;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && "detail" in detail) {
+    const d = (detail as { detail?: unknown }).detail;
+    if (typeof d === "string") return d;
+  }
+  return fallback;
+};
+
 export function LunchesPage() {
+  const actionResponsiveStyles = `
+    .lunch-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .lunch-actions .lunch-actions-block {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .lunch-actions .lunch-actions-block {
+        flex: 1 1 50%;
+        justify-content: flex-start;
+      }
+    }
+  `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
@@ -191,13 +220,7 @@ export function LunchesPage() {
       notifications.show({ message: "Pacote atualizado.", color: "green" });
     },
     onError: (err: unknown) => {
-      const detail = (err as { response?: { data?: unknown } })?.response?.data;
-      const msg =
-        typeof detail === "string"
-          ? detail
-          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
-          ? (detail as { detail: string }).detail
-          : JSON.stringify(detail || "Erro ao atualizar pacote.");
+      const msg = extractErrorMessage(err, "Erro ao atualizar pacote.");
       notifications.show({ message: msg, color: "red" });
     },
   });
@@ -210,13 +233,7 @@ export function LunchesPage() {
       notifications.show({ message: "Pacote ajustado.", color: "green" });
     },
     onError: (err: unknown) => {
-      const detail = (err as { response?: { data?: unknown } })?.response?.data;
-      const msg =
-        typeof detail === "string"
-          ? detail
-          : typeof detail === "object" && detail && "detail" in detail && typeof (detail as any).detail === "string"
-          ? (detail as { detail: string }).detail
-          : JSON.stringify(detail || "Erro ao ajustar pacote.");
+      const msg = extractErrorMessage(err, "Erro ao ajustar pacote.");
       notifications.show({ message: msg, color: "red" });
     },
   });
@@ -355,6 +372,7 @@ export function LunchesPage() {
 
   return (
     <Container size="xl" py="md">
+      <style>{actionResponsiveStyles}</style>
       <Group mb="md">
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
@@ -440,9 +458,9 @@ export function LunchesPage() {
                 <Table.Td>{paymentModeLabels[item.payment_mode || ""] || "—"}</Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
-                  <Group gap="xs" justify="flex-end">
+                  <div className="lunch-actions">
                     {item.lunch_type === "PACOTE" && (
-                      <Group gap="xs" align="center">
+                      <div className="lunch-actions-block">
                         <Button
                           size="xs"
                           variant="light"
@@ -465,40 +483,42 @@ export function LunchesPage() {
                         >
                           +1
                         </Button>
-                      </Group>
+                      </div>
                     )}
-                    {canMarkPaid(item) && (
-                      <Tooltip label="Marcar pago">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          loading={mutation.isPending && mutation.variables === item.id}
-                          onClick={() => mutation.mutate(item.id)}
-                          leftSection={<IconCheck size={16} />}
-                          aria-label="Marcar pago"
-                        >
-                          PG
+                    <div className="lunch-actions-block" style={{ justifyContent: "flex-end" }}>
+                      {canMarkPaid(item) && (
+                        <Tooltip label="Marcar pago">
+                          <Button
+                            size="xs"
+                            variant="light"
+                            loading={mutation.isPending && mutation.variables === item.id}
+                            onClick={() => mutation.mutate(item.id)}
+                            leftSection={<IconCheck size={16} />}
+                            aria-label="Marcar pago"
+                          >
+                            PG
+                          </Button>
+                        </Tooltip>
+                      )}
+                      <Tooltip label="Editar">
+                        <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                          <IconPencil size={16} />
                         </Button>
                       </Tooltip>
-                    )}
-                    <Tooltip label="Editar">
-                      <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
-                        <IconPencil size={16} />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip label="Remover">
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        color="red"
-                        loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                        onClick={() => deleteMutation.mutate(item.id)}
-                        aria-label="Remover"
-                      >
-                        <IconTrash size={16} />
-                      </Button>
-                    </Tooltip>
-                  </Group>
+                      <Tooltip label="Remover">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          color="red"
+                          loading={deleteMutation.isPending && deleteMutation.variables === item.id}
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          aria-label="Remover"
+                        >
+                          <IconTrash size={16} />
+                        </Button>
+                      </Tooltip>
+                    </div>
+                  </div>
                 </Table.Td>
               </Table.Tr>
             ))}

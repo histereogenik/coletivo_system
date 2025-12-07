@@ -68,6 +68,35 @@ const normalizePhoneForSubmit = (value: string) => {
   return digits.startsWith("+") ? digits : `+${digits}`;
 };
 
+const extractErrorMessage = (err: unknown, fallback: string) => {
+  const detail = (err as { response?: { data?: unknown } })?.response?.data;
+  if (Array.isArray(detail)) {
+    const msgs = detail.filter((v): v is string => typeof v === "string");
+    if (msgs.length) return msgs.join(" ");
+  }
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object") {
+    if ("detail" in detail && typeof (detail as { detail?: unknown }).detail === "string") {
+      return (detail as { detail: string }).detail;
+    }
+    const parts: string[] = [];
+    Object.values(detail as Record<string, unknown>).forEach((val) => {
+      if (typeof val === "string") parts.push(val);
+      else if (Array.isArray(val)) {
+        const inner = val.filter((v): v is string => typeof v === "string");
+        if (inner.length) parts.push(inner.join(" "));
+      }
+    });
+    if (parts.length) return parts.join(" ");
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      /* ignore stringify errors */
+    }
+  }
+  return fallback;
+};
+
 const formatDateReadable = (value?: string | null) => {
   if (!value) return "—";
   const d = new Date(value);
@@ -136,7 +165,7 @@ export function MembersPage() {
       notifications.show({ message: "Integrante criado.", color: "green" });
       modalHandlers.close();
     },
-    onError: () => notifications.show({ message: "Erro ao criar integrante.", color: "red" }),
+    onError: (err: unknown) => notifications.show({ message: extractErrorMessage(err, "Erro ao criar integrante."), color: "red" }),
   });
 
   const updateMutation = useMutation({
@@ -148,7 +177,7 @@ export function MembersPage() {
       notifications.show({ message: "Integrante atualizado.", color: "green" });
       modalHandlers.close();
     },
-    onError: () => notifications.show({ message: "Erro ao atualizar integrante.", color: "red" }),
+    onError: (err: unknown) => notifications.show({ message: extractErrorMessage(err, "Erro ao atualizar integrante."), color: "red" }),
   });
 
   const deleteMutation = useMutation({
@@ -158,7 +187,7 @@ export function MembersPage() {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       notifications.show({ message: "Integrante removido.", color: "green" });
     },
-    onError: () => notifications.show({ message: "Erro ao remover integrante.", color: "red" }),
+    onError: (err: unknown) => notifications.show({ message: extractErrorMessage(err, "Erro ao remover integrante."), color: "red" }),
   });
 
   const handleSubmit = () => {
