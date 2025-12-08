@@ -82,22 +82,19 @@ const typeLabels: Record<string, string> = {
 export function LunchesPage() {
   const actionResponsiveStyles = `
     .lunch-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-    .lunch-actions .lunch-actions-block {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    @media (max-width: 640px) {
-      .lunch-actions .lunch-actions-block {
-        flex: 1 1 50%;
-        justify-content: flex-start;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: center;
+        overflow-x: auto;
       }
-    }
+    .lunch-actions .lunch-actions-block {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: nowrap;
+      }
   `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
