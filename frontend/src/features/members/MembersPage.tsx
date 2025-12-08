@@ -319,20 +319,22 @@ export function MembersPage() {
         </Button>
       </Group>
 
-        <ScrollArea>
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nome</Table.Th>
-                <Table.Th>Telefone</Table.Th>
-                <Table.Th>Categoria</Table.Th>
-                <Table.Th>Dieta</Table.Th>
-                <Table.Th ta="right">Ações</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-            {visibleMembers.map((item) => (
-              <Table.Tr key={item.id}>
+      <ScrollArea>
+        <Table highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ minWidth: 160 }}>Nome</Table.Th>
+              <Table.Th style={{ minWidth: 160 }}>Telefone</Table.Th>
+              <Table.Th style={{ minWidth: 120 }}>Categoria</Table.Th>
+              <Table.Th style={{ minWidth: 120 }}>Dieta</Table.Th>
+              <Table.Th style={{ minWidth: 180 }} ta="right">
+                Ações
+              </Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+        <Table.Tbody>
+        {visibleMembers.map((item) => (
+          <Table.Tr key={item.id}>
                 <Table.Td>{item.full_name}</Table.Td>
                 <Table.Td>{formatPhoneDisplay(item.phone)}</Table.Td>
                 <Table.Td>

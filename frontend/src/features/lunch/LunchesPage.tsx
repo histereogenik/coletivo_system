@@ -1,4 +1,4 @@
-import {
+﻿import {
   Badge,
   Button,
   Container,
@@ -422,13 +422,17 @@ export function LunchesPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Data</Table.Th>
-              <Table.Th>Tipo</Table.Th>
-              <Table.Th>Integrante</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Pagamento</Table.Th>
-              <Table.Th ta="right">Valor</Table.Th>
-              <Table.Th ta="right">Ações</Table.Th>
+              <Table.Th style={{ minWidth: 110 }}>Data</Table.Th>
+              <Table.Th style={{ minWidth: 110 }}>Tipo</Table.Th>
+              <Table.Th style={{ minWidth: 160 }}>Integrante</Table.Th>
+              <Table.Th style={{ minWidth: 120 }}>Status</Table.Th>
+              <Table.Th style={{ minWidth: 120 }}>Pagamento</Table.Th>
+              <Table.Th style={{ minWidth: 110 }} ta="right">
+                Valor
+              </Table.Th>
+              <Table.Th style={{ minWidth: 160 }} ta="right">
+                Ações
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -620,3 +624,9 @@ export function LunchesPage() {
     </Container>
   );
 }
+
+
+
+
+
+

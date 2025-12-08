@@ -1,4 +1,4 @@
-import {
+﻿import {
   Badge,
   Button,
   Container,
@@ -285,12 +285,18 @@ export function FinancialPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Data</Table.Th>
-              <Table.Th>Tipo</Table.Th>
-              <Table.Th>Categoria</Table.Th>
-              <Table.Th>Descrição</Table.Th>
-              <Table.Th ta="right">Valor</Table.Th>
-              {isAuthenticated && <Table.Th ta="right">Ações</Table.Th>}
+              <Table.Th style={{ minWidth: 110 }}>Data</Table.Th>
+              <Table.Th style={{ minWidth: 110 }}>Tipo</Table.Th>
+              <Table.Th style={{ minWidth: 140 }}>Categoria</Table.Th>
+              <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
+              <Table.Th style={{ minWidth: 120 }} ta="right">
+                Valor
+              </Table.Th>
+              {isAuthenticated && (
+                <Table.Th style={{ minWidth: 140 }} ta="right">
+                  Ações
+                </Table.Th>
+              )}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -389,3 +395,5 @@ export function FinancialPage() {
     </Container>
   );
 }
+
+

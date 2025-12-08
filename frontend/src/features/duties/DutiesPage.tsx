@@ -166,10 +166,12 @@ export function DutiesPage() {
       <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Nome</Table.Th>
-            <Table.Th>Remuneração</Table.Th>
-            <Table.Th>Integrantes</Table.Th>
-            <Table.Th ta="right">Ações</Table.Th>
+            <Table.Th style={{ minWidth: 180 }}>Nome</Table.Th>
+            <Table.Th style={{ minWidth: 140 }}>Remuneração</Table.Th>
+            <Table.Th style={{ minWidth: 180 }}>Integrantes</Table.Th>
+            <Table.Th style={{ minWidth: 140 }} ta="right">
+              Ações
+            </Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
