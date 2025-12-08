@@ -37,6 +37,7 @@ const dietLabels: Record<Member["diet"], string> = {
 const formatPhone = (value: string) => {
   // Mantém apenas dígitos e o sinal de +
   const digits = value.replace(/[^\d+]/g, "");
+  if (!digits.replace(/\D/g, "")) return "";
   // Formata de forma simples para visualização (+CC DDDDD DDDD)
   const cleaned = digits.startsWith("+") ? digits.slice(1) : digits;
   const withPlus = digits.startsWith("+");
@@ -46,6 +47,7 @@ const formatPhone = (value: string) => {
   if (cleaned.length > 4) parts.push(cleaned.slice(4, 9)); // prefixo
   if (cleaned.length > 9) parts.push(cleaned.slice(9, 13)); // sufixo
   const formatted = parts.filter(Boolean).join(" ");
+  if (!formatted.trim()) return "";
   return (withPlus ? "+" : "+") + formatted.trim();
 };
 
@@ -167,14 +169,17 @@ export function MembersPage() {
       notifications.show({ message: "Preencha o nome.", color: "red" });
       return;
     }
-    if (formState.email && !isValidEmail(formState.email)) {
+    const trimmedEmail = formState.email?.trim() || "";
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       notifications.show({ message: "Email inválido.", color: "red" });
       return;
     }
     let phoneNormalized: string | undefined = undefined;
     if (formState.phone) {
       phoneNormalized = normalizePhoneForSubmit(formState.phone);
-      if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
+      if (phoneNormalized === "+") {
+        phoneNormalized = undefined;
+      } else if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
         notifications.show({
           message: "Telefone inválido. Use o formato internacional com código do país.",
           color: "red",
@@ -183,7 +188,11 @@ export function MembersPage() {
       }
     }
 
-    const payload = { ...formState, phone: phoneNormalized };
+    const payload: Partial<Member> = {
+      ...formState,
+      phone: phoneNormalized,
+      email: trimmedEmail || undefined,
+    };
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
     } else {
