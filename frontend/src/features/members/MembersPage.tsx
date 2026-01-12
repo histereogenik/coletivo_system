@@ -7,6 +7,7 @@ import {
   Pagination,
   ScrollArea,
   Select,
+  Switch,
   Table,
   Text,
   TextInput,
@@ -22,7 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import { extractErrorMessage } from "../../shared/errors";
 import { createMember, deleteMember, fetchMembers, updateMember, type Member } from "./api";
 
-const roleLabels: Record<Member["role"], string> = {
+const roleLabels: Record<Exclude<Member["role"], null | undefined>, string> = {
   SUSTENTADOR: "Sustentador",
   MENSALISTA: "Mensalista",
   AVULSO: "Avulso",
@@ -51,7 +52,7 @@ const formatPhone = (value: string) => {
   return (withPlus ? "+" : "+") + formatted.trim();
 };
 
-const formatPhoneDisplay = (value?: string) => {
+const formatPhoneDisplay = (value?: string | null) => {
   if (!value) return "";
   const digits = value.replace(/[^\d]/g, "");
   if (digits.length < 10) return value;
@@ -87,6 +88,8 @@ export function MembersPage() {
   const [editing, setEditing] = useState<Member | null>(null);
   const [formState, setFormState] = useState<Partial<Member>>({
     full_name: "",
+    is_child: false,
+    responsible: undefined,
     phone: "",
     email: "",
     address: "",
@@ -170,28 +173,34 @@ export function MembersPage() {
       return;
     }
     const trimmedEmail = formState.email?.trim() || "";
-    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
-      notifications.show({ message: "Email inválido.", color: "red" });
-      return;
-    }
     let phoneNormalized: string | undefined = undefined;
-    if (formState.phone) {
-      phoneNormalized = normalizePhoneForSubmit(formState.phone);
-      if (phoneNormalized === "+") {
-        phoneNormalized = undefined;
-      } else if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
-        notifications.show({
-          message: "Telefone inválido. Use o formato internacional com código do país.",
-          color: "red",
-        });
+
+    if (!formState.is_child) {
+      if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+        notifications.show({ message: "Email inválido.", color: "red" });
         return;
+      }
+      if (formState.phone) {
+        phoneNormalized = normalizePhoneForSubmit(formState.phone);
+        if (phoneNormalized === "+") {
+          phoneNormalized = undefined;
+        } else if (!phoneNormalized.startsWith("+") || phoneNormalized.length < 10) {
+          notifications.show({
+            message: "Telefone inválido. Use o formato internacional com código do país.",
+            color: "red",
+          });
+          return;
+        }
       }
     }
 
     const payload: Partial<Member> = {
       ...formState,
-      phone: phoneNormalized,
-      email: trimmedEmail || undefined,
+      phone: formState.is_child ? undefined : phoneNormalized,
+      email: formState.is_child ? undefined : trimmedEmail || undefined,
+      heard_about: formState.is_child ? undefined : formState.heard_about,
+      role: formState.is_child ? null : formState.role,
+      responsible: formState.is_child ? formState.responsible : undefined,
     };
     if (editing) {
       updateMutation.mutate({ id: editing.id, payload });
@@ -204,6 +213,8 @@ export function MembersPage() {
     setEditing(null);
     setFormState({
       full_name: "",
+      is_child: false,
+      responsible: undefined,
       phone: "",
       email: "",
       address: "",
@@ -217,7 +228,15 @@ export function MembersPage() {
 
   const openEdit = (item: Member) => {
     setEditing(item);
-    setFormState({ ...item });
+    setFormState({
+      ...item,
+      is_child: item.is_child ?? false,
+      responsible: item.responsible ?? undefined,
+      phone: item.phone ?? "",
+      email: item.email ?? "",
+      heard_about: item.heard_about ?? "",
+      role: item.is_child ? null : item.role ?? "AVULSO",
+    });
     modalHandlers.open();
   };
 
@@ -268,6 +287,9 @@ export function MembersPage() {
 
   const members = data ? [...data].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")) : [];
   const visibleMembers = members.slice((page - 1) * pageSize, page * pageSize);
+  const responsibleOptions = members
+    .filter((m) => !m.is_child && (!editing || m.id !== editing.id))
+    .map((m) => ({ value: m.id.toString(), label: m.full_name }));
 
   return (
     <Container size="xl" py="md">
@@ -325,7 +347,7 @@ export function MembersPage() {
             <Table.Tr>
               <Table.Th style={{ minWidth: 160 }}>Nome</Table.Th>
               <Table.Th style={{ minWidth: 160 }}>Telefone</Table.Th>
-              <Table.Th style={{ minWidth: 120 }}>Categoria</Table.Th>
+              <Table.Th style={{ minWidth: 160 }}>Categoria</Table.Th>
               <Table.Th style={{ minWidth: 120 }}>Dieta</Table.Th>
               <Table.Th style={{ minWidth: 180 }} ta="right">
                 Ações
@@ -336,19 +358,32 @@ export function MembersPage() {
         {visibleMembers.map((item) => (
           <Table.Tr key={item.id}>
                 <Table.Td>{item.full_name}</Table.Td>
-                <Table.Td>{formatPhoneDisplay(item.phone)}</Table.Td>
                 <Table.Td>
-                  <Badge
-                    color={
-                      item.role === "SUSTENTADOR"
-                        ? "indigo"
-                        : item.role === "MENSALISTA"
-                        ? "cyan"
-                        : "gray"
-                    }
-                  >
-                    {roleLabels[item.role] || item.role}
-                  </Badge>
+                  {formatPhoneDisplay(item.phone)}
+                  {item.responsible_name ? (
+                    <Text size="xs" c="dimmed">
+                      Resp.: {item.responsible_name}
+                    </Text>
+                  ) : null}
+                </Table.Td>
+                <Table.Td>
+                  {item.is_child ? (
+                    <div className="flex flex-col gap-1">
+                      <Badge color="pink">Criança</Badge>
+                    </div>
+                  ) : (
+                    <Badge
+                      color={
+                        item.role === "SUSTENTADOR"
+                          ? "indigo"
+                          : item.role === "MENSALISTA"
+                          ? "cyan"
+                          : "gray"
+                      }
+                    >
+                      {item.role ? roleLabels[item.role] || item.role : "Sem categoria"}
+                    </Badge>
+                  )}
                 </Table.Td>
                 <Table.Td>
                   <Badge
@@ -407,32 +442,66 @@ export function MembersPage() {
             value={formState.full_name ?? ""}
             onChange={(e) => setFormState((prev) => ({ ...prev, full_name: e.currentTarget.value }))}
           />
-          <TextInput
-            label="Telefone"
-            value={formState.phone ?? ""}
-            onChange={(e) =>
+          <Switch
+            label="Criança"
+            checked={!!formState.is_child}
+            onChange={(e) => {
+              const next = e.currentTarget.checked;
               setFormState((prev) => ({
                 ...prev,
-                phone: formatPhone(e.currentTarget.value),
-              }))
-            }
-            placeholder="+55 11 98888-7777"
+                is_child: next,
+                responsible: next ? prev.responsible : undefined,
+                email: next ? "" : prev.email ?? "",
+                phone: next ? "" : prev.phone ?? "",
+                heard_about: next ? "" : prev.heard_about ?? "",
+                role: next ? null : prev.role ?? "AVULSO",
+              }));
+            }}
           />
-          <TextInput
-            label="Email"
-            value={formState.email ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, email: e.currentTarget.value }))}
-          />
-          <TextInput
-            label="Endereço"
-            value={formState.address ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, address: e.currentTarget.value }))}
-          />
-          <TextInput
-            label="Como conheceu?"
-            value={formState.heard_about ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, heard_about: e.currentTarget.value }))}
-          />
+          {formState.is_child ? (
+            <Select
+              label="Responsável"
+              data={responsibleOptions}
+              placeholder="Selecione o responsável"
+              value={formState.responsible ? String(formState.responsible) : undefined}
+              onChange={(val) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  responsible: val ? Number(val) : undefined,
+                }))
+              }
+            />
+          ) : null}
+          {!formState.is_child && (
+            <>
+              <TextInput
+                label="Telefone"
+                value={formState.phone ?? ""}
+                onChange={(e) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    phone: formatPhone(e.currentTarget.value),
+                  }))
+                }
+                placeholder="+55 11 98888-7777"
+              />
+              <TextInput
+                label="Email"
+                value={formState.email ?? ""}
+                onChange={(e) => setFormState((prev) => ({ ...prev, email: e.currentTarget.value }))}
+              />
+              <TextInput
+                label="Endereço"
+                value={formState.address ?? ""}
+                onChange={(e) => setFormState((prev) => ({ ...prev, address: e.currentTarget.value }))}
+              />
+              <TextInput
+                label="Como conheceu?"
+                value={formState.heard_about ?? ""}
+                onChange={(e) => setFormState((prev) => ({ ...prev, heard_about: e.currentTarget.value }))}
+              />
+            </>
+          )}
           <Select
             label="Categoria"
             data={[
@@ -476,7 +545,9 @@ export function MembersPage() {
             <Text size="sm">Email: {selected.email}</Text>
             <Text size="sm">Endereço: {selected.address}</Text>
             <Text size="sm">Origem: {selected.heard_about}</Text>
-            <Text size="sm">Categoria: {roleLabels[selected.role]}</Text>
+            <Text size="sm">
+              Categoria: {selected.role ? roleLabels[selected.role] || selected.role : "Sem categoria"}
+            </Text>
             <Text size="sm">Dieta: {dietLabels[selected.diet]}</Text>
             <Text size="sm">Cadastro: {formatDateReadable(selected.created_at)}</Text>
             {selected.observations ? <Text size="sm">Obs: {selected.observations}</Text> : null}
@@ -486,3 +557,4 @@ export function MembersPage() {
     </Container>
   );
 }
+

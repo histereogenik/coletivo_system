@@ -3,11 +3,14 @@ import { api } from "../../shared/api";
 export type Member = {
   id: number;
   full_name: string;
-  phone: string;
-  email: string;
+  is_child: boolean;
+  responsible?: number | null;
+  responsible_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
   address: string;
   heard_about: string;
-  role: "SUSTENTADOR" | "MENSALISTA" | "AVULSO";
+  role: "SUSTENTADOR" | "MENSALISTA" | "AVULSO" | null;
   diet: "VEGANO" | "VEGETARIANO" | "CARNIVORO";
   observations?: string;
   created_at?: string;
