@@ -1,4 +1,4 @@
-import { MantineProvider, Text } from "@mantine/core";
+﻿import { MantineProvider, Text } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
@@ -12,6 +12,7 @@ import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { FinancialPage } from "./features/financial/FinancialPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { LunchesPage } from "./features/lunch/LunchesPage";
+import { PackagesPage } from "./features/lunch/PackagesPage";
 import { MembersPage } from "./features/members/MembersPage";
 import { DutiesPage } from "./features/duties/DutiesPage";
 import { queryClient } from "./shared/queryClient";
@@ -27,7 +28,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/financeiro" element={<FinancialPage />} />
-            <Route path="/lunches" element={<LunchesPage />} />
+            <Route path="/lunches" element={<LunchesPage />} />\n            <Route path="/pacotes" element={<PackagesPage />} />
             <Route path="/integrantes" element={<MembersPage />} />
             <Route path="/funcoes" element={<DutiesPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -40,3 +41,5 @@ function App() {
 }
 
 export default App;
+
+
