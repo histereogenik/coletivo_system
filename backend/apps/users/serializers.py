@@ -1,6 +1,7 @@
 ﻿import re
 
 import phonenumbers
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.users.models import Member
@@ -10,6 +11,7 @@ PHONE_REGEX = re.compile(r"^[0-9+().\-\s]{7,20}$")
 
 class MemberSerializer(serializers.ModelSerializer):
     responsible_name = serializers.SerializerMethodField(read_only=True)
+    has_package = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Member
@@ -26,6 +28,7 @@ class MemberSerializer(serializers.ModelSerializer):
             "role",
             "diet",
             "observations",
+            "has_package",
             "created_at",
             "updated_at",
         ]
@@ -93,6 +96,16 @@ class MemberSerializer(serializers.ModelSerializer):
 
     def get_responsible_name(self, obj: Member):
         return obj.responsible.full_name if obj.responsible else None
+
+    def get_has_package(self, obj: Member) -> bool:
+        from apps.lunch.models import Package
+
+        today = timezone.localdate()
+        return obj.packages.filter(
+            remaining_quantity__gt=0,
+            status=Package.PackageStatus.VALIDO,
+            expiration__gte=today,
+        ).exists()
 
     def validate(self, attrs):
         is_child = attrs.get("is_child", getattr(self.instance, "is_child", False))

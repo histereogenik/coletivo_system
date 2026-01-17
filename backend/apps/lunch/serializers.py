@@ -1,4 +1,5 @@
 ﻿from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.common.roles import promote_role
@@ -29,11 +30,14 @@ class PackageSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-        extra_kwargs = {"remaining_quantity": {"required": False}}
+        extra_kwargs = {
+            "remaining_quantity": {"required": False},
+            "status": {"required": False},
+        }
 
     def validate_value_cents(self, value):
         if value < 0:
-            raise serializers.ValidationError("Valor deve ser maior que zero.")
+            raise serializers.ValidationError("Valor deve ser maior ou igual a zero.")
         return value
 
     def validate(self, attrs):
@@ -52,17 +56,12 @@ class PackageSerializer(serializers.ModelSerializer):
             if "expiration" in attrs
             else getattr(self.instance, "expiration", None)
         )
-        status = (
-            attrs.get("status") if "status" in attrs else getattr(self.instance, "status", None)
-        )
 
         errors = {}
         if not quantity:
             errors["quantity"] = "Quantidade é obrigatória para pacote."
         if not expiration:
             errors["expiration"] = "Validade do pacote é obrigatória."
-        if not status:
-            errors["status"] = "Status do pacote é obrigatório."
         if remaining_quantity is None:
             remaining_quantity = quantity
         if (
@@ -76,13 +75,63 @@ class PackageSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
+        if expiration:
+            today = timezone.localdate()
+            attrs["status"] = (
+                Package.PackageStatus.EXPIRADO
+                if expiration < today
+                else Package.PackageStatus.VALIDO
+            )
+
         attrs["remaining_quantity"] = remaining_quantity
         return attrs
 
     def create(self, validated_data):
         instance = super().create(validated_data)
         promote_role(instance.member, Member.Role.MENSALISTA)
+        self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
         return instance
+
+    def update(self, instance, validated_data):
+        prev_status = instance.payment_status
+        prev_value = instance.value_cents
+        prev_date = instance.date
+        instance = super().update(instance, validated_data)
+        self._sync_financial_entry(
+            instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date
+        )
+        return instance
+
+    def _sync_financial_entry(self, instance, prev_status, prev_value, prev_date):
+        entry = getattr(instance, "financial_entry", None)
+        is_paid_now = instance.payment_status == Package.PaymentStatus.PAGO
+        was_paid = prev_status == Package.PaymentStatus.PAGO
+
+        if is_paid_now and instance.value_cents > 0:
+            description = f"Pagamento pacote - {instance.member.full_name} - {instance.date}"
+            if entry:
+                if (
+                    (prev_value != instance.value_cents)
+                    or (prev_date != instance.date)
+                    or (entry.description != description)
+                ):
+                    entry.value_cents = instance.value_cents
+                    entry.date = instance.date
+                    entry.description = description
+                    entry.entry_type = FinancialEntry.EntryType.ENTRADA
+                    entry.category = FinancialEntry.EntryCategory.ALMOCO
+                    entry.save()
+            else:
+                FinancialEntry.objects.create(
+                    entry_type=FinancialEntry.EntryType.ENTRADA,
+                    category=FinancialEntry.EntryCategory.ALMOCO,
+                    description=description,
+                    value_cents=instance.value_cents,
+                    date=instance.date,
+                    package=instance,
+                )
+        elif was_paid and entry:
+            entry.delete()
 
 
 class LunchSerializer(serializers.ModelSerializer):
@@ -118,7 +167,7 @@ class LunchSerializer(serializers.ModelSerializer):
 
     def validate_value_cents(self, value):
         if value < 0:
-            raise serializers.ValidationError("Valor deve ser maior que zero.")
+            raise serializers.ValidationError("Valor deve ser maior ou igual a zero.")
         return value
 
     def validate(self, attrs):
@@ -199,8 +248,9 @@ class LunchSerializer(serializers.ModelSerializer):
         is_paid_now = instance.payment_status == Lunch.PaymentStatus.PAGO
         was_paid = prev_status == Lunch.PaymentStatus.PAGO
 
-        if is_paid_now:
-            description = f"Pagamento almoço - {instance.member.full_name} - {instance.date}"
+        if is_paid_now and instance.value_cents > 0:
+            label = "Pagamento pacote" if instance.package_id else "Pagamento almoço"
+            description = f"{label} - {instance.member.full_name} - {instance.date}"
             if entry:
                 if (
                     (prev_value != instance.value_cents)

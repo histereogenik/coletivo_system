@@ -1,5 +1,6 @@
-from django.core.exceptions import ValidationError
+﻿from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from apps.users.models import Member
 
@@ -43,8 +44,6 @@ class Package(models.Model):
             missing["quantity"] = "Quantidade é obrigatória para pacote."
         if not self.expiration:
             missing["expiration"] = "Validade do pacote é obrigatória."
-        if not self.status:
-            missing["status"] = "Status do pacote é obrigatório."
         if self.remaining_quantity is None:
             self.remaining_quantity = self.quantity
         if (
@@ -54,6 +53,13 @@ class Package(models.Model):
         ):
             missing["remaining_quantity"] = (
                 "Saldo de refeições não pode exceder a quantidade do pacote."
+            )
+        if self.expiration:
+            today = timezone.localdate()
+            self.status = (
+                self.PackageStatus.EXPIRADO
+                if self.expiration < today
+                else self.PackageStatus.VALIDO
             )
         if missing:
             raise ValidationError(missing)

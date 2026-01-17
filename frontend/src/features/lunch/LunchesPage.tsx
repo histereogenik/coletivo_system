@@ -107,11 +107,13 @@ export function LunchesPage() {
   const [filters, setFilters] = useState<{
     member: string | null;
     payment_status: string | null;
+    has_package: boolean | null;
     date_from: DateValue;
     date_to: DateValue;
   }>({
     member: null,
     payment_status: null,
+    has_package: null,
     date_from: null,
     date_to: null,
   });
@@ -125,6 +127,7 @@ export function LunchesPage() {
       "lunches",
       filters.member,
       filters.payment_status,
+      filters.has_package,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
@@ -132,6 +135,8 @@ export function LunchesPage() {
       fetchLunches({
         member: filters.member ? Number(filters.member) : undefined,
         payment_status: filters.payment_status || undefined,
+        has_package:
+          filters.has_package === null ? undefined : filters.has_package ? "true" : "false",
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
       }),
@@ -210,6 +215,7 @@ export function LunchesPage() {
       date: dateIso,
       use_package: formState.use_package ? true : undefined,
       package: formState.use_package ? formState.package : null,
+      payment_status: formState.use_package ? "PAGO" : formState.payment_status,
     };
 
     if (editing) {
@@ -273,7 +279,7 @@ export function LunchesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters.member, filters.payment_status, filters.date_from, filters.date_to, dataLength]);
+  }, [filters.member, filters.payment_status, filters.has_package, filters.date_from, filters.date_to, dataLength]);
 
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages));
@@ -303,7 +309,14 @@ export function LunchesPage() {
 
   const canMarkPaid = (lunch: Lunch) => lunch.payment_status !== "PAGO";
 
-  const memberOptions = membersQuery.data.map((m: MemberOption) => ({
+  const members = membersQuery.data ?? [];
+  const memberOptions = members.map((m: MemberOption) => ({
+    value: m.id.toString(),
+    label: m.full_name,
+  }));
+  const packageMembers = members.filter((m) => m.has_package);
+  const memberOptionsForForm = formState.use_package ? packageMembers : members;
+  const memberOptionsSelect = memberOptionsForForm.map((m: MemberOption) => ({
     value: m.id.toString(),
     label: m.full_name,
   }));
@@ -312,6 +325,7 @@ export function LunchesPage() {
     setFilters({
       member: null,
       payment_status: null,
+      has_package: null,
       date_from: null,
       date_to: null,
     });
@@ -344,6 +358,21 @@ export function LunchesPage() {
           clearable
           value={filters.payment_status}
           onChange={(val) => setFilters((prev) => ({ ...prev, payment_status: val }))}
+        />
+        <Select
+          label="Tipo"
+          data={[
+            { value: "PACOTE", label: "Pacote" },
+            { value: "AVULSO", label: "Avulso" },
+          ]}
+          clearable
+          value={filters.has_package === null ? null : filters.has_package ? "PACOTE" : "AVULSO"}
+          onChange={(val) =>
+            setFilters((prev) => ({
+              ...prev,
+              has_package: val === "PACOTE" ? true : val === "AVULSO" ? false : null,
+            }))
+          }
         />
         <DateInput
           label="De"
@@ -450,11 +479,23 @@ export function LunchesPage() {
         title={editing ? "Editar almoço" : "Novo almoço"}
       >
         <div className="flex flex-col gap-3">
+          <Switch
+            label="Usar pacote"
+            checked={!!formState.use_package}
+            onChange={(e) =>
+              setFormState((prev) => ({
+                ...prev,
+                use_package: e.currentTarget.checked,
+                member: e.currentTarget.checked ? undefined : prev.member,
+                payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
+              }))
+            }
+          />
           <Select
             label="Integrante"
-            data={memberOptions}
+            data={memberOptionsSelect}
             searchable
-            nothingFoundMessage="Nenhum integrante"
+            nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
             value={formState.member ? formState.member.toString() : null}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
           />
@@ -463,6 +504,7 @@ export function LunchesPage() {
             value={valueReais}
             onChange={(e) => setValueReais(e.currentTarget.value)}
             placeholder="Ex: 35,00"
+            disabled={!!formState.use_package}
           />
           <DateInput
             label="Data"
@@ -471,16 +513,6 @@ export function LunchesPage() {
             valueFormat="DD/MM/YYYY"
             locale="pt-br"
           />
-          <Switch
-            label="Usar pacote"
-            checked={!!formState.use_package}
-            onChange={(e) =>
-              setFormState((prev) => ({
-                ...prev,
-                use_package: e.currentTarget.checked,
-              }))
-            }
-          />
           <Select
             label="Status de pagamento"
             data={[
@@ -488,6 +520,7 @@ export function LunchesPage() {
               { value: "EM_ABERTO", label: "Em aberto" },
             ]}
             value={formState.payment_status}
+            disabled={!!formState.use_package}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
           <Select
@@ -498,6 +531,7 @@ export function LunchesPage() {
               { value: "DINHEIRO", label: "Dinheiro" },
             ]}
             value={formState.payment_mode}
+            disabled={!!formState.use_package}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           <Group justify="flex-end" mt="sm">
@@ -510,4 +544,3 @@ export function LunchesPage() {
     </Container>
   );
 }
-

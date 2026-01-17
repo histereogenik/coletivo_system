@@ -11,10 +11,18 @@ from apps.lunch.serializers import LunchSerializer, PackageSerializer
 class LunchFilter(django_filters.FilterSet):
     date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+    has_package = django_filters.BooleanFilter(method="filter_has_package")
+
+    def filter_has_package(self, queryset, name, value):
+        if value is True:
+            return queryset.filter(package__isnull=False)
+        if value is False:
+            return queryset.filter(package__isnull=True)
+        return queryset
 
     class Meta:
         model = Lunch
-        fields = ["payment_status", "date", "member", "package"]
+        fields = ["payment_status", "date", "member", "package", "has_package"]
 
 
 class PackageFilter(django_filters.FilterSet):
@@ -47,6 +55,12 @@ class PackageViewSet(viewsets.ModelViewSet):
     serializer_class = PackageSerializer
     permission_classes = [SuperuserOnly]
     filterset_class = PackageFilter
+
+    def perform_destroy(self, instance):
+        entry = getattr(instance, "financial_entry", None)
+        if entry:
+            entry.delete()
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=["post"], url_path="decrement")
     def decrement(self, request, pk=None):

@@ -101,7 +101,6 @@ export function PackagesPage() {
     quantity: 1,
     remaining_quantity: undefined,
     expiration: new Date().toISOString().slice(0, 10),
-    status: "VALIDO",
   });
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
@@ -245,7 +244,6 @@ export function PackagesPage() {
       quantity: 1,
       remaining_quantity: undefined,
       expiration: new Date().toISOString().slice(0, 10),
-      status: "VALIDO",
     });
     setValueReais("");
     setDateValue(new Date());
@@ -511,15 +509,6 @@ export function PackagesPage() {
             locale="pt-br"
           />
           <Select
-            label="Status"
-            data={[
-              { value: "VALIDO", label: "Válido" },
-              { value: "EXPIRADO", label: "Expirado" },
-            ]}
-            value={formState.status ?? undefined}
-            onChange={(val) => setFormState((prev) => ({ ...prev, status: val || "VALIDO" }))}
-          />
-          <Select
             label="Status de pagamento"
             data={[
               { value: "PAGO", label: "Pago" },
@@ -548,4 +537,3 @@ export function PackagesPage() {
     </Container>
   );
 }
-
