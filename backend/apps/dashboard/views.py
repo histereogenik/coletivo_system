@@ -50,6 +50,23 @@ class DashboardSummaryView(APIView):
         ).count()
         total_lunches = Lunch.objects.count()
 
+        lunches_today = Lunch.objects.select_related("member").filter(date=today)
+        lunches_today_paid = lunches_today.filter(payment_status=Lunch.PaymentStatus.PAGO)
+        total_lunches_today = lunches_today.count()
+        total_paid_today = (
+            lunches_today_paid.aggregate(total=models.Sum("value_cents"))["total"] or 0
+        )
+        lunches_today_items = [
+            {
+                "id": lunch.id,
+                "member_name": lunch.member.full_name,
+                "payment_status": lunch.payment_status,
+                "value_cents": lunch.value_cents,
+                "has_package": bool(lunch.package_id),
+            }
+            for lunch in lunches_today.order_by("member__full_name", "id")
+        ]
+
         data = {
             "monthly_balance_cents": monthly_balance,
             "entradas_cents": entradas,
@@ -65,6 +82,9 @@ class DashboardSummaryView(APIView):
                 "total_last_30_days": total_lunches_last_30,
                 "total_em_aberto": total_lunches_open,
                 "total": total_lunches,
+                "today_total": total_lunches_today,
+                "today_paid_cents": total_paid_today,
+                "today_items": lunches_today_items,
             },
         }
         return Response(data)

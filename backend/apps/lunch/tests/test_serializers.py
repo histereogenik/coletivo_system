@@ -1,91 +1,101 @@
-from datetime import date, timedelta
+﻿from datetime import date, timedelta
 
 import pytest
 
-from apps.lunch.models import Lunch
-from apps.lunch.serializers import LunchSerializer
+from apps.lunch.models import Lunch, Package
+from apps.lunch.serializers import LunchSerializer, PackageSerializer
 from apps.users.models import Member
 from apps.users.tests.factories import MemberFactory
 
 
 @pytest.mark.django_db
-def test_lunch_serializer_creates_avulso_without_package_fields():
-    member = MemberFactory()
-    payload = {
-        "member": member.id,
-        "value_cents": 3500,
-        "date": date.today(),
-        "lunch_type": Lunch.LunchType.AVULSO,
-        "payment_status": Lunch.PaymentStatus.PAGO,
-        "quantity": 5,
-        "package_expiration": date.today() + timedelta(days=30),
-        "package_status": Lunch.PackageStatus.VALIDO,
-    }
-
-    serializer = LunchSerializer(data=payload)
-    assert serializer.is_valid(), serializer.errors
-    instance = serializer.save()
-
-    assert instance.lunch_type == Lunch.LunchType.AVULSO
-    assert instance.quantity is None
-    assert instance.package_expiration is None
-    assert instance.package_status is None
-
-
-@pytest.mark.django_db
-def test_lunch_serializer_requires_package_fields_for_pacote():
-    member = MemberFactory()
-    payload = {
-        "member": member.id,
-        "value_cents": 4500,
-        "date": date.today(),
-        "lunch_type": Lunch.LunchType.PACOTE,
-        "payment_status": Lunch.PaymentStatus.EM_ABERTO,
-    }
-
-    serializer = LunchSerializer(data=payload)
-    assert not serializer.is_valid()
-    assert "quantity" in serializer.errors
-    assert "package_expiration" in serializer.errors
-    assert "package_status" in serializer.errors
-
-
-@pytest.mark.django_db
-def test_lunch_serializer_creates_pacote_when_fields_present():
+def test_package_serializer_sets_remaining_when_missing():
     member = MemberFactory(role=Member.Role.AVULSO)
     payload = {
         "member": member.id,
         "value_cents": 5000,
         "date": date.today(),
-        "lunch_type": Lunch.LunchType.PACOTE,
-        "payment_status": Lunch.PaymentStatus.EM_ABERTO,
+        "payment_status": Package.PaymentStatus.EM_ABERTO,
+        "payment_mode": Package.PaymentMode.PIX,
         "quantity": 10,
-        "package_expiration": date.today() + timedelta(days=60),
-        "package_status": Lunch.PackageStatus.VALIDO,
+        "expiration": date.today() + timedelta(days=30),
+        "status": Package.PackageStatus.VALIDO,
+    }
+
+    serializer = PackageSerializer(data=payload)
+    assert serializer.is_valid(), serializer.errors
+    instance = serializer.save()
+
+    assert instance.remaining_quantity == payload["quantity"]
+
+
+@pytest.mark.django_db
+def test_lunch_serializer_uses_oldest_package_when_use_package():
+    member = MemberFactory()
+    old_package = Package.objects.create(
+        member=member,
+        value_cents=10000,
+        date=date.today() - timedelta(days=10),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    newer_package = Package.objects.create(
+        member=member,
+        value_cents=12000,
+        date=date.today() - timedelta(days=2),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    payload = {
+        "member": member.id,
+        "value_cents": 3000,
+        "date": date.today(),
+        "payment_status": Lunch.PaymentStatus.PAGO,
+        "use_package": True,
     }
 
     serializer = LunchSerializer(data=payload)
     assert serializer.is_valid(), serializer.errors
     instance = serializer.save()
 
-    member.refresh_from_db()
-    assert member.role == Member.Role.MENSALISTA
-    assert instance.quantity == payload["quantity"]
-    assert instance.package_expiration == payload["package_expiration"]
-    assert instance.package_status == payload["package_status"]
+    assert instance.package_id == old_package.id
+    old_package.refresh_from_db()
+    newer_package.refresh_from_db()
+    assert old_package.remaining_quantity == 4
+    assert newer_package.remaining_quantity == 5
 
 
 @pytest.mark.django_db
-def test_lunch_serializer_requires_positive_value():
+def test_lunch_serializer_rejects_package_from_other_member():
     member = MemberFactory()
+    other_member = MemberFactory()
+    package = Package.objects.create(
+        member=other_member,
+        value_cents=10000,
+        date=date.today(),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
     payload = {
         "member": member.id,
-        "value_cents": 0,
+        "package": package.id,
+        "value_cents": 3000,
         "date": date.today(),
-        "lunch_type": Lunch.LunchType.AVULSO,
         "payment_status": Lunch.PaymentStatus.PAGO,
     }
 
     serializer = LunchSerializer(data=payload)
     assert not serializer.is_valid()
-    assert "value_cents" in serializer.errors
+    assert "package" in serializer.errors

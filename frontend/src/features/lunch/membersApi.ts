@@ -1,8 +1,9 @@
-import { api } from "../../shared/api";
+﻿import { api } from "../../shared/api";
 
 export type MemberOption = {
   id: number;
   full_name: string;
+  has_package: boolean;
 };
 
 export async function fetchMembers() {

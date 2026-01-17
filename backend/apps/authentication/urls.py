@@ -2,9 +2,9 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.authentication.views import (
+    AuthStatusView,
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
-    AuthStatusView,
     LogoutView,
 )
 

@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig } from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8001",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://api.sistemacoletivo.com.br",
 });
 
 api.interceptors.request.use((config) => {

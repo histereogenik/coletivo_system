@@ -1,4 +1,4 @@
-from datetime import date
+﻿from datetime import date
 
 import pytest
 
@@ -15,7 +15,6 @@ def test_paid_lunch_creates_financial_entry():
         "member": member.id,
         "value_cents": 3000,
         "date": date.today(),
-        "lunch_type": Lunch.LunchType.AVULSO,
         "payment_status": Lunch.PaymentStatus.PAGO,
     }
 
@@ -36,7 +35,6 @@ def test_updating_to_paid_creates_financial_entry():
         "member": member.id,
         "value_cents": 4000,
         "date": date.today(),
-        "lunch_type": Lunch.LunchType.AVULSO,
         "payment_status": Lunch.PaymentStatus.EM_ABERTO,
     }
     serializer = LunchSerializer(data=payload)
@@ -61,7 +59,6 @@ def test_reverting_paid_deletes_financial_entry():
         "member": member.id,
         "value_cents": 3500,
         "date": date.today(),
-        "lunch_type": Lunch.LunchType.AVULSO,
         "payment_status": Lunch.PaymentStatus.PAGO,
     }
     serializer = LunchSerializer(data=payload)

@@ -1,7 +1,7 @@
 import django_filters
 from rest_framework import viewsets
 
-from apps.common.permissions import SuperuserOrReadOnly
+from apps.common.permissions import SuperuserOnly
 from apps.financial.models import FinancialEntry
 from apps.financial.serializers import FinancialEntrySerializer
 
@@ -22,5 +22,5 @@ class FinancialEntryFilter(django_filters.FilterSet):
 class FinancialEntryViewSet(viewsets.ModelViewSet):
     queryset = FinancialEntry.objects.all().order_by("-date", "-created_at")
     serializer_class = FinancialEntrySerializer
-    permission_classes = [SuperuserOrReadOnly]
+    permission_classes = [SuperuserOnly]
     filterset_class = FinancialEntryFilter

@@ -1,4 +1,4 @@
-import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
+﻿import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ const navItems = [
   { label: "Agenda", to: "/agenda" },
   { label: "Financeiro", to: "/financeiro" },
   { label: "Almoços", to: "/lunches" },
+  { label: "Pacotes", to: "/pacotes" },
   { label: "Integrantes", to: "/integrantes" },
   { label: "Funções", to: "/funcoes" },
 ];
@@ -85,3 +86,5 @@ export function Layout({ children }: LayoutProps) {
     </AppShell>
   );
 }
+
+

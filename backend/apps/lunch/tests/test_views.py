@@ -1,10 +1,10 @@
-import pytest
+﻿import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from apps.lunch.models import Lunch
-from apps.lunch.tests.factories import LunchFactory
+from apps.lunch.tests.factories import LunchFactory, PackageFactory
 from apps.users.tests.factories import MemberFactory
 
 User = get_user_model()
@@ -62,27 +62,18 @@ def test_superuser_can_filter_lunches_by_payment_status(api_client, superuser):
 
 
 @pytest.mark.django_db
-def test_superuser_can_filter_lunches_by_package_status(api_client, superuser):
-    lunch_valid = LunchFactory(
-        lunch_type=Lunch.LunchType.PACOTE,
-        quantity=5,
-        package_expiration="2025-12-31",
-        package_status=Lunch.PackageStatus.VALIDO,
-    )
-    LunchFactory(
-        lunch_type=Lunch.LunchType.PACOTE,
-        quantity=5,
-        package_expiration="2025-12-31",
-        package_status=Lunch.PackageStatus.EXPIRADO,
-    )
+def test_superuser_can_filter_lunches_by_package(api_client, superuser):
+    package = PackageFactory()
+    lunch_with_package = LunchFactory(package=package)
+    LunchFactory(package=None)
 
     api_client.force_authenticate(user=superuser)
     url = reverse("lunch-list")
-    response = api_client.get(url, {"package_status": Lunch.PackageStatus.VALIDO})
+    response = api_client.get(url, {"package": package.id})
 
     assert response.status_code == 200
     ids = {item["id"] for item in response.data}
-    assert lunch_valid.id in ids
+    assert lunch_with_package.id in ids
     assert len(ids) == 1
 
 

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Badge,
   Button,
   Container,
@@ -18,6 +18,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   createFinancialEntry,
@@ -113,6 +114,7 @@ export function FinancialPage() {
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
       }),
+    enabled: isAuthenticated,
   });
 
   const invalidateRelated = () => {
@@ -221,6 +223,21 @@ export function FinancialPage() {
       date_to: null,
     });
 
+  if (!isAuthenticated) {
+    return (
+      <Container size="xl" py="md">
+        <Group mb="md">
+          <IconCurrencyDollar size={20} />
+          <Title order={3}>Financeiro</Title>
+        </Group>
+        <Text mb="sm">Autenticação necessária para visualizar o financeiro.</Text>
+        <Button component={Link} to="/login">
+          Ir para login
+        </Button>
+      </Container>
+    );
+  }
+
   if (isLoading) return <Text>Carregando...</Text>;
   if (isError || !data) return <Text c="red">Erro ao carregar financeiro.</Text>;
 
@@ -285,12 +302,18 @@ export function FinancialPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Data</Table.Th>
-              <Table.Th>Tipo</Table.Th>
-              <Table.Th>Categoria</Table.Th>
-              <Table.Th>Descrição</Table.Th>
-              <Table.Th ta="right">Valor</Table.Th>
-              {isAuthenticated && <Table.Th ta="right">Ações</Table.Th>}
+              <Table.Th style={{ minWidth: 110 }}>Data</Table.Th>
+              <Table.Th style={{ minWidth: 110 }}>Tipo</Table.Th>
+              <Table.Th style={{ minWidth: 140 }}>Categoria</Table.Th>
+              <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
+              <Table.Th style={{ minWidth: 120 }} ta="right">
+                Valor
+              </Table.Th>
+              {isAuthenticated && (
+                <Table.Th style={{ minWidth: 140 }} ta="right">
+                  Ações
+                </Table.Th>
+              )}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -389,3 +412,5 @@ export function FinancialPage() {
     </Container>
   );
 }
+
+
