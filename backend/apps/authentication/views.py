@@ -39,7 +39,9 @@ class CookieTokenRefreshView(TokenRefreshView):
         # Allow refresh to come from cookie if not provided in body.
         refresh_token = request.data.get("refresh") or request.COOKIES.get("refresh_token")
         if not refresh_token:
-            return Response({"refresh": ["Este campo é obrigatório."]}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"refresh": ["Este campo é obrigatório."]}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = self.get_serializer(data={"refresh": refresh_token})
         serializer.is_valid(raise_exception=True)

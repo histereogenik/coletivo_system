@@ -1,11 +1,11 @@
-import re
+﻿import re
 
 import phonenumbers
 from rest_framework import serializers
 
 from apps.users.models import Member
 
-PHONE_REGEX = re.compile(r"^[0-9+().\\-\\s]{7,20}$")
+PHONE_REGEX = re.compile(r"^[0-9+().\-\s]{7,20}$")
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -40,16 +40,19 @@ class MemberSerializer(serializers.ModelSerializer):
             "email": {"required": False, "allow_null": True, "allow_blank": True},
             "responsible": {"required": False, "allow_null": True},
             "role": {
+                "required": False,
+                "allow_null": True,
                 "error_messages": {
                     "required": "Campo obrigatório.",
                     "invalid_choice": "Escolha uma opção válida.",
-                }
+                },
             },
             "diet": {
+                "required": False,
                 "error_messages": {
                     "required": "Campo obrigatório.",
                     "invalid_choice": "Escolha uma opção válida.",
-                }
+                },
             },
         }
 
@@ -95,9 +98,10 @@ class MemberSerializer(serializers.ModelSerializer):
         is_child = attrs.get("is_child", getattr(self.instance, "is_child", False))
         responsible = attrs.get("responsible", getattr(self.instance, "responsible", None))
 
+        errors = {}
         if is_child:
             if not responsible:
-                raise serializers.ValidationError({"responsible": "Selecione um responsável."})
+                errors["responsible"] = "Selecione um responsável."
             # For children, clear optional fields
             attrs["email"] = None
             attrs["phone"] = None
@@ -107,8 +111,12 @@ class MemberSerializer(serializers.ModelSerializer):
             attrs["responsible"] = None
             role_value = attrs.get("role", getattr(self.instance, "role", None))
             if not role_value:
-                raise serializers.ValidationError({"role": "Este campo é obrigatório."})
+                errors["role"] = "Este campo é obrigatório."
 
-        if not attrs.get("diet") and not getattr(self.instance, "diet", None):
-            raise serializers.ValidationError({"diet": "Este campo é obrigatório."})
+        diet_value = attrs.get("diet", getattr(self.instance, "diet", None))
+        if not diet_value:
+            errors["diet"] = "Este campo é obrigatório."
+
+        if errors:
+            raise serializers.ValidationError(errors)
         return attrs
