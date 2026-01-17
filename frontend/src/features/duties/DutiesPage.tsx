@@ -15,6 +15,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { fetchMembers } from "../lunch/membersApi";
 import { createDuty, deleteDuty, fetchDuties, updateDuty, type Duty } from "./api";
@@ -143,7 +144,10 @@ export function DutiesPage() {
           <IconTools size={20} />
           <Title order={3}>Funções</Title>
         </Group>
-        <Text c="dimmed">Autenticação necessária para gerenciar funções.</Text>
+        <Text mb="sm">Autenticação necessária para visualizar e gerenciar funções.</Text>
+        <Button component={Link} to="/login">
+          Ir para login
+        </Button>
       </Container>
     );
   }
