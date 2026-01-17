@@ -20,8 +20,9 @@ import { IconPackage, IconPencil, IconTrash, IconPlus } from "@tabler/icons-reac
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
@@ -120,6 +121,8 @@ export function PackagesPage() {
   });
   const [page, setPage] = useState(1);
   const pageSize = 15;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processedNovoRef = useRef(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -285,6 +288,18 @@ export function PackagesPage() {
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    if (processedNovoRef.current) return;
+    if (!isAuthenticated) return;
+    if (searchParams.get("novo") === "1") {
+      processedNovoRef.current = true;
+      openNew();
+      const next = new URLSearchParams(searchParams);
+      next.delete("novo");
+      setSearchParams(next, { replace: true });
+    }
+  }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
   const clearFilters = () =>
     setFilters({

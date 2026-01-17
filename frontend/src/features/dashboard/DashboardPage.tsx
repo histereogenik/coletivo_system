@@ -1,5 +1,5 @@
-import { Button, Card, Container, SimpleGrid, Text, Title } from "@mantine/core";
-import { IconChartBar, IconCurrencyDollar, IconSoup, IconUsers, IconUserPlus } from "@tabler/icons-react";
+﻿import { Badge, Button, Container, SimpleGrid, Table, Text, Title } from "@mantine/core";
+import { IconSoup, IconUsers, IconUserPlus, IconPackage } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { SummaryCard } from "../../components/SummaryCard";
@@ -23,6 +23,13 @@ export function DashboardPage() {
   const formatCents = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  const paymentLabels: Record<string, string> = {
+    PAGO: "Pago",
+    EM_ABERTO: "Em aberto",
+  };
+
+  const todayItems = [...data.lunches.today_items].sort((a, b) => a.id - b.id);
+
   const quickButtonStyles = {
     root: {
       height: "135.391px",
@@ -44,7 +51,7 @@ export function DashboardPage() {
   return (
     <Container size="xl" py="md">
       {isAuthenticated && (
-        <SimpleGrid cols={2} spacing="md" mb="md">
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="md">
           <Button
             component={Link}
             to="/integrantes?novo=1"
@@ -73,36 +80,74 @@ export function DashboardPage() {
             <span>+ Novo</span>
             <span>Almoço</span>
           </Button>
+          <Button
+            component={Link}
+            to="/pacotes?novo=1"
+            fullWidth
+            size="lg"
+            color="orange"
+            radius="md"
+            variant="filled"
+            styles={quickButtonStyles}
+          >
+            <IconPackage size={26} />
+            <span>+ Novo</span>
+            <span>Pacote</span>
+          </Button>
         </SimpleGrid>
       )}
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="md">
-        <SummaryCard
-          title="Balanço mensal"
-          value={formatCents(data.monthly_balance_cents)}
-          subtitle={`Entradas ${formatCents(data.entradas_cents)} · Saídas ${formatCents(data.saidas_cents)}`}
-          icon={<IconCurrencyDollar size={20} />}
-        />
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
         <SummaryCard
           title="Integrantes"
           value={`${data.members.total}`}
-          subtitle={`Sustentadores ${data.members.sustentadores} · Mensalistas ${data.members.mensalistas} · Avulsos ${data.members.avulsos}`}
+          subtitle={`Sustentadores ${data.members.sustentadores} | Mensalistas ${data.members.mensalistas} | Avulsos ${data.members.avulsos}`}
           icon={<IconUsers size={20} />}
         />
         <SummaryCard
-          title="Almoços (30d)"
-          value={`${data.lunches.total_last_30_days}`}
-          subtitle={`Média diária ${data.lunches.average_daily_last_30_days.toFixed(1)} · Em aberto ${data.lunches.total_em_aberto}`}
-          icon={<IconChartBar size={20} />}
+          title="Almoços Hoje"
+          value={`${data.lunches.today_total}`}
+          subtitle={`Faturamento hoje: ${formatCents(data.lunches.today_paid_cents)}`}
+          icon={<IconSoup size={20} />}
         />
       </SimpleGrid>
 
-      <Card withBorder shadow="xs" padding="lg">
-        <Title order={4} mb="sm">
-          Total de almoços
-        </Title>
-        <Text size="lg">{data.lunches.total}</Text>
-      </Card>
+      <Title order={4} mb="xs">
+        Almoços de hoje
+      </Title>
+      <Table highlightOnHover withTableBorder withColumnBorders>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>#</Table.Th>
+            <Table.Th>Nome</Table.Th>
+            <Table.Th>Tipo</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th ta="right">Valor</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {todayItems.map((item, index) => (
+            <Table.Tr key={item.id}>
+              <Table.Td>{index + 1}</Table.Td>
+              <Table.Td>{item.member_name}</Table.Td>
+              <Table.Td>{item.has_package ? "Pacote" : "Avulso"}</Table.Td>
+              <Table.Td>
+                <Badge color={item.payment_status === "PAGO" ? "green" : "orange"}>
+                  {paymentLabels[item.payment_status] || item.payment_status}
+                </Badge>
+              </Table.Td>
+              <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
+            </Table.Tr>
+          ))}
+          {todayItems.length === 0 && (
+            <Table.Tr>
+              <Table.Td colSpan={4}>
+                <Text c="dimmed">Nenhum almoço registrado hoje.</Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
+        </Table.Tbody>
+      </Table>
     </Container>
   );
 }
