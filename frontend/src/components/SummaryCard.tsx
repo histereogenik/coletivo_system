@@ -4,7 +4,7 @@ import React from "react";
 type SummaryCardProps = {
   title: string;
   value: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   icon?: React.ReactNode;
 };
 
@@ -19,7 +19,7 @@ export function SummaryCard({ title, value, subtitle, icon }: SummaryCardProps) 
       </Group>
       <Title order={3}>{value}</Title>
       {subtitle && (
-        <Text size="sm" c="dimmed" mt="xs">
+        <Text size="sm" c="dimmed" mt="xs" component="div">
           {subtitle}
         </Text>
       )}

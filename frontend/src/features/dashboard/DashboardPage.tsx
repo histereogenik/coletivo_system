@@ -107,7 +107,13 @@ export function DashboardPage() {
         <SummaryCard
           title="Almoços Hoje"
           value={`${data.lunches.today_total}`}
-          subtitle={`Faturamento hoje: ${formatCents(data.lunches.today_paid_cents)}`}
+          subtitle={
+            <>
+              {`Faturamento hoje: ${formatCents(data.lunches.today_paid_cents)}`}
+              <br />
+              <span style={{ fontSize: "0.75em" }}>*contando os valores de pacotes já pagos</span>
+            </>
+          }
           icon={<IconSoup size={20} />}
         />
       </SimpleGrid>

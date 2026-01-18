@@ -408,6 +408,9 @@ export function PackagesPage() {
               <Table.Th style={{ minWidth: 140 }} ta="right">
                 Quantidade
               </Table.Th>
+              <Table.Th style={{ minWidth: 130 }} ta="right">
+                Valor unitário
+              </Table.Th>
               <Table.Th style={{ minWidth: 110 }} ta="right">
                 Valor
               </Table.Th>
@@ -434,6 +437,11 @@ export function PackagesPage() {
                 <Table.Td>{formatPtDate(item.expiration)}</Table.Td>
                 <Table.Td ta="right">
                   {item.remaining_quantity}/{item.quantity}
+                </Table.Td>
+                <Table.Td ta="right">
+                  {formatCents(
+                    item.unit_value_cents ?? (item.quantity ? Math.round(item.value_cents / item.quantity) : 0)
+                  )}
                 </Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">

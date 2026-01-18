@@ -225,6 +225,7 @@ class LunchSerializer(serializers.ModelSerializer):
             if not package:
                 raise serializers.ValidationError({"package": "Nenhum pacote válido disponível."})
             attrs["package"] = package
+            attrs["value_cents"] = package.unit_value_cents
 
         if package and member and package.member_id != member.id:
             raise serializers.ValidationError({"package": "Pacote não pertence ao integrante."})
@@ -232,6 +233,8 @@ class LunchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"package": "Pacote sem saldo."})
         if package and date and package.expiration < date:
             raise serializers.ValidationError({"package": "Pacote expirado para a data do almoço."})
+        if package and "value_cents" not in attrs:
+            attrs["value_cents"] = package.unit_value_cents
         return attrs
 
     def create(self, validated_data):
@@ -276,6 +279,11 @@ class LunchSerializer(serializers.ModelSerializer):
         entry = getattr(instance, "financial_entry", None)
         is_paid_now = instance.payment_status == Lunch.PaymentStatus.PAGO
         was_paid = prev_status == Lunch.PaymentStatus.PAGO
+
+        if instance.package_id:
+            if entry:
+                entry.delete()
+            return
 
         if is_paid_now and instance.value_cents > 0:
             label = "Pagamento pacote" if instance.package_id else "Pagamento almoço"
