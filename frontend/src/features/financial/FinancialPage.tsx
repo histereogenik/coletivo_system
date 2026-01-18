@@ -2,6 +2,7 @@
   Badge,
   Button,
   Container,
+  SimpleGrid,
   Group,
   Modal,
   Pagination,
@@ -13,17 +14,25 @@
   Title,
 } from "@mantine/core";
 import { DateInput, type DateValue } from "@mantine/dates";
-import { IconCurrencyDollar, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconCurrencyDollar,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconWallet,
+} from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
 import {
   createFinancialEntry,
   deleteFinancialEntry,
   fetchFinancialEntries,
+  fetchFinancialSummary,
   updateFinancialEntry,
   type FinancialEntry,
 } from "./api";
@@ -99,6 +108,12 @@ export function FinancialPage() {
     date_to: null,
   });
 
+  const { data: summary } = useQuery({
+    queryKey: ["financial-summary"],
+    queryFn: fetchFinancialSummary,
+    enabled: isAuthenticated,
+  });
+
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "financial",
@@ -119,6 +134,7 @@ export function FinancialPage() {
 
   const invalidateRelated = () => {
     queryClient.invalidateQueries({ queryKey: ["financial"] });
+    queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
@@ -244,6 +260,11 @@ export function FinancialPage() {
   const formatCents = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  const summaryStats = summary ?? {
+    month: { entradas_cents: 0, saidas_cents: 0, saldo_cents: 0 },
+    total: { entradas_cents: 0, saidas_cents: 0, saldo_cents: 0 },
+  };
+
   return (
     <Container size="xl" py="md">
       <Group mb="md">
@@ -255,6 +276,25 @@ export function FinancialPage() {
           </Button>
         )}
       </Group>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
+        <SummaryCard
+          title="Balanço mensal"
+          value={formatCents(summaryStats.month.saldo_cents)}
+          subtitle={`Entradas ${formatCents(summaryStats.month.entradas_cents)} · Saídas ${formatCents(
+            summaryStats.month.saidas_cents
+          )}`}
+          icon={<IconWallet size={20} />}
+        />
+        <SummaryCard
+          title="Balanço total"
+          value={formatCents(summaryStats.total.saldo_cents)}
+          subtitle={`Entradas ${formatCents(summaryStats.total.entradas_cents)} · Saídas ${formatCents(
+            summaryStats.total.saidas_cents
+          )}`}
+          icon={<IconCurrencyDollar size={20} />}
+        />
+      </SimpleGrid>
 
       <Group gap="sm" align="flex-end" mb="md">
         <Select

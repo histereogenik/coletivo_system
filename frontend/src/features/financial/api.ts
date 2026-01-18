@@ -9,8 +9,26 @@ export type FinancialEntry = {
   date: string;
 };
 
+export type FinancialSummary = {
+  month: {
+    entradas_cents: number;
+    saidas_cents: number;
+    saldo_cents: number;
+  };
+  total: {
+    entradas_cents: number;
+    saidas_cents: number;
+    saldo_cents: number;
+  };
+};
+
 export async function fetchFinancialEntries(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get<FinancialEntry[]>("/api/financial/entries/", { params });
+  return data;
+}
+
+export async function fetchFinancialSummary() {
+  const { data } = await api.get<FinancialSummary>("/api/financial/summary/");
   return data;
 }
 
