@@ -95,7 +95,6 @@ export function PackagesPage() {
   const [editing, setEditing] = useState<Package | null>(null);
   const [formState, setFormState] = useState<Partial<Package>>({
     member: undefined,
-    value_cents: 0,
     date: new Date().toISOString().slice(0, 10),
     payment_status: "EM_ABERTO",
     payment_mode: "PIX",
@@ -103,7 +102,7 @@ export function PackagesPage() {
     remaining_quantity: undefined,
     expiration: new Date().toISOString().slice(0, 10),
   });
-  const [valueReais, setValueReais] = useState<string>("");
+  const [unitValueReais, setUnitValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
   const [expirationValue, setExpirationValue] = useState<DateValue>(new Date());
   const [filters, setFilters] = useState<{
@@ -216,15 +215,18 @@ export function PackagesPage() {
       notifications.show({ message: "Preencha integrante, data e validade.", color: "red" });
       return;
     }
-    const parsedValue = valueReais
-      ? parseFloat(valueReais.replace(/\./g, "").replace(",", "."))
-      : 0;
+    if (!unitValueReais.trim()) {
+      notifications.show({ message: "Preencha o valor do almoço.", color: "red" });
+      return;
+    }
+    const parsedUnitValue = parseFloat(unitValueReais.replace(/\./g, "").replace(",", "."));
     const dateIso = toIsoDate(dateValue) || "";
     const expirationIso = toIsoDate(expirationValue) || "";
 
     const payload: Partial<Package> = {
       ...formState,
-      value_cents: Number.isNaN(parsedValue) ? 0 : Math.round(parsedValue * 100),
+      unit_value_cents: Number.isNaN(parsedUnitValue) ? 0 : Math.round(parsedUnitValue * 100),
+      value_cents: totalValueCents,
       date: dateIso,
       expiration: expirationIso,
     };
@@ -240,7 +242,6 @@ export function PackagesPage() {
     setEditing(null);
     setFormState({
       member: undefined,
-      value_cents: 0,
       date: new Date().toISOString().slice(0, 10),
       payment_status: "EM_ABERTO",
       payment_mode: "PIX",
@@ -248,7 +249,7 @@ export function PackagesPage() {
       remaining_quantity: undefined,
       expiration: new Date().toISOString().slice(0, 10),
     });
-    setValueReais("");
+    setUnitValueReais("");
     setDateValue(new Date());
     setExpirationValue(new Date());
     modalHandlers.open();
@@ -261,8 +262,9 @@ export function PackagesPage() {
       member: item.member,
       payment_mode: item.payment_mode ?? "PIX",
     });
-    setValueReais(
-      (item.value_cents / 100).toLocaleString("pt-BR", {
+    const unitValueCents = item.quantity ? Math.round(item.value_cents / item.quantity) : 0;
+    setUnitValueReais(
+      (unitValueCents / 100).toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })
@@ -331,6 +333,11 @@ export function PackagesPage() {
 
   const formatCents = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const parsedUnitValue = unitValueReais
+    ? parseFloat(unitValueReais.replace(/\./g, "").replace(",", "."))
+    : 0;
+  const unitValueCents = Number.isNaN(parsedUnitValue) ? 0 : Math.round(parsedUnitValue * 100);
+  const totalValueCents = unitValueCents * (formState.quantity ?? 0);
 
   return (
     <Container size="xl" py="md">
@@ -499,22 +506,23 @@ export function PackagesPage() {
           />
           <TextInput
             label="Valor (R$)"
-            value={valueReais}
-            onChange={(e) => setValueReais(e.currentTarget.value)}
-            placeholder="Ex: 120,00"
-          />
-          <DateInput
-            label="Data da compra"
-            value={dateValue}
-            onChange={(val) => setDateValue(val ?? null)}
-            valueFormat="DD/MM/YYYY"
-            locale="pt-br"
+            value={unitValueReais}
+            onChange={(e) => setUnitValueReais(e.currentTarget.value)}
+            placeholder="Ex: 28,00"
           />
           <NumberInput
             label="Quantidade"
             value={formState.quantity ?? undefined}
             onChange={(val) => setFormState((prev) => ({ ...prev, quantity: Number(val) || undefined }))}
             min={1}
+          />
+          <TextInput label="Valor calculado" value={formatCents(totalValueCents)} readOnly />
+          <DateInput
+            label="Data da compra"
+            value={dateValue}
+            onChange={(val) => setDateValue(val ?? null)}
+            valueFormat="DD/MM/YYYY"
+            locale="pt-br"
           />
           <DateInput
             label="Validade"

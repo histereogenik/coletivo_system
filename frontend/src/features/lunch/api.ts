@@ -17,6 +17,7 @@ export type Package = {
   member: number;
   member_name?: string;
   value_cents: number;
+  unit_value_cents?: number;
   date: string;
   payment_status: string;
   payment_mode?: string | null;

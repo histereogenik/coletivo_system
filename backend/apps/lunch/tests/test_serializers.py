@@ -13,7 +13,7 @@ def test_package_serializer_sets_remaining_when_missing():
     member = MemberFactory(role=Member.Role.AVULSO)
     payload = {
         "member": member.id,
-        "value_cents": 5000,
+        "unit_value_cents": 500,
         "date": date.today(),
         "payment_status": Package.PaymentStatus.EM_ABERTO,
         "payment_mode": Package.PaymentMode.PIX,

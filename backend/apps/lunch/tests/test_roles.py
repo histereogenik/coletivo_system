@@ -13,7 +13,7 @@ def test_package_purchase_promotes_to_mensalista_when_not_sustentador():
     member = MemberFactory(role=Member.Role.AVULSO)
     payload = {
         "member": member.id,
-        "value_cents": 1000,
+        "unit_value_cents": 200,
         "date": date.today(),
         "payment_status": Package.PaymentStatus.PAGO,
         "payment_mode": Package.PaymentMode.PIX,
@@ -35,7 +35,7 @@ def test_package_purchase_keeps_sustentador_priority():
     member = MemberFactory(role=Member.Role.SUSTENTADOR)
     payload = {
         "member": member.id,
-        "value_cents": 1000,
+        "unit_value_cents": 200,
         "date": date.today(),
         "payment_status": Package.PaymentStatus.PAGO,
         "payment_mode": Package.PaymentMode.PIX,
