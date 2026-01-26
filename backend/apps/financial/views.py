@@ -17,10 +17,23 @@ class FinancialEntryFilter(django_filters.FilterSet):
     date_range = django_filters.DateFromToRangeFilter(field_name="date")
     entry_type = django_filters.CharFilter(field_name="entry_type")
     category = django_filters.CharFilter(field_name="category")
+    value_cents = django_filters.NumberFilter(field_name="value_cents")
+    value_cents_min = django_filters.NumberFilter(field_name="value_cents", lookup_expr="gte")
+    value_cents_max = django_filters.NumberFilter(field_name="value_cents", lookup_expr="lte")
 
     class Meta:
         model = FinancialEntry
-        fields = ["date", "entry_type", "category", "date_range", "date_from", "date_to"]
+        fields = [
+            "date",
+            "entry_type",
+            "category",
+            "date_range",
+            "date_from",
+            "date_to",
+            "value_cents",
+            "value_cents_min",
+            "value_cents_max",
+        ]
 
 
 class FinancialEntryViewSet(viewsets.ModelViewSet):

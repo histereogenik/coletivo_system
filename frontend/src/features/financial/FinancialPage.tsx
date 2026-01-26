@@ -99,20 +99,24 @@ export function FinancialPage() {
   const [filters, setFilters] = useState<{
     entry_type: "ENTRADA" | "SAIDA" | null;
     category: string | null;
+    value: string;
     date_from: DateValue;
     date_to: DateValue;
   }>({
     entry_type: null,
     category: null,
+    value: "",
     date_from: null,
     date_to: null,
   });
+  const [valueInput, setValueInput] = useState<string>("");
 
   const { data: summary } = useQuery({
     queryKey: [
       "financial-summary",
       filters.entry_type,
       filters.category,
+      filters.value,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
@@ -120,6 +124,9 @@ export function FinancialPage() {
       fetchFinancialSummary({
         entry_type: filters.entry_type || undefined,
         category: filters.category || undefined,
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
       }),
@@ -131,6 +138,7 @@ export function FinancialPage() {
       "financial",
       filters.entry_type,
       filters.category,
+      filters.value,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
@@ -138,6 +146,9 @@ export function FinancialPage() {
       fetchFinancialEntries({
         entry_type: filters.entry_type || undefined,
         category: filters.category || undefined,
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
       }),
@@ -186,6 +197,10 @@ export function FinancialPage() {
   useEffect(() => {
     setPage(1);
   }, [filters.entry_type, filters.category, filters.date_from, filters.date_to, dataLength]);
+
+  useEffect(() => {
+    setValueInput(filters.value);
+  }, [filters.value]);
 
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages));
@@ -247,6 +262,7 @@ export function FinancialPage() {
     setFilters({
       entry_type: null,
       category: null,
+      value: "",
       date_from: null,
       date_to: null,
     });
@@ -291,7 +307,7 @@ export function FinancialPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
         {summaryStats.filtered &&
-        (filters.entry_type || filters.category || filters.date_from || filters.date_to) ? (
+        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value) ? (
           <SummaryCard
             title="Balanço do filtro"
             value={formatCents(summaryStats.filtered.saldo_cents)}
@@ -342,6 +358,18 @@ export function FinancialPage() {
           clearable
           value={filters.category}
           onChange={(val) => setFilters((prev) => ({ ...prev, category: val }))}
+        />
+        <TextInput
+          label="Valor (R$)"
+          value={valueInput}
+          onChange={(e) => setValueInput(e.currentTarget.value)}
+          onBlur={() => setFilters((prev) => ({ ...prev, value: valueInput.trim() }))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setFilters((prev) => ({ ...prev, value: valueInput.trim() }));
+            }
+          }}
+          placeholder="Ex: 28,00"
         />
         <DateInput
           label="De"
