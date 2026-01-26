@@ -109,8 +109,20 @@ export function FinancialPage() {
   });
 
   const { data: summary } = useQuery({
-    queryKey: ["financial-summary"],
-    queryFn: fetchFinancialSummary,
+    queryKey: [
+      "financial-summary",
+      filters.entry_type,
+      filters.category,
+      toIsoDate(filters.date_from) ?? null,
+      toIsoDate(filters.date_to) ?? null,
+    ],
+    queryFn: () =>
+      fetchFinancialSummary({
+        entry_type: filters.entry_type || undefined,
+        category: filters.category || undefined,
+        date_from: toIsoDate(filters.date_from),
+        date_to: toIsoDate(filters.date_to),
+      }),
     enabled: isAuthenticated,
   });
 
@@ -278,14 +290,26 @@ export function FinancialPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
-        <SummaryCard
-          title="Balanço mensal"
-          value={formatCents(summaryStats.month.saldo_cents)}
-          subtitle={`Entradas ${formatCents(summaryStats.month.entradas_cents)} · Saídas ${formatCents(
-            summaryStats.month.saidas_cents
-          )}`}
-          icon={<IconWallet size={20} />}
-        />
+        {summaryStats.filtered &&
+        (filters.entry_type || filters.category || filters.date_from || filters.date_to) ? (
+          <SummaryCard
+            title="Balanço do filtro"
+            value={formatCents(summaryStats.filtered.saldo_cents)}
+            subtitle={`Entradas ${formatCents(summaryStats.filtered.entradas_cents)} · Saídas ${formatCents(
+              summaryStats.filtered.saidas_cents
+            )}`}
+            icon={<IconWallet size={20} />}
+          />
+        ) : (
+          <SummaryCard
+            title="Balanço mensal"
+            value={formatCents(summaryStats.month.saldo_cents)}
+            subtitle={`Entradas ${formatCents(summaryStats.month.entradas_cents)} · Saídas ${formatCents(
+              summaryStats.month.saidas_cents
+            )}`}
+            icon={<IconWallet size={20} />}
+          />
+        )}
         <SummaryCard
           title="Balanço total"
           value={formatCents(summaryStats.total.saldo_cents)}

@@ -65,6 +65,24 @@ class FinancialSummaryView(APIView):
             or 0
         )
 
+        filterset = FinancialEntryFilter(request.GET, queryset=entries)
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=400)
+
+        filtered_entries = filterset.qs
+        filtered_entradas = (
+            filtered_entries.filter(entry_type=FinancialEntry.EntryType.ENTRADA).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
+        filtered_saidas = (
+            filtered_entries.filter(entry_type=FinancialEntry.EntryType.SAIDA).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
+
         return Response(
             {
                 "month": {
@@ -76,6 +94,12 @@ class FinancialSummaryView(APIView):
                     "entradas_cents": total_entradas,
                     "saidas_cents": total_saidas,
                     "saldo_cents": total_entradas - total_saidas,
+                },
+                "filtered": {
+                    "entradas_cents": filtered_entradas,
+                    "saidas_cents": filtered_saidas,
+                    "saldo_cents": filtered_entradas - filtered_saidas,
+                    "count": filtered_entries.count(),
                 },
             }
         )
