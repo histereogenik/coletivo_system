@@ -462,6 +462,8 @@ export function MembersPage() {
             <Select
               label="Responsável"
               data={responsibleOptions}
+              searchable
+              nothingFoundMessage="Nenhum responsável encontrado"
               placeholder="Selecione o responsável"
               value={formState.responsible ? String(formState.responsible) : undefined}
               onChange={(val) =>
