@@ -1,4 +1,5 @@
 ﻿import django_filters
+from django.db import models
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -12,6 +13,9 @@ class LunchFilter(django_filters.FilterSet):
     date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
     has_package = django_filters.BooleanFilter(method="filter_has_package")
+    value_cents = django_filters.NumberFilter(field_name="value_cents")
+    value_cents_min = django_filters.NumberFilter(field_name="value_cents", lookup_expr="gte")
+    value_cents_max = django_filters.NumberFilter(field_name="value_cents", lookup_expr="lte")
 
     def filter_has_package(self, queryset, name, value):
         if value is True:
@@ -22,7 +26,7 @@ class LunchFilter(django_filters.FilterSet):
 
     class Meta:
         model = Lunch
-        fields = ["payment_status", "date", "member", "package", "has_package"]
+        fields = ["payment_status", "date", "member", "package", "has_package", "value_cents", "value_cents_min", "value_cents_max"]
 
 
 class PackageFilter(django_filters.FilterSet):
@@ -48,6 +52,34 @@ class LunchViewSet(viewsets.ModelViewSet):
         if entry:
             entry.delete()
         super().perform_destroy(instance)
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        filterset = LunchFilter(request.GET, queryset=self.get_queryset())
+        if not filterset.is_valid():
+            return Response(filterset.errors, status=400)
+
+        entries = filterset.qs
+        total_received = (
+            entries.filter(payment_status=Lunch.PaymentStatus.PAGO).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
+        total_open = (
+            entries.filter(payment_status=Lunch.PaymentStatus.EM_ABERTO).aggregate(
+                total=models.Sum("value_cents")
+            )["total"]
+            or 0
+        )
+
+        return Response(
+            {
+                "received_cents": total_received,
+                "open_cents": total_open,
+                "count": entries.count(),
+            }
+        )
 
 
 class PackageViewSet(viewsets.ModelViewSet):

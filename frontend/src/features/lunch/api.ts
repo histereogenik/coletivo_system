@@ -12,6 +12,12 @@ export type Lunch = {
   package_remaining?: number | null;
 };
 
+export type LunchSummary = {
+  received_cents: number;
+  open_cents: number;
+  count: number;
+};
+
 export type Package = {
   id: number;
   member: number;
@@ -29,6 +35,11 @@ export type Package = {
 
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get<Lunch[]>("/api/lunch/lunches/", { params });
+  return data;
+}
+
+export async function fetchLunchSummary(params?: Record<string, string | number | undefined>) {
+  const { data } = await api.get<LunchSummary>("/api/lunch/lunches/summary/", { params });
   return data;
 }
 
