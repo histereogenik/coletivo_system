@@ -25,6 +25,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
@@ -383,9 +384,20 @@ export function LunchesPage() {
       <Group mb="md">
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo
-        </Button>
+        <Group ml="auto">
+          <Button
+            component="a"
+            href={`${API_BASE_URL}/api/lunch/lunches/export/`}
+            target="_blank"
+            rel="noreferrer"
+            variant="outline"
+          >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+            Novo
+          </Button>
+        </Group>
       </Group>
       {isFilterActive && (
         <Box mb="md">

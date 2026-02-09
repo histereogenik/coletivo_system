@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import {
   createFinancialEntry,
   deleteFinancialEntry,
@@ -299,9 +300,20 @@ export function FinancialPage() {
         <IconCurrencyDollar size={20} />
         <Title order={3}>Financeiro</Title>
         {isAuthenticated && (
-          <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-            Novo
-          </Button>
+          <Group ml="auto">
+            <Button
+              component="a"
+              href={`${API_BASE_URL}/api/financial/entries/export/`}
+              target="_blank"
+              rel="noreferrer"
+              variant="outline"
+            >
+              Exportar
+            </Button>
+            <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+              Novo
+            </Button>
+          </Group>
         )}
       </Group>
 

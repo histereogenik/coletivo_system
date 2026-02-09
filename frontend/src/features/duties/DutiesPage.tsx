@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { fetchMembers } from "../lunch/membersApi";
 import { createDuty, deleteDuty, fetchDuties, updateDuty, type Duty } from "./api";
 
@@ -159,9 +160,20 @@ export function DutiesPage() {
           <IconTools size={20} />
           <Title order={3}>Funções</Title>
         </Group>
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-          Nova
-        </Button>
+        <Group>
+          <Button
+            component="a"
+            href={`${API_BASE_URL}/api/duties/duties/export/`}
+            target="_blank"
+            rel="noreferrer"
+            variant="outline"
+          >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+            Nova
+          </Button>
+        </Group>
       </Group>
 
       {dutiesQuery.isLoading && <Text size="sm">Carregando...</Text>}

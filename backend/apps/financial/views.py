@@ -2,9 +2,11 @@ import django_filters
 from django.db import models
 from django.utils import timezone
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.exports import cents_to_reais, create_xlsx_response
 from apps.common.permissions import SuperuserOnly
 from apps.financial.models import FinancialEntry
 from apps.financial.serializers import FinancialEntrySerializer
@@ -41,6 +43,32 @@ class FinancialEntryViewSet(viewsets.ModelViewSet):
     serializer_class = FinancialEntrySerializer
     permission_classes = [SuperuserOnly]
     filterset_class = FinancialEntryFilter
+
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        headers = [
+            "Data",
+            "Tipo",
+            "Categoria",
+            "Descrição",
+            "Valor (R$)",
+            "Almoço",
+            "Pacote",
+        ]
+        rows = [
+            [
+                entry.date.strftime("%Y-%m-%d"),
+                entry.get_entry_type_display(),
+                entry.get_category_display(),
+                entry.description,
+                cents_to_reais(entry.value_cents),
+                entry.lunch_id or "",
+                entry.package_id or "",
+            ]
+            for entry in queryset
+        ]
+        return create_xlsx_response("financeiro", headers, rows)
 
 
 class FinancialSummaryView(APIView):

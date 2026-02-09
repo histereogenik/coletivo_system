@@ -11,6 +11,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { fetchMembers } from "../lunch/membersApi";
 import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
 import { fetchDuties } from "../duties/api";
@@ -258,9 +259,20 @@ export function AgendaPage() {
           <Title order={3}>Agenda</Title>
         </Group>
         {isAuthenticated && (
-          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-            Novo
-          </Button>
+          <Group>
+            <Button
+              component="a"
+              href={`${API_BASE_URL}/api/agenda/entries/export/`}
+              target="_blank"
+              rel="noreferrer"
+              variant="outline"
+            >
+              Exportar
+            </Button>
+            <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+              Novo
+            </Button>
+          </Group>
         )}
       </Group>
 
