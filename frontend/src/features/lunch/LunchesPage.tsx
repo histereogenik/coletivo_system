@@ -157,6 +157,8 @@ export function LunchesPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "lunches",
+      page,
+      pageSize,
       filters.member,
       filters.payment_status,
       filters.has_package,
@@ -166,6 +168,8 @@ export function LunchesPage() {
     ],
     queryFn: () =>
       fetchLunches({
+        page,
+        page_size: pageSize,
         member: filters.member ? Number(filters.member) : undefined,
         payment_status: filters.payment_status || undefined,
         has_package:
@@ -313,20 +317,29 @@ export function LunchesPage() {
     }
   }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const lunches = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.member, filters.payment_status, filters.has_package, filters.value, filters.date_from, filters.date_to, dataLength]);
+  }, [
+    filters.member,
+    filters.payment_status,
+    filters.has_package,
+    filters.value,
+    filters.date_from,
+    filters.date_to,
+  ]);
 
   useEffect(() => {
     setValueInput(filters.value);
   }, [filters.value]);
 
   useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   if (!isAuthenticated) {
     return (
@@ -491,7 +504,7 @@ export function LunchesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {lunches.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -549,7 +562,7 @@ export function LunchesPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>

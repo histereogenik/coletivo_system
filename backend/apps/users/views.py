@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 
 from apps.common.exports import create_xlsx_response
+from apps.common.pagination import OptionalPagination
 from apps.common.permissions import SuperuserOnly
 from apps.users.models import Member
 from apps.users.serializers import MemberSerializer
@@ -35,6 +36,7 @@ class MemberViewSet(viewsets.ModelViewSet):
     serializer_class = MemberSerializer
     permission_classes = [SuperuserOnly]
     filterset_class = MemberFilter
+    pagination_class = OptionalPagination
 
     @action(detail=False, methods=["get"], url_path="export")
     def export(self, request):

@@ -127,6 +127,8 @@ export function PackagesPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "packages",
+      page,
+      pageSize,
       filters.member,
       filters.payment_status,
       filters.status,
@@ -135,6 +137,8 @@ export function PackagesPage() {
     ],
     queryFn: () =>
       fetchPackages({
+        page,
+        page_size: pageSize,
         member: filters.member ? Number(filters.member) : undefined,
         payment_status: filters.payment_status || undefined,
         status: filters.status || undefined,
@@ -281,16 +285,18 @@ export function PackagesPage() {
     label: m.full_name,
   }));
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const packages = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.member, filters.payment_status, filters.status, filters.date_from, filters.date_to, dataLength]);
+  }, [filters.member, filters.payment_status, filters.status, filters.date_from, filters.date_to]);
 
   useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   useEffect(() => {
     if (processedNovoRef.current) return;
@@ -432,7 +438,7 @@ export function PackagesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {packages.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>{item.member_name || `#${item.member}`}</Table.Td>
@@ -505,7 +511,7 @@ export function PackagesPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>

@@ -1,4 +1,5 @@
 ﻿import { api } from "../../shared/api";
+import { type PaginatedResponse } from "../../shared/pagination";
 
 export type Lunch = {
   id: number;
@@ -34,7 +35,7 @@ export type Package = {
 };
 
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<Lunch[]>("/api/lunch/lunches/", { params });
+  const { data } = await api.get<PaginatedResponse<Lunch>>("/api/lunch/lunches/", { params });
   return data;
 }
 
@@ -65,7 +66,7 @@ export async function deleteLunch(id: number) {
 }
 
 export async function fetchPackages(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<Package[]>("/api/lunch/packages/", { params });
+  const { data } = await api.get<PaginatedResponse<Package>>("/api/lunch/packages/", { params });
   return data;
 }
 

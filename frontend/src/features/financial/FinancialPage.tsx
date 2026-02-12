@@ -142,6 +142,8 @@ export function FinancialPage() {
       filters.value,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
+      page,
+      pageSize,
     ],
     queryFn: () =>
       fetchFinancialEntries({
@@ -152,6 +154,8 @@ export function FinancialPage() {
           : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        page,
+        page_size: pageSize,
       }),
     enabled: isAuthenticated,
   });
@@ -192,20 +196,21 @@ export function FinancialPage() {
     onError: () => notifications.show({ message: "Erro ao remover lançamento.", color: "red" }),
   });
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.entry_type, filters.category, filters.date_from, filters.date_to, dataLength]);
+  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to]);
 
   useEffect(() => {
     setValueInput(filters.value);
   }, [filters.value]);
 
   useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   const handleSubmit = () => {
     if (!formState.entry_type || !formState.category || !valueReais || !dateValue) {
@@ -421,7 +426,7 @@ export function FinancialPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {(data?.results ?? []).map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -456,7 +461,7 @@ export function FinancialPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>

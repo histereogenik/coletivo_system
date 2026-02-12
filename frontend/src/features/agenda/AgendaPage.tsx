@@ -1,4 +1,4 @@
-import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
+﻿import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
 import { DateInput, TimeInput, type DateValue } from "@mantine/dates";
 import { IconCalendar, IconPlus } from "@tabler/icons-react";
 import FullCalendar from "@fullcalendar/react";
@@ -14,7 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
 import { fetchMembers } from "../lunch/membersApi";
 import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
-import { fetchDuties } from "../duties/api";
+import { fetchAllDuties } from "../duties/api";
 
 const statusColors: Record<string, string> = {
   PLANEJADO: "blue",
@@ -109,7 +109,7 @@ export function AgendaPage() {
 
   const dutiesQuery = useQuery({
     queryKey: ["duties-for-agenda"],
-    queryFn: () => fetchDuties(),
+    queryFn: () => fetchAllDuties(),
     enabled: isAuthenticated,
   });
 
