@@ -1,4 +1,4 @@
-import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
+﻿import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
 import { DateInput, TimeInput, type DateValue } from "@mantine/dates";
 import { IconCalendar, IconPlus } from "@tabler/icons-react";
 import FullCalendar from "@fullcalendar/react";
@@ -11,9 +11,10 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { fetchMembers } from "../lunch/membersApi";
 import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
-import { fetchDuties } from "../duties/api";
+import { fetchAllDuties } from "../duties/api";
 
 const statusColors: Record<string, string> = {
   PLANEJADO: "blue",
@@ -108,7 +109,7 @@ export function AgendaPage() {
 
   const dutiesQuery = useQuery({
     queryKey: ["duties-for-agenda"],
-    queryFn: () => fetchDuties(),
+    queryFn: () => fetchAllDuties(),
     enabled: isAuthenticated,
   });
 
@@ -258,9 +259,20 @@ export function AgendaPage() {
           <Title order={3}>Agenda</Title>
         </Group>
         {isAuthenticated && (
-          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-            Novo
-          </Button>
+          <Group>
+            <Button
+              component="a"
+              href={`${API_BASE_URL}/api/agenda/entries/export/`}
+              target="_blank"
+              rel="noreferrer"
+              variant="outline"
+            >
+              Exportar
+            </Button>
+            <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+              Novo
+            </Button>
+          </Group>
         )}
       </Group>
 

@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { fetchMembers } from "../lunch/membersApi";
 import { createDuty, deleteDuty, fetchDuties, updateDuty, type Duty } from "./api";
 
@@ -34,8 +35,8 @@ export function DutiesPage() {
   const pageSize = 15;
 
   const dutiesQuery = useQuery({
-    queryKey: ["duties"],
-    queryFn: () => fetchDuties(),
+    queryKey: ["duties", page, pageSize],
+    queryFn: () => fetchDuties({ page, page_size: pageSize }),
     enabled: isAuthenticated,
   });
 
@@ -122,19 +123,17 @@ export function DutiesPage() {
     }
   };
 
-  const duties = dutiesQuery.data ?? [];
-  const dutiesLength = duties.length;
+  const dutiesData = dutiesQuery.data;
+  const duties = dutiesData?.results ?? [];
+  const dutiesLength = dutiesData?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(dutiesLength / pageSize));
 
   useEffect(() => {
-    setPage(1);
-  }, [dutiesLength]);
-
-  useEffect(() => {
+    if (!dutiesData) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [dutiesData, totalPages]);
 
-  const visibleDuties = duties.slice((page - 1) * pageSize, page * pageSize);
+  const visibleDuties = duties;
 
 
   if (!isAuthenticated) {
@@ -159,9 +158,20 @@ export function DutiesPage() {
           <IconTools size={20} />
           <Title order={3}>Funções</Title>
         </Group>
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
-          Nova
-        </Button>
+        <Group>
+          <Button
+            component="a"
+            href={`${API_BASE_URL}/api/duties/duties/export/`}
+            target="_blank"
+            rel="noreferrer"
+            variant="outline"
+          >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+            Nova
+          </Button>
+        </Group>
       </Group>
 
       {dutiesQuery.isLoading && <Text size="sm">Carregando...</Text>}

@@ -2,6 +2,7 @@
   Badge,
   Button,
   Container,
+  Box,
   Group,
   Modal,
   ScrollArea,
@@ -22,13 +23,16 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
   createLunch,
   deleteLunch,
   fetchLunches,
+  fetchLunchSummary,
   markLunchPaid,
   updateLunch,
   Lunch,
@@ -108,35 +112,71 @@ export function LunchesPage() {
     member: string | null;
     payment_status: string | null;
     has_package: boolean | null;
+    value: string;
     date_from: DateValue;
     date_to: DateValue;
   }>({
     member: null,
     payment_status: null,
     has_package: null,
+    value: "",
     date_from: null,
     date_to: null,
   });
+  const [valueInput, setValueInput] = useState<string>("" );
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
   const [page, setPage] = useState(1);
   const pageSize = 15;
 
-  const { data, isLoading, isError } = useQuery({
+  const { data: summary } = useQuery({
     queryKey: [
-      "lunches",
+      "lunch-summary",
       filters.member,
       filters.payment_status,
       filters.has_package,
+      filters.value,
+      toIsoDate(filters.date_from) ?? null,
+      toIsoDate(filters.date_to) ?? null,
+    ],
+    queryFn: () =>
+      fetchLunchSummary({
+        member: filters.member ? Number(filters.member) : undefined,
+        payment_status: filters.payment_status || undefined,
+        has_package:
+          filters.has_package === null ? undefined : filters.has_package ? "true" : "false",
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
+        date_from: toIsoDate(filters.date_from),
+        date_to: toIsoDate(filters.date_to),
+      }),
+    enabled: isAuthenticated,
+  });
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: [
+      "lunches",
+      page,
+      pageSize,
+      filters.member,
+      filters.payment_status,
+      filters.has_package,
+      filters.value,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
     queryFn: () =>
       fetchLunches({
+        page,
+        page_size: pageSize,
         member: filters.member ? Number(filters.member) : undefined,
         payment_status: filters.payment_status || undefined,
         has_package:
           filters.has_package === null ? undefined : filters.has_package ? "true" : "false",
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
       }),
@@ -225,6 +265,9 @@ export function LunchesPage() {
     }
   };
 
+  const formatCents = (cents: number) =>
+    (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   const openNew = useCallback(() => {
     setEditing(null);
     setFormState({
@@ -274,16 +317,29 @@ export function LunchesPage() {
     }
   }, [isAuthenticated, searchParams, setSearchParams, openNew]);
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const lunches = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.member, filters.payment_status, filters.has_package, filters.date_from, filters.date_to, dataLength]);
+  }, [
+    filters.member,
+    filters.payment_status,
+    filters.has_package,
+    filters.value,
+    filters.date_from,
+    filters.date_to,
+  ]);
 
   useEffect(() => {
+    setValueInput(filters.value);
+  }, [filters.value]);
+
+  useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   if (!isAuthenticated) {
     return (
@@ -304,10 +360,14 @@ export function LunchesPage() {
   if (isError || !data || membersQuery.isError || !membersQuery.data)
     return <Text c="red">Erro ao carregar almoços.</Text>;
 
-  const formatCents = (cents: number) =>
-    (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
   const canMarkPaid = (lunch: Lunch) => lunch.payment_status !== "PAGO";
+  const isFilterActive =
+    !!filters.member ||
+    !!filters.payment_status ||
+    filters.has_package !== null ||
+    !!filters.value ||
+    !!filters.date_from ||
+    !!filters.date_to;
 
   const members = membersQuery.data ?? [];
   const memberOptions = members.map((m: MemberOption) => ({
@@ -326,6 +386,7 @@ export function LunchesPage() {
       member: null,
       payment_status: null,
       has_package: null,
+      value: "",
       date_from: null,
       date_to: null,
     });
@@ -336,10 +397,31 @@ export function LunchesPage() {
       <Group mb="md">
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo
-        </Button>
+        <Group ml="auto">
+          <Button
+            component="a"
+            href={`${API_BASE_URL}/api/lunch/lunches/export/`}
+            target="_blank"
+            rel="noreferrer"
+            variant="outline"
+          >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+            Novo
+          </Button>
+        </Group>
       </Group>
+      {isFilterActive && (
+        <Box mb="md">
+          <SummaryCard
+            title="Valor total recebido"
+            value={formatCents(summary?.received_cents ?? 0)}
+            subtitle={`Valor de almoços em aberto: ${formatCents(summary?.open_cents ?? 0)}`}
+            icon={<IconSoup size={20} />}
+          />
+        </Box>
+      )}
       <Group gap="sm" align="flex-end" mb="md">
         <Select
           label="Integrante"
@@ -373,6 +455,18 @@ export function LunchesPage() {
               has_package: val === "PACOTE" ? true : val === "AVULSO" ? false : null,
             }))
           }
+        />
+        <TextInput
+          label="Valor (R$)"
+          value={valueInput}
+          onChange={(e) => setValueInput(e.currentTarget.value)}
+          onBlur={() => setFilters((prev) => ({ ...prev, value: valueInput.trim() }))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setFilters((prev) => ({ ...prev, value: valueInput.trim() }));
+            }
+          }}
+          placeholder="Ex: 28,00"
         />
         <DateInput
           label="De"
@@ -410,7 +504,7 @@ export function LunchesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {lunches.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -468,7 +562,7 @@ export function LunchesPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>

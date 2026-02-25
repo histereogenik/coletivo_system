@@ -2,6 +2,7 @@
   Badge,
   Button,
   Container,
+  SimpleGrid,
   Group,
   Modal,
   Pagination,
@@ -13,17 +14,26 @@
   Title,
 } from "@mantine/core";
 import { DateInput, type DateValue } from "@mantine/dates";
-import { IconCurrencyDollar, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconCurrencyDollar,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconWallet,
+} from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import {
   createFinancialEntry,
   deleteFinancialEntry,
   fetchFinancialEntries,
+  fetchFinancialSummary,
   updateFinancialEntry,
   type FinancialEntry,
 } from "./api";
@@ -90,13 +100,38 @@ export function FinancialPage() {
   const [filters, setFilters] = useState<{
     entry_type: "ENTRADA" | "SAIDA" | null;
     category: string | null;
+    value: string;
     date_from: DateValue;
     date_to: DateValue;
   }>({
     entry_type: null,
     category: null,
+    value: "",
     date_from: null,
     date_to: null,
+  });
+  const [valueInput, setValueInput] = useState<string>("");
+
+  const { data: summary } = useQuery({
+    queryKey: [
+      "financial-summary",
+      filters.entry_type,
+      filters.category,
+      filters.value,
+      toIsoDate(filters.date_from) ?? null,
+      toIsoDate(filters.date_to) ?? null,
+    ],
+    queryFn: () =>
+      fetchFinancialSummary({
+        entry_type: filters.entry_type || undefined,
+        category: filters.category || undefined,
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
+        date_from: toIsoDate(filters.date_from),
+        date_to: toIsoDate(filters.date_to),
+      }),
+    enabled: isAuthenticated,
   });
 
   const { data, isLoading, isError } = useQuery({
@@ -104,21 +139,30 @@ export function FinancialPage() {
       "financial",
       filters.entry_type,
       filters.category,
+      filters.value,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
+      page,
+      pageSize,
     ],
     queryFn: () =>
       fetchFinancialEntries({
         entry_type: filters.entry_type || undefined,
         category: filters.category || undefined,
+        value_cents: filters.value
+          ? Math.round(parseFloat(filters.value.replace(/\./g, "").replace(",", ".")) * 100)
+          : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        page,
+        page_size: pageSize,
       }),
     enabled: isAuthenticated,
   });
 
   const invalidateRelated = () => {
     queryClient.invalidateQueries({ queryKey: ["financial"] });
+    queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
@@ -152,16 +196,21 @@ export function FinancialPage() {
     onError: () => notifications.show({ message: "Erro ao remover lançamento.", color: "red" }),
   });
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.entry_type, filters.category, filters.date_from, filters.date_to, dataLength]);
+  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to]);
 
   useEffect(() => {
+    setValueInput(filters.value);
+  }, [filters.value]);
+
+  useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   const handleSubmit = () => {
     if (!formState.entry_type || !formState.category || !valueReais || !dateValue) {
@@ -219,6 +268,7 @@ export function FinancialPage() {
     setFilters({
       entry_type: null,
       category: null,
+      value: "",
       date_from: null,
       date_to: null,
     });
@@ -244,17 +294,64 @@ export function FinancialPage() {
   const formatCents = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  const summaryStats = summary ?? {
+    month: { entradas_cents: 0, saidas_cents: 0, saldo_cents: 0 },
+    total: { entradas_cents: 0, saidas_cents: 0, saldo_cents: 0 },
+  };
+
   return (
     <Container size="xl" py="md">
       <Group mb="md">
         <IconCurrencyDollar size={20} />
         <Title order={3}>Financeiro</Title>
         {isAuthenticated && (
-          <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-            Novo
-          </Button>
+          <Group ml="auto">
+            <Button
+              component="a"
+              href={`${API_BASE_URL}/api/financial/entries/export/`}
+              target="_blank"
+              rel="noreferrer"
+              variant="outline"
+            >
+              Exportar
+            </Button>
+            <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+              Novo
+            </Button>
+          </Group>
         )}
       </Group>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
+        {summaryStats.filtered &&
+        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value) ? (
+          <SummaryCard
+            title="Balanço do filtro"
+            value={formatCents(summaryStats.filtered.saldo_cents)}
+            subtitle={`Entradas ${formatCents(summaryStats.filtered.entradas_cents)} · Saídas ${formatCents(
+              summaryStats.filtered.saidas_cents
+            )}`}
+            icon={<IconWallet size={20} />}
+          />
+        ) : (
+          <SummaryCard
+            title="Balanço mensal"
+            value={formatCents(summaryStats.month.saldo_cents)}
+            subtitle={`Entradas ${formatCents(summaryStats.month.entradas_cents)} · Saídas ${formatCents(
+              summaryStats.month.saidas_cents
+            )}`}
+            icon={<IconWallet size={20} />}
+          />
+        )}
+        <SummaryCard
+          title="Balanço total"
+          value={formatCents(summaryStats.total.saldo_cents)}
+          subtitle={`Entradas ${formatCents(summaryStats.total.entradas_cents)} · Saídas ${formatCents(
+            summaryStats.total.saidas_cents
+          )}`}
+          icon={<IconCurrencyDollar size={20} />}
+        />
+      </SimpleGrid>
 
       <Group gap="sm" align="flex-end" mb="md">
         <Select
@@ -278,6 +375,18 @@ export function FinancialPage() {
           clearable
           value={filters.category}
           onChange={(val) => setFilters((prev) => ({ ...prev, category: val }))}
+        />
+        <TextInput
+          label="Valor (R$)"
+          value={valueInput}
+          onChange={(e) => setValueInput(e.currentTarget.value)}
+          onBlur={() => setFilters((prev) => ({ ...prev, value: valueInput.trim() }))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setFilters((prev) => ({ ...prev, value: valueInput.trim() }));
+            }
+          }}
+          placeholder="Ex: 28,00"
         />
         <DateInput
           label="De"
@@ -317,7 +426,7 @@ export function FinancialPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {(data?.results ?? []).map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>
@@ -352,7 +461,7 @@ export function FinancialPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>

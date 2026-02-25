@@ -1,4 +1,5 @@
 import { api } from "../../shared/api";
+import { type PaginatedResponse } from "../../shared/pagination";
 
 export type FinancialEntry = {
   id: number;
@@ -9,8 +10,34 @@ export type FinancialEntry = {
   date: string;
 };
 
+export type FinancialSummary = {
+  month: {
+    entradas_cents: number;
+    saidas_cents: number;
+    saldo_cents: number;
+  };
+  total: {
+    entradas_cents: number;
+    saidas_cents: number;
+    saldo_cents: number;
+  };
+  filtered?: {
+    entradas_cents: number;
+    saidas_cents: number;
+    saldo_cents: number;
+    count: number;
+  };
+};
+
 export async function fetchFinancialEntries(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<FinancialEntry[]>("/api/financial/entries/", { params });
+  const { data } = await api.get<PaginatedResponse<FinancialEntry>>("/api/financial/entries/", {
+    params,
+  });
+  return data;
+}
+
+export async function fetchFinancialSummary(params?: Record<string, string | number | undefined>) {
+  const { data } = await api.get<FinancialSummary>("/api/financial/summary/", { params });
   return data;
 }
 

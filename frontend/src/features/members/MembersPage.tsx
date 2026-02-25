@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { extractErrorMessage } from "../../shared/errors";
 import { createMember, deleteMember, fetchMembers, updateMember, type Member } from "./api";
 
@@ -298,9 +299,20 @@ export function MembersPage() {
         <Title order={3}>Integrantes</Title>
         {isLoading && <Text size="sm" c="dimmed">Carregando...</Text>}
         {isError && <Text c="red" size="sm">Erro ao carregar integrantes.</Text>}
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo
-        </Button>
+        <Group ml="auto">
+        <Button
+          component="a"
+          href={`${API_BASE_URL}/api/users/members/export/`}
+          target="_blank"
+          rel="noreferrer"
+          variant="outline"
+        >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
+            Novo
+          </Button>
+        </Group>
       </Group>
 
       <Group gap="sm" align="flex-end" mb="md">
@@ -462,6 +474,8 @@ export function MembersPage() {
             <Select
               label="Responsável"
               data={responsibleOptions}
+              searchable
+              nothingFoundMessage="Nenhum responsável encontrado"
               placeholder="Selecione o responsável"
               value={formState.responsible ? String(formState.responsible) : undefined}
               onChange={(val) =>

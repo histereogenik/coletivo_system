@@ -20,6 +20,7 @@ class Package(models.Model):
         VALIDO = "VALIDO", "Válido"
 
     member = models.ForeignKey(Member, related_name="packages", on_delete=models.CASCADE)
+    unit_value_cents = models.PositiveIntegerField(help_text="Valor unitário em centavos.")
     value_cents = models.PositiveIntegerField(help_text="Valor em centavos.")
     date = models.DateField(help_text="Data de compra do pacote.")
     payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices)

@@ -11,6 +11,7 @@ from apps.users.models import Member
 class PackageSerializer(serializers.ModelSerializer):
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
+    unit_value_cents = serializers.IntegerField(required=False)
 
     class Meta:
         model = Package
@@ -19,6 +20,7 @@ class PackageSerializer(serializers.ModelSerializer):
             "member",
             "member_name",
             "value_cents",
+            "unit_value_cents",
             "date",
             "payment_status",
             "payment_mode",
@@ -35,16 +37,21 @@ class PackageSerializer(serializers.ModelSerializer):
             "status": {"required": False},
         }
 
-    def validate_value_cents(self, value):
-        if value < 0:
-            raise serializers.ValidationError("Valor deve ser maior ou igual a zero.")
-        return value
-
     def validate(self, attrs):
+        unit_value_cents = (
+            attrs.get("unit_value_cents")
+            if "unit_value_cents" in attrs
+            else getattr(self.instance, "unit_value_cents", None)
+        )
         quantity = (
             attrs.get("quantity")
             if "quantity" in attrs
             else getattr(self.instance, "quantity", None)
+        )
+        value_cents = (
+            attrs.get("value_cents")
+            if "value_cents" in attrs
+            else getattr(self.instance, "value_cents", None)
         )
         remaining_quantity = (
             attrs.get("remaining_quantity")
@@ -62,6 +69,28 @@ class PackageSerializer(serializers.ModelSerializer):
             errors["quantity"] = "Quantidade é obrigatória para pacote."
         if not expiration:
             errors["expiration"] = "Validade do pacote é obrigatória."
+        if unit_value_cents is None and value_cents is None:
+            errors["unit_value_cents"] = "Informe o valor do almoço."
+        if unit_value_cents is not None:
+            if unit_value_cents < 0:
+                errors["unit_value_cents"] = "Valor deve ser maior ou igual a zero."
+            elif quantity:
+                expected_total = unit_value_cents * quantity
+                if value_cents is not None and value_cents != expected_total:
+                    errors["value_cents"] = "Valor total deve corresponder ao valor do almoço."
+                attrs["unit_value_cents"] = unit_value_cents
+                attrs["value_cents"] = expected_total
+        elif value_cents is not None and value_cents < 0:
+            errors["value_cents"] = "Valor deve ser maior ou igual a zero."
+        elif (
+            unit_value_cents is None
+            and "quantity" in attrs
+            and self.instance
+            and self.instance.quantity
+        ):
+            inferred_unit = self.instance.unit_value_cents
+            attrs["unit_value_cents"] = inferred_unit
+            attrs["value_cents"] = inferred_unit * quantity
         if remaining_quantity is None:
             remaining_quantity = quantity
         if (
@@ -196,6 +225,7 @@ class LunchSerializer(serializers.ModelSerializer):
             if not package:
                 raise serializers.ValidationError({"package": "Nenhum pacote válido disponível."})
             attrs["package"] = package
+            attrs["value_cents"] = package.unit_value_cents
 
         if package and member and package.member_id != member.id:
             raise serializers.ValidationError({"package": "Pacote não pertence ao integrante."})
@@ -203,6 +233,8 @@ class LunchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"package": "Pacote sem saldo."})
         if package and date and package.expiration < date:
             raise serializers.ValidationError({"package": "Pacote expirado para a data do almoço."})
+        if package and "value_cents" not in attrs:
+            attrs["value_cents"] = package.unit_value_cents
         return attrs
 
     def create(self, validated_data):
@@ -247,6 +279,11 @@ class LunchSerializer(serializers.ModelSerializer):
         entry = getattr(instance, "financial_entry", None)
         is_paid_now = instance.payment_status == Lunch.PaymentStatus.PAGO
         was_paid = prev_status == Lunch.PaymentStatus.PAGO
+
+        if instance.package_id:
+            if entry:
+                entry.delete()
+            return
 
         if is_paid_now and instance.value_cents > 0:
             label = "Pagamento pacote" if instance.package_id else "Pagamento almoço"

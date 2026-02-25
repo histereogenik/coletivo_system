@@ -1,4 +1,5 @@
 import { api } from "../../shared/api";
+import { fetchAllPages } from "../../shared/pagination";
 
 export type AgendaEntry = {
   id: number;
@@ -13,8 +14,7 @@ export type AgendaEntry = {
 };
 
 export async function fetchAgenda(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<AgendaEntry[]>("/api/agenda/entries/", { params });
-  return data;
+  return fetchAllPages<AgendaEntry>("/api/agenda/entries/", params);
 }
 
 export async function createAgendaEntry(payload: Partial<AgendaEntry> & { member_ids?: number[] }) {

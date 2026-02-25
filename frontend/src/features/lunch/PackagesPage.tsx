@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../shared/api";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
@@ -95,7 +96,6 @@ export function PackagesPage() {
   const [editing, setEditing] = useState<Package | null>(null);
   const [formState, setFormState] = useState<Partial<Package>>({
     member: undefined,
-    value_cents: 0,
     date: new Date().toISOString().slice(0, 10),
     payment_status: "EM_ABERTO",
     payment_mode: "PIX",
@@ -103,7 +103,7 @@ export function PackagesPage() {
     remaining_quantity: undefined,
     expiration: new Date().toISOString().slice(0, 10),
   });
-  const [valueReais, setValueReais] = useState<string>("");
+  const [unitValueReais, setUnitValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
   const [expirationValue, setExpirationValue] = useState<DateValue>(new Date());
   const [filters, setFilters] = useState<{
@@ -127,6 +127,8 @@ export function PackagesPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "packages",
+      page,
+      pageSize,
       filters.member,
       filters.payment_status,
       filters.status,
@@ -135,6 +137,8 @@ export function PackagesPage() {
     ],
     queryFn: () =>
       fetchPackages({
+        page,
+        page_size: pageSize,
         member: filters.member ? Number(filters.member) : undefined,
         payment_status: filters.payment_status || undefined,
         status: filters.status || undefined,
@@ -216,15 +220,18 @@ export function PackagesPage() {
       notifications.show({ message: "Preencha integrante, data e validade.", color: "red" });
       return;
     }
-    const parsedValue = valueReais
-      ? parseFloat(valueReais.replace(/\./g, "").replace(",", "."))
-      : 0;
+    if (!unitValueReais.trim()) {
+      notifications.show({ message: "Preencha o valor do almoço.", color: "red" });
+      return;
+    }
+    const parsedUnitValue = parseFloat(unitValueReais.replace(/\./g, "").replace(",", "."));
     const dateIso = toIsoDate(dateValue) || "";
     const expirationIso = toIsoDate(expirationValue) || "";
 
     const payload: Partial<Package> = {
       ...formState,
-      value_cents: Number.isNaN(parsedValue) ? 0 : Math.round(parsedValue * 100),
+      unit_value_cents: Number.isNaN(parsedUnitValue) ? 0 : Math.round(parsedUnitValue * 100),
+      value_cents: totalValueCents,
       date: dateIso,
       expiration: expirationIso,
     };
@@ -240,7 +247,6 @@ export function PackagesPage() {
     setEditing(null);
     setFormState({
       member: undefined,
-      value_cents: 0,
       date: new Date().toISOString().slice(0, 10),
       payment_status: "EM_ABERTO",
       payment_mode: "PIX",
@@ -248,7 +254,7 @@ export function PackagesPage() {
       remaining_quantity: undefined,
       expiration: new Date().toISOString().slice(0, 10),
     });
-    setValueReais("");
+    setUnitValueReais("");
     setDateValue(new Date());
     setExpirationValue(new Date());
     modalHandlers.open();
@@ -261,8 +267,9 @@ export function PackagesPage() {
       member: item.member,
       payment_mode: item.payment_mode ?? "PIX",
     });
-    setValueReais(
-      (item.value_cents / 100).toLocaleString("pt-BR", {
+    const unitValueCents = item.quantity ? Math.round(item.value_cents / item.quantity) : 0;
+    setUnitValueReais(
+      (unitValueCents / 100).toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })
@@ -278,16 +285,18 @@ export function PackagesPage() {
     label: m.full_name,
   }));
 
-  const dataLength = data?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dataLength / pageSize));
+  const packages = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     setPage(1);
-  }, [filters.member, filters.payment_status, filters.status, filters.date_from, filters.date_to, dataLength]);
+  }, [filters.member, filters.payment_status, filters.status, filters.date_from, filters.date_to]);
 
   useEffect(() => {
+    if (!data) return;
     setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  }, [data, totalPages]);
 
   useEffect(() => {
     if (processedNovoRef.current) return;
@@ -331,6 +340,11 @@ export function PackagesPage() {
 
   const formatCents = (cents: number) =>
     (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const parsedUnitValue = unitValueReais
+    ? parseFloat(unitValueReais.replace(/\./g, "").replace(",", "."))
+    : 0;
+  const unitValueCents = Number.isNaN(parsedUnitValue) ? 0 : Math.round(parsedUnitValue * 100);
+  const totalValueCents = unitValueCents * (formState.quantity ?? 0);
 
   return (
     <Container size="xl" py="md">
@@ -338,9 +352,20 @@ export function PackagesPage() {
       <Group mb="md">
         <IconPackage size={20} />
         <Title order={3}>Pacotes</Title>
-        <Button onClick={openNew} leftSection={<IconPlus size={16} />} ml="auto">
-          Novo
-        </Button>
+        <Group ml="auto">
+          <Button
+            component="a"
+            href={`${API_BASE_URL}/api/lunch/packages/export/`}
+            target="_blank"
+            rel="noreferrer"
+            variant="outline"
+          >
+            Exportar
+          </Button>
+          <Button onClick={openNew} leftSection={<IconPlus size={16} />}>
+            Novo
+          </Button>
+        </Group>
       </Group>
       <Group gap="sm" align="flex-end" mb="md">
         <Select
@@ -401,6 +426,9 @@ export function PackagesPage() {
               <Table.Th style={{ minWidth: 140 }} ta="right">
                 Quantidade
               </Table.Th>
+              <Table.Th style={{ minWidth: 130 }} ta="right">
+                Valor unitário
+              </Table.Th>
               <Table.Th style={{ minWidth: 110 }} ta="right">
                 Valor
               </Table.Th>
@@ -410,7 +438,7 @@ export function PackagesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {data.slice((page - 1) * pageSize, page * pageSize).map((item) => (
+            {packages.map((item) => (
               <Table.Tr key={item.id}>
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>{item.member_name || `#${item.member}`}</Table.Td>
@@ -427,6 +455,11 @@ export function PackagesPage() {
                 <Table.Td>{formatPtDate(item.expiration)}</Table.Td>
                 <Table.Td ta="right">
                   {item.remaining_quantity}/{item.quantity}
+                </Table.Td>
+                <Table.Td ta="right">
+                  {formatCents(
+                    item.unit_value_cents ?? (item.quantity ? Math.round(item.value_cents / item.quantity) : 0)
+                  )}
                 </Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
@@ -478,7 +511,7 @@ export function PackagesPage() {
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {data.length > 0 && (
+      {totalCount > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
@@ -499,22 +532,23 @@ export function PackagesPage() {
           />
           <TextInput
             label="Valor (R$)"
-            value={valueReais}
-            onChange={(e) => setValueReais(e.currentTarget.value)}
-            placeholder="Ex: 120,00"
-          />
-          <DateInput
-            label="Data da compra"
-            value={dateValue}
-            onChange={(val) => setDateValue(val ?? null)}
-            valueFormat="DD/MM/YYYY"
-            locale="pt-br"
+            value={unitValueReais}
+            onChange={(e) => setUnitValueReais(e.currentTarget.value)}
+            placeholder="Ex: 28,00"
           />
           <NumberInput
             label="Quantidade"
             value={formState.quantity ?? undefined}
             onChange={(val) => setFormState((prev) => ({ ...prev, quantity: Number(val) || undefined }))}
             min={1}
+          />
+          <TextInput label="Valor calculado" value={formatCents(totalValueCents)} readOnly />
+          <DateInput
+            label="Data da compra"
+            value={dateValue}
+            onChange={(val) => setDateValue(val ?? null)}
+            valueFormat="DD/MM/YYYY"
+            locale="pt-br"
           />
           <DateInput
             label="Validade"

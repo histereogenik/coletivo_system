@@ -1,4 +1,5 @@
 ﻿import { api } from "../../shared/api";
+import { type PaginatedResponse } from "../../shared/pagination";
 
 export type Lunch = {
   id: number;
@@ -12,11 +13,18 @@ export type Lunch = {
   package_remaining?: number | null;
 };
 
+export type LunchSummary = {
+  received_cents: number;
+  open_cents: number;
+  count: number;
+};
+
 export type Package = {
   id: number;
   member: number;
   member_name?: string;
   value_cents: number;
+  unit_value_cents?: number;
   date: string;
   payment_status: string;
   payment_mode?: string | null;
@@ -27,7 +35,12 @@ export type Package = {
 };
 
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<Lunch[]>("/api/lunch/lunches/", { params });
+  const { data } = await api.get<PaginatedResponse<Lunch>>("/api/lunch/lunches/", { params });
+  return data;
+}
+
+export async function fetchLunchSummary(params?: Record<string, string | number | undefined>) {
+  const { data } = await api.get<LunchSummary>("/api/lunch/lunches/summary/", { params });
   return data;
 }
 
@@ -53,7 +66,7 @@ export async function deleteLunch(id: number) {
 }
 
 export async function fetchPackages(params?: Record<string, string | number | undefined>) {
-  const { data } = await api.get<Package[]>("/api/lunch/packages/", { params });
+  const { data } = await api.get<PaginatedResponse<Package>>("/api/lunch/packages/", { params });
   return data;
 }
 

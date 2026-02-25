@@ -1,4 +1,5 @@
 import { api } from "../../shared/api";
+import { fetchAllPages, type PaginatedResponse } from "../../shared/pagination";
 
 export type Duty = {
   id: number;
@@ -7,9 +8,13 @@ export type Duty = {
   members?: { id: number; full_name: string }[];
 };
 
-export async function fetchDuties() {
-  const { data } = await api.get<Duty[]>("/api/duties/duties/");
+export async function fetchDuties(params?: Record<string, string | number | undefined>) {
+  const { data } = await api.get<PaginatedResponse<Duty>>("/api/duties/duties/", { params });
   return data;
+}
+
+export async function fetchAllDuties() {
+  return fetchAllPages<Duty>("/api/duties/duties/");
 }
 
 export async function createDuty(payload: Partial<Duty> & { member_ids?: number[] }) {
