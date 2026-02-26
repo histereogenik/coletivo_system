@@ -164,13 +164,24 @@ REST_FRAMEWORK = {
     },
 }
 
-# Enable permissive CORS for local dev; lock down in production.
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS/CSRF configuration (use permissive values only in local development).
+cors_allow_all_env = os.getenv("CORS_ALLOW_ALL_ORIGINS")
+CORS_ALLOW_ALL_ORIGINS = DEBUG if cors_allow_all_env is None else cors_allow_all_env == "True"
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
-    origin for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
+
+# Needed when Django is behind reverse proxy (NPM/Dokploy) and receives HTTPS via forwarded headers.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -182,3 +193,4 @@ SIMPLE_JWT = {
 
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "False") == "True"
 AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "Lax")
+AUTH_COOKIE_DOMAIN = os.getenv("AUTH_COOKIE_DOMAIN") or None

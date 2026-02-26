@@ -12,6 +12,8 @@ def set_auth_cookies(response: Response, access: str, refresh: str | None = None
         "secure": settings.AUTH_COOKIE_SECURE,
         "samesite": settings.AUTH_COOKIE_SAMESITE,
     }
+    if settings.AUTH_COOKIE_DOMAIN:
+        cookie_params["domain"] = settings.AUTH_COOKIE_DOMAIN
     access_max_age = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
     response.set_cookie("access_token", access, max_age=access_max_age, **cookie_params)
     if refresh:
@@ -20,8 +22,11 @@ def set_auth_cookies(response: Response, access: str, refresh: str | None = None
 
 
 def clear_auth_cookies(response: Response):
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    delete_params = {}
+    if settings.AUTH_COOKIE_DOMAIN:
+        delete_params["domain"] = settings.AUTH_COOKIE_DOMAIN
+    response.delete_cookie("access_token", **delete_params)
+    response.delete_cookie("refresh_token", **delete_params)
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
