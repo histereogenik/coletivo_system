@@ -8,8 +8,8 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-COPY backup/entrypoint.sh /scripts/entrypoint.sh
-COPY backup/backup.sh /scripts/backup.sh
+COPY entrypoint.sh /scripts/entrypoint.sh
+COPY backup.sh /scripts/backup.sh
 
 RUN chmod +x /scripts/entrypoint.sh /scripts/backup.sh
 
