@@ -1,8 +1,8 @@
 services:
   backup:
     build:
-      context: .
-      dockerfile: backup/Dockerfile
+      context: ./backup
+      dockerfile: Dockerfile
     env_file:
       - ./backup/.env.backup
     restart: unless-stopped
