@@ -14,6 +14,7 @@ class Package(models.Model):
         PIX = "PIX", "Pix"
         CARTAO = "CARTAO", "Cartão"
         DINHEIRO = "DINHEIRO", "Dinheiro"
+        TROCA = "TROCA", "Troca"
 
     class PackageStatus(models.TextChoices):
         EXPIRADO = "EXPIRADO", "Expirado"
@@ -82,6 +83,7 @@ class Lunch(models.Model):
         PIX = "PIX", "Pix"
         CARTAO = "CARTAO", "Cartão"
         DINHEIRO = "DINHEIRO", "Dinheiro"
+        TROCA = "TROCA", "Troca"
 
     member = models.ForeignKey(Member, related_name="lunches", on_delete=models.CASCADE)
     package = models.ForeignKey(

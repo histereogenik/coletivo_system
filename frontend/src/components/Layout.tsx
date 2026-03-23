@@ -1,10 +1,10 @@
-﻿import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
+import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 type LayoutProps = {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 const navItems = [
@@ -82,9 +82,7 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>{children ?? <Outlet />}</AppShell.Main>
     </AppShell>
   );
 }
-
-

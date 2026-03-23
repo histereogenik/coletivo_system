@@ -74,6 +74,7 @@ const paymentModeLabels: Record<string, string> = {
   PIX: "Pix",
   CARTAO: "Cartão",
   DINHEIRO: "Dinheiro",
+  TROCA: "Troca",
 };
 
 export function LunchesPage() {
@@ -623,6 +624,7 @@ export function LunchesPage() {
               { value: "PIX", label: "Pix" },
               { value: "CARTAO", label: "Cartão" },
               { value: "DINHEIRO", label: "Dinheiro" },
+              { value: "TROCA", label: "Troca" },
             ]}
             value={formState.payment_mode}
             disabled={!!formState.use_package}

@@ -1,4 +1,4 @@
-﻿import { MantineProvider, Text } from "@mantine/core";
+import { MantineProvider, Text } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
@@ -8,13 +8,14 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import { Layout } from "./components/Layout";
 import { AgendaPage } from "./features/agenda/AgendaPage";
-import { DashboardPage } from "./features/dashboard/DashboardPage";
-import { FinancialPage } from "./features/financial/FinancialPage";
 import { LoginPage } from "./features/auth/LoginPage";
+import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { DutiesPage } from "./features/duties/DutiesPage";
+import { FinancialPage } from "./features/financial/FinancialPage";
 import { LunchesPage } from "./features/lunch/LunchesPage";
 import { PackagesPage } from "./features/lunch/PackagesPage";
 import { MembersPage } from "./features/members/MembersPage";
-import { DutiesPage } from "./features/duties/DutiesPage";
+import { PublicRegistrationPage } from "./features/public-registration/PublicRegistrationPage";
 import { queryClient } from "./shared/queryClient";
 import { theme } from "./shared/theme";
 
@@ -23,8 +24,9 @@ function App() {
     <MantineProvider defaultColorScheme="light" theme={theme}>
       <Notifications />
       <QueryClientProvider client={queryClient}>
-        <Layout>
-          <Routes>
+        <Routes>
+          <Route path="/cadastro" element={<PublicRegistrationPage />} />
+          <Route element={<Layout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/financeiro" element={<FinancialPage />} />
@@ -34,12 +36,11 @@ function App() {
             <Route path="/funcoes" element={<DutiesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Text>Página não encontrada.</Text>} />
-          </Routes>
-        </Layout>
+          </Route>
+        </Routes>
       </QueryClientProvider>
     </MantineProvider>
   );
 }
 
 export default App;
-
