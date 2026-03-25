@@ -146,6 +146,28 @@ def test_public_registration_rejects_duplicate_email(api_client):
 
 
 @pytest.mark.django_db
+def test_public_registration_rejects_child_observations_above_limit(api_client):
+    url = reverse("public-registration-submit")
+    payload = {
+        "full_name": "Maria Silva",
+        "role": Member.Role.AVULSO,
+        "diet": Member.Diet.CARNIVORO,
+        "children": [
+            {
+                "full_name": "Ana Silva",
+                "diet": Member.Diet.VEGANO,
+                "observations": "a" * 501,
+            }
+        ],
+    }
+
+    response = api_client.post(url, payload, format="json")
+
+    assert response.status_code == 400
+    assert "children" in response.data
+
+
+@pytest.mark.django_db
 def test_public_registration_admin_requires_authentication(api_client):
     url = reverse("public-registration-admin-list")
 
@@ -222,6 +244,23 @@ def test_reject_public_registration_updates_status_and_notes(api_client, superus
     registration.refresh_from_db()
     assert registration.status == PublicRegistration.Status.REJEITADO
     assert registration.review_notes == "Dados incompletos para aprovação."
+
+
+@pytest.mark.django_db
+def test_reject_public_registration_rejects_review_notes_above_limit(api_client, superuser):
+    registration = PublicRegistrationFactory()
+    api_client.force_authenticate(user=superuser)
+    url = reverse("public-registration-admin-reject", args=[registration.id])
+
+    response = api_client.post(
+        url,
+        {"review_notes": "a" * 501},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    registration.refresh_from_db()
+    assert registration.status == PublicRegistration.Status.PENDENTE
 
 
 @pytest.mark.django_db

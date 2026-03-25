@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxLengthValidator
 from django.db import models
 
+from apps.common.text_limits import MAX_TEXT_LENGTH
 
 class FinancialEntry(models.Model):
     class EntryType(models.TextChoices):
@@ -19,7 +21,7 @@ class FinancialEntry(models.Model):
 
     entry_type = models.CharField(max_length=10, choices=EntryType.choices)
     category = models.CharField(max_length=20, choices=EntryCategory.choices)
-    description = models.TextField()
+    description = models.TextField(validators=[MaxLengthValidator(MAX_TEXT_LENGTH)])
     value_cents = models.PositiveIntegerField()
     date = models.DateField()
     lunch = models.OneToOneField(

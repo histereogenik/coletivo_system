@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxLengthValidator
 from django.db import models
 
+from apps.common.text_limits import MAX_TEXT_LENGTH
 from apps.duties.models import Duty
 from apps.users.models import Member
 
@@ -17,7 +19,7 @@ class AgendaEntry(models.Model):
     duty = models.ForeignKey(Duty, related_name="agenda_entries", on_delete=models.CASCADE)
     members = models.ManyToManyField(Member, related_name="agenda_entries", blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANEJADO)
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, validators=[MaxLengthValidator(MAX_TEXT_LENGTH)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

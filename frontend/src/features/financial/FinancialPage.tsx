@@ -26,9 +26,11 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
 import {
   createFinancialEntry,
   deleteFinancialEntry,
@@ -494,9 +496,16 @@ export function FinancialPage() {
             onChange={(val) => setFormState((prev) => ({ ...prev, category: val || "ALMOCO" }))}
           />
           <TextInput
-            label="Descrição"
+            label={
+              <FieldLabelWithCounter
+                label="Descrição"
+                counter={formatCharacterCounter(formState.description)}
+              />
+            }
             value={formState.description ?? ""}
             onChange={(e) => setFormState((prev) => ({ ...prev, description: e.currentTarget.value }))}
+            maxLength={TEXT_FIELD_MAX_LENGTH}
+            styles={{ label: { width: "100%" } }}
           />
           <TextInput
             label="Valor (R$)"

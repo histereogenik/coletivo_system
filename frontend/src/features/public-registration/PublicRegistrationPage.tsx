@@ -21,8 +21,14 @@ import { notifications } from "@mantine/notifications";
 import { IconCheck, IconHeartHandshake, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { PublicHeader } from "../../components/PublicHeader";
 import { extractErrorMessage } from "../../shared/errors";
+import {
+  formatCharacterCounter,
+  NAME_FIELD_MAX_LENGTH,
+  TEXT_FIELD_MAX_LENGTH,
+} from "../../shared/formLimits";
 import { fetchPublicRegistrationMeta, submitPublicRegistration } from "./api";
 import type {
   PublicRegistrationChildInput,
@@ -286,6 +292,7 @@ export function PublicRegistrationPage() {
                     value={formValues.full_name}
                     onChange={(event) => updateAdultField("full_name", event.currentTarget.value)}
                     error={adultErrors.full_name}
+                    maxLength={NAME_FIELD_MAX_LENGTH}
                   />
                   <TextInput
                     label="Telefone"
@@ -304,12 +311,14 @@ export function PublicRegistrationPage() {
                     placeholder="Rua, número, bairro"
                     value={formValues.address}
                     onChange={(event) => updateAdultField("address", event.currentTarget.value)}
+                    maxLength={TEXT_FIELD_MAX_LENGTH}
                   />
                   <TextInput
                     label="Como conheceu o coletivo"
                     placeholder="Ex.: indicação, Instagram, amigos"
                     value={formValues.heard_about}
                     onChange={(event) => updateAdultField("heard_about", event.currentTarget.value)}
+                    maxLength={TEXT_FIELD_MAX_LENGTH}
                   />
                   <Select
                     label="Categoria"
@@ -332,11 +341,18 @@ export function PublicRegistrationPage() {
                 </SimpleGrid>
 
                 <Textarea
-                  label="Observações"
-                  placeholder="Se quiser, conte algo importante para a equipe."
+                  label={
+                    <FieldLabelWithCounter
+                      label="Observações"
+                      counter={formatCharacterCounter(formValues.observations)}
+                    />
+                  }
+                  placeholder="Tem alguma restrição? Se quiser, conte algo importante para a equipe"
                   minRows={4}
                   value={formValues.observations}
                   onChange={(event) => updateAdultField("observations", event.currentTarget.value)}
+                  maxLength={TEXT_FIELD_MAX_LENGTH}
+                  styles={{ label: { width: "100%" } }}
                 />
 
                 <Divider label="Crianças" labelPosition="left" />
@@ -399,6 +415,7 @@ export function PublicRegistrationPage() {
                               updateChildField(child.index, "full_name", event.currentTarget.value)
                             }
                             error={child.errors.full_name}
+                            maxLength={NAME_FIELD_MAX_LENGTH}
                           />
                           <Select
                             label="Dieta"
@@ -412,13 +429,20 @@ export function PublicRegistrationPage() {
                         </SimpleGrid>
 
                         <Textarea
-                          label="Observações"
+                          label={
+                            <FieldLabelWithCounter
+                              label="Observações"
+                              counter={formatCharacterCounter(child.observations)}
+                            />
+                          }
                           placeholder="Se quiser, conte algo importante sobre a criança."
                           minRows={3}
                           value={child.observations}
                           onChange={(event) =>
                             updateChildField(child.index, "observations", event.currentTarget.value)
                           }
+                          maxLength={TEXT_FIELD_MAX_LENGTH}
+                          styles={{ label: { width: "100%" } }}
                         />
                       </Stack>
                     </Card>

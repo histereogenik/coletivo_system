@@ -79,3 +79,18 @@ def test_member_serializer_accepts_international_phone():
     assert serializer.is_valid(), serializer.errors
     instance = serializer.save()
     assert instance.phone.startswith("+1")
+
+
+@pytest.mark.django_db
+def test_member_serializer_rejects_observations_above_limit():
+    serializer = MemberSerializer(
+        data={
+            "full_name": "Maria Silva",
+            "role": Member.Role.AVULSO,
+            "diet": Member.Diet.CARNIVORO,
+            "observations": "a" * 501,
+        }
+    )
+
+    assert not serializer.is_valid()
+    assert "observations" in serializer.errors

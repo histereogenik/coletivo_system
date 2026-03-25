@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.agenda.models import AgendaEntry
+from apps.common.validators import validate_text_length
 from apps.common.roles import promote_role
 from apps.duties.models import Duty
 from apps.users.models import Member
@@ -47,6 +48,9 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "members", "duty_name"]
+
+    def validate_notes(self, value: str) -> str:
+        return validate_text_length(value, field_label="Notas") or ""
 
     def validate(self, attrs):
         start = attrs.get("start_time") or getattr(self.instance, "start_time", None)

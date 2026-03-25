@@ -2,6 +2,7 @@ import phonenumbers
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.common.validators import validate_text_length
 from apps.users.models import Member, PublicRegistration, PublicRegistrationChild
 
 
@@ -124,6 +125,15 @@ class MemberSerializer(serializers.ModelSerializer):
     def validate_phone(self, value: str | None):
         return normalize_phone_value(value)
 
+    def validate_address(self, value: str) -> str:
+        return validate_text_length(value, field_label="Endereço") or ""
+
+    def validate_heard_about(self, value: str) -> str:
+        return validate_text_length(value, field_label="Como conheceu o coletivo") or ""
+
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações") or ""
+
     def get_responsible_name(self, obj: Member):
         return obj.responsible.full_name if obj.responsible else None
 
@@ -181,6 +191,9 @@ class PublicRegistrationChildSerializer(serializers.ModelSerializer):
     def validate_full_name(self, value: str) -> str:
         return validate_full_name_value(value, field_label="Nome da criança")
 
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações da criança") or ""
+
 
 class PublicRegistrationSubmitSerializer(serializers.ModelSerializer):
     children = PublicRegistrationChildSerializer(many=True, required=False)
@@ -228,6 +241,15 @@ class PublicRegistrationSubmitSerializer(serializers.ModelSerializer):
     def validate_phone(self, value: str | None):
         return normalize_phone_value(value)
 
+    def validate_address(self, value: str) -> str:
+        return validate_text_length(value, field_label="Endereço") or ""
+
+    def validate_heard_about(self, value: str) -> str:
+        return validate_text_length(value, field_label="Como conheceu o coletivo") or ""
+
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações") or ""
+
     def create(self, validated_data):
         children_data = validated_data.pop("children", [])
         validated_data["status"] = PublicRegistration.Status.PENDENTE
@@ -263,3 +285,6 @@ class PublicRegistrationAdminSerializer(serializers.ModelSerializer):
 
 class PublicRegistrationRejectSerializer(serializers.Serializer):
     review_notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_review_notes(self, value: str) -> str:
+        return validate_text_length(value, field_label="Notas da revisão") or ""

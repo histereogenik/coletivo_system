@@ -31,9 +31,15 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
 import { extractErrorMessage } from "../../shared/errors";
+import {
+  formatCharacterCounter,
+  NAME_FIELD_MAX_LENGTH,
+  TEXT_FIELD_MAX_LENGTH,
+} from "../../shared/formLimits";
 import {
   approvePublicRegistration,
   createMember,
@@ -766,6 +772,7 @@ export function MembersPage() {
             onChange={(event) =>
               setMemberFormState((prev) => ({ ...prev, full_name: event.currentTarget.value }))
             }
+            maxLength={NAME_FIELD_MAX_LENGTH}
           />
           <Switch
             label="Cadastrar criança"
@@ -848,6 +855,7 @@ export function MembersPage() {
             onChange={(event) =>
               setMemberFormState((prev) => ({ ...prev, address: event.currentTarget.value }))
             }
+            maxLength={TEXT_FIELD_MAX_LENGTH}
           />
           <TextInput
             label="Como conheceu"
@@ -856,14 +864,22 @@ export function MembersPage() {
             onChange={(event) =>
               setMemberFormState((prev) => ({ ...prev, heard_about: event.currentTarget.value }))
             }
+            maxLength={TEXT_FIELD_MAX_LENGTH}
           />
           <Textarea
-            label="Observações"
+            label={
+              <FieldLabelWithCounter
+                label="Observações"
+                counter={formatCharacterCounter(memberFormState.observations)}
+              />
+            }
             value={memberFormState.observations ?? ""}
             onChange={(event) =>
               setMemberFormState((prev) => ({ ...prev, observations: event.currentTarget.value }))
             }
             minRows={3}
+            maxLength={TEXT_FIELD_MAX_LENGTH}
+            styles={{ label: { width: "100%" } }}
           />
           <Group justify="flex-end">
             <Button onClick={handleSubmitMember} loading={createMemberMutation.isPending || updateMemberMutation.isPending}>
@@ -997,10 +1013,17 @@ export function MembersPage() {
             Se quiser, registre uma observação para a revisão deste cadastro.
           </Text>
           <Textarea
-            label="Notas da revisão"
+            label={
+              <FieldLabelWithCounter
+                label="Notas da revisão"
+                counter={formatCharacterCounter(rejectNotes)}
+              />
+            }
             value={rejectNotes}
             onChange={(event) => setRejectNotes(event.currentTarget.value)}
             minRows={4}
+            maxLength={TEXT_FIELD_MAX_LENGTH}
+            styles={{ label: { width: "100%" } }}
           />
           <Group justify="flex-end">
             <Button variant="outline" onClick={closeRejectRegistration}>
