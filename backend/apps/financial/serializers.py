@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.common.validators import validate_text_length
 from apps.financial.models import FinancialEntry
 
 ENTRADA_CATEGORIES = {FinancialEntry.EntryCategory.ALMOCO, FinancialEntry.EntryCategory.DOACAO}
@@ -30,6 +31,9 @@ class FinancialEntrySerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Valor deve ser maior que zero.")
         return value
+
+    def validate_description(self, value: str) -> str:
+        return validate_text_length(value, field_label="Descrição") or ""
 
     def validate(self, attrs):
         entry_type = attrs.get("entry_type") or getattr(self.instance, "entry_type", None)

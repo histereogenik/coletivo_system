@@ -572,6 +572,7 @@ export function PackagesPage() {
               { value: "PIX", label: "Pix" },
               { value: "CARTAO", label: "Cartão" },
               { value: "DINHEIRO", label: "Dinheiro" },
+              { value: "TROCA", label: "Troca" },
             ]}
             value={formState.payment_mode}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}

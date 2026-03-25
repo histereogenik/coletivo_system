@@ -49,3 +49,19 @@ def test_financial_entry_serializer_allows_estorno_saida():
 
     serializer = FinancialEntrySerializer(data=payload)
     assert serializer.is_valid(), serializer.errors
+
+
+@pytest.mark.django_db
+def test_financial_entry_serializer_rejects_description_above_limit():
+    payload = {
+        "entry_type": FinancialEntry.EntryType.ENTRADA,
+        "category": FinancialEntry.EntryCategory.ALMOCO,
+        "description": "a" * 501,
+        "value_cents": 1000,
+        "date": "2025-12-10",
+    }
+
+    serializer = FinancialEntrySerializer(data=payload)
+
+    assert not serializer.is_valid()
+    assert "description" in serializer.errors

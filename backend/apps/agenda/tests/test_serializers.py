@@ -110,3 +110,19 @@ def test_agenda_entry_rejects_time_conflict_for_member():
     serializer = AgendaEntrySerializer(data=payload)
     assert not serializer.is_valid()
     assert "member_conflicts" in serializer.errors
+
+
+@pytest.mark.django_db
+def test_agenda_entry_rejects_notes_above_limit():
+    duty = DutyFactory()
+    payload = {
+        "date": "2025-12-05",
+        "start_time": "09:00",
+        "duty": duty.id,
+        "notes": "a" * 501,
+    }
+
+    serializer = AgendaEntrySerializer(data=payload)
+
+    assert not serializer.is_valid()
+    assert "notes" in serializer.errors

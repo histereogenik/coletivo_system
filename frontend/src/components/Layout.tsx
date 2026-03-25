@@ -1,23 +1,26 @@
-﻿import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
+import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-type LayoutProps = {
-  children: React.ReactNode;
-};
-
 const navItems = [
-  { label: "Dashboard", to: "/" },
-  { label: "Agenda", to: "/agenda" },
-  { label: "Financeiro", to: "/financeiro" },
-  { label: "Almoços", to: "/lunches" },
-  { label: "Pacotes", to: "/pacotes" },
-  { label: "Integrantes", to: "/integrantes" },
-  { label: "Funções", to: "/funcoes" },
+  { label: "Dashboard", to: "/painel" },
+  { label: "Agenda", to: "/painel/agenda" },
+  { label: "Financeiro", to: "/painel/financeiro" },
+  { label: "Almoços", to: "/painel/lunches" },
+  { label: "Pacotes", to: "/painel/pacotes" },
+  { label: "Integrantes", to: "/painel/integrantes" },
+  { label: "Funções", to: "/painel/funcoes" },
 ];
 
-export function Layout({ children }: LayoutProps) {
+const isActivePath = (pathname: string, itemPath: string) => {
+  if (itemPath === "/painel") {
+    return pathname === itemPath;
+  }
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+};
+
+export function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const isMobile = useMediaQuery("(max-width: 640px)");
   const location = useLocation();
@@ -65,7 +68,7 @@ export function Layout({ children }: LayoutProps) {
       <AppShell.Navbar p="md">
         <nav className="flex flex-col gap-2">
           {navItems.map((item) => {
-            const active = location.pathname === item.to;
+            const active = isActivePath(location.pathname, item.to);
             return (
               <Link
                 key={item.to}
@@ -82,9 +85,9 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>
+        <Outlet />
+      </AppShell.Main>
     </AppShell>
   );
 }
-
-

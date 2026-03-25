@@ -1,5 +1,6 @@
 ﻿import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
 import { DateInput, TimeInput, type DateValue } from "@mantine/dates";
+import { Textarea } from "@mantine/core";
 import { IconCalendar, IconPlus } from "@tabler/icons-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -10,11 +11,15 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
 import { fetchMembers } from "../lunch/membersApi";
 import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
 import { fetchAllDuties } from "../duties/api";
+
+void TextInput;
 
 const statusColors: Record<string, string> = {
   PLANEJADO: "blue",
@@ -361,11 +366,19 @@ export function AgendaPage() {
             value={formState.status ?? undefined}
             onChange={(val) => setFormState((prev) => ({ ...prev, status: val || "PLANEJADO" }))}
           />
-          <TextInput
-            label="Notas"
+          <Textarea
+            label={
+              <FieldLabelWithCounter
+                label="Notas"
+                counter={formatCharacterCounter(formState.notes)}
+              />
+            }
             value={formState.notes ?? ""}
             onChange={(e) => setFormState((prev) => ({ ...prev, notes: e.currentTarget.value }))}
             placeholder="Observações adicionais"
+            minRows={3}
+            maxLength={TEXT_FIELD_MAX_LENGTH}
+            styles={{ label: { width: "100%" } }}
           />
           <Group justify="space-between" mt="sm">
             {editing ? (

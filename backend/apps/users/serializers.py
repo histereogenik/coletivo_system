@@ -1,12 +1,69 @@
-﻿import re
-
 import phonenumbers
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.users.models import Member
+from apps.common.validators import validate_text_length
+from apps.users.models import Member, PublicRegistration, PublicRegistrationChild
 
-PHONE_REGEX = re.compile(r"^[0-9+().\-\s]{7,20}$")
+
+def validate_full_name_value(value: str, field_label: str = "Nome completo") -> str:
+    cleaned = value.strip()
+    if len(cleaned) < 3:
+        raise serializers.ValidationError(f"{field_label} deve ter pelo menos 3 caracteres.")
+    return cleaned
+
+
+def normalize_email_value(
+    value: str | None,
+    *,
+    member_instance: Member | None = None,
+    registration_instance: PublicRegistration | None = None,
+    check_pending_registrations: bool = False,
+) -> str | None:
+    if value in (None, ""):
+        return None
+
+    email = value.lower().strip()
+
+    member_qs = Member.objects.filter(email__iexact=email)
+    if member_instance:
+        member_qs = member_qs.exclude(pk=member_instance.pk)
+    if member_qs.exists():
+        raise serializers.ValidationError("Já existe um integrante com este e-mail.")
+
+    if check_pending_registrations:
+        registration_qs = PublicRegistration.objects.filter(
+            email__iexact=email,
+            status=PublicRegistration.Status.PENDENTE,
+        )
+        if registration_instance:
+            registration_qs = registration_qs.exclude(pk=registration_instance.pk)
+        if registration_qs.exists():
+            raise serializers.ValidationError(
+                "Já existe uma inscrição pendente com este e-mail."
+            )
+
+    return email
+
+
+def normalize_phone_value(value: str | None) -> str | None:
+    if not value or value.strip() in {"", "+"}:
+        return None
+
+    region = None if value.strip().startswith("+") else "BR"
+    try:
+        parsed = phonenumbers.parse(value, region)
+    except phonenumbers.NumberParseException as exc:
+        raise serializers.ValidationError(
+            "Telefone inválido. Use o formato internacional com código do país."
+        ) from exc
+
+    if not phonenumbers.is_valid_number(parsed):
+        raise serializers.ValidationError(
+            "Telefone inválido. Use o formato internacional com código do país."
+        )
+
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -60,39 +117,22 @@ class MemberSerializer(serializers.ModelSerializer):
         }
 
     def validate_full_name(self, value: str) -> str:
-        cleaned = value.strip()
-        if len(cleaned) < 3:
-            raise serializers.ValidationError("Nome completo deve ter pelo menos 3 caracteres.")
-        return cleaned
+        return validate_full_name_value(value)
 
-    def validate_email(self, value: str):
-        if value in (None, ""):
-            return None
-        email = value.lower().strip()
-        qs = Member.objects.filter(email__iexact=email)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError("Já existe um membro com este e-mail.")
-        return email
+    def validate_email(self, value: str | None):
+        return normalize_email_value(value, member_instance=self.instance)
 
-    def validate_phone(self, value: str):
-        if not value or value.strip() in {"+", ""}:
-            return None
-        region = None if value.strip().startswith("+") else "BR"
-        try:
-            parsed = phonenumbers.parse(value, region)
-        except phonenumbers.NumberParseException as exc:
-            raise serializers.ValidationError(
-                "Telefone inválido. Use o formato internacional com código do país."
-            ) from exc
+    def validate_phone(self, value: str | None):
+        return normalize_phone_value(value)
 
-        if not phonenumbers.is_valid_number(parsed):
-            raise serializers.ValidationError(
-                "Telefone inválido. Use o formato internacional com código do país."
-            )
+    def validate_address(self, value: str) -> str:
+        return validate_text_length(value, field_label="Endereço") or ""
 
-        return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+    def validate_heard_about(self, value: str) -> str:
+        return validate_text_length(value, field_label="Como conheceu o coletivo") or ""
+
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações") or ""
 
     def get_responsible_name(self, obj: Member):
         return obj.responsible.full_name if obj.responsible else None
@@ -115,7 +155,6 @@ class MemberSerializer(serializers.ModelSerializer):
         if is_child:
             if not responsible:
                 errors["responsible"] = "Selecione um responsável."
-            # For children, clear optional fields
             attrs["email"] = None
             attrs["phone"] = None
             attrs["heard_about"] = ""
@@ -133,3 +172,119 @@ class MemberSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+
+class PublicRegistrationChildSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicRegistrationChild
+        fields = ["id", "full_name", "diet", "observations", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {
+            "diet": {
+                "error_messages": {
+                    "required": "Este campo é obrigatório.",
+                    "invalid_choice": "Escolha uma opção válida.",
+                }
+            }
+        }
+
+    def validate_full_name(self, value: str) -> str:
+        return validate_full_name_value(value, field_label="Nome da criança")
+
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações da criança") or ""
+
+
+class PublicRegistrationSubmitSerializer(serializers.ModelSerializer):
+    children = PublicRegistrationChildSerializer(many=True, required=False)
+
+    class Meta:
+        model = PublicRegistration
+        fields = [
+            "id",
+            "full_name",
+            "phone",
+            "email",
+            "address",
+            "heard_about",
+            "role",
+            "diet",
+            "observations",
+            "children",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {
+            "email": {"required": False, "allow_null": True, "allow_blank": True},
+            "phone": {"required": False, "allow_null": True, "allow_blank": True},
+            "role": {
+                "error_messages": {
+                    "required": "Este campo é obrigatório.",
+                    "invalid_choice": "Escolha uma opção válida.",
+                }
+            },
+            "diet": {
+                "error_messages": {
+                    "required": "Este campo é obrigatório.",
+                    "invalid_choice": "Escolha uma opção válida.",
+                }
+            },
+        }
+
+    def validate_full_name(self, value: str) -> str:
+        return validate_full_name_value(value)
+
+    def validate_email(self, value: str | None):
+        return normalize_email_value(value, check_pending_registrations=True)
+
+    def validate_phone(self, value: str | None):
+        return normalize_phone_value(value)
+
+    def validate_address(self, value: str) -> str:
+        return validate_text_length(value, field_label="Endereço") or ""
+
+    def validate_heard_about(self, value: str) -> str:
+        return validate_text_length(value, field_label="Como conheceu o coletivo") or ""
+
+    def validate_observations(self, value: str) -> str:
+        return validate_text_length(value, field_label="Observações") or ""
+
+    def create(self, validated_data):
+        children_data = validated_data.pop("children", [])
+        validated_data["status"] = PublicRegistration.Status.PENDENTE
+        registration = PublicRegistration.objects.create(**validated_data)
+        for child_data in children_data:
+            PublicRegistrationChild.objects.create(registration=registration, **child_data)
+        return registration
+
+
+class PublicRegistrationAdminSerializer(serializers.ModelSerializer):
+    children = PublicRegistrationChildSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PublicRegistration
+        fields = [
+            "id",
+            "full_name",
+            "phone",
+            "email",
+            "address",
+            "heard_about",
+            "role",
+            "diet",
+            "observations",
+            "status",
+            "review_notes",
+            "children",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class PublicRegistrationRejectSerializer(serializers.Serializer):
+    review_notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_review_notes(self, value: str) -> str:
+        return validate_text_length(value, field_label="Notas da revisão") or ""
