@@ -67,7 +67,7 @@ export function DashboardPage() {
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="md">
           <Button
             component={Link}
-            to="/integrantes?novo=1"
+            to="/painel/integrantes?novo=1"
             fullWidth
             size="lg"
             color="indigo"
@@ -81,7 +81,7 @@ export function DashboardPage() {
           </Button>
           <Button
             component={Link}
-            to="/lunches?novo=1"
+            to="/painel/lunches?novo=1"
             fullWidth
             size="lg"
             color="teal"
@@ -95,7 +95,7 @@ export function DashboardPage() {
           </Button>
           <Button
             component={Link}
-            to="/pacotes?novo=1"
+            to="/painel/pacotes?novo=1"
             fullWidth
             size="lg"
             color="orange"
@@ -179,7 +179,7 @@ export function DashboardPage() {
                 {pendingRegistrationsCount} pendente{pendingRegistrationsCount === 1 ? "" : "s"} aguardando revisão.
               </Text>
             </div>
-            <Button component={Link} to="/integrantes?tab=novos-cadastros" variant="outline">
+            <Button component={Link} to="/painel/integrantes?tab=novos-cadastros" variant="outline">
               Gerenciar
             </Button>
           </Group>

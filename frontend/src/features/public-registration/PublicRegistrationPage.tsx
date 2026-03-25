@@ -21,6 +21,7 @@ import { notifications } from "@mantine/notifications";
 import { IconCheck, IconHeartHandshake, IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { PublicHeader } from "../../components/PublicHeader";
 import { extractErrorMessage } from "../../shared/errors";
 import { fetchPublicRegistrationMeta, submitPublicRegistration } from "./api";
 import type {
@@ -29,13 +30,7 @@ import type {
   PublicRegistrationPayload,
 } from "./types";
 
-type AdultErrorFields = Partial<
-  Record<
-    "full_name" | "role" | "diet",
-    string
-  >
->;
-
+type AdultErrorFields = Partial<Record<"full_name" | "role" | "diet", string>>;
 type ChildErrorFields = Partial<Record<"full_name" | "diet", string>>;
 
 const createEmptyChild = (): PublicRegistrationChildInput => ({
@@ -218,6 +213,8 @@ export function PublicRegistrationPage() {
       }}
     >
       <Container size="md" py={{ base: "lg", sm: "xl" }}>
+        <PublicHeader subtitle="Cadastro público para participar do projeto." mode="back" />
+
         <Paper withBorder shadow="sm" radius="xl" p={{ base: "lg", sm: "xl" }}>
           <Stack gap="lg">
             <Group gap="sm" align="center">
@@ -336,7 +333,7 @@ export function PublicRegistrationPage() {
 
                 <Textarea
                   label="Observações"
-                  placeholder="Tem alguma restrição? Se quiser, conte algo importante para a equipe."
+                  placeholder="Se quiser, conte algo importante para a equipe."
                   minRows={4}
                   value={formValues.observations}
                   onChange={(event) => updateAdultField("observations", event.currentTarget.value)}
@@ -416,7 +413,7 @@ export function PublicRegistrationPage() {
 
                         <Textarea
                           label="Observações"
-                          placeholder="Tem alguma restrição? Se quiser, conte algo importante sobre a criança."
+                          placeholder="Se quiser, conte algo importante sobre a criança."
                           minRows={3}
                           value={child.observations}
                           onChange={(event) =>
