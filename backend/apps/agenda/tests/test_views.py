@@ -65,7 +65,7 @@ def test_filter_by_date(api_client, superuser):
     response = api_client.get(url, {"date": "2025-12-05"})
 
     assert response.status_code == 200
-    assert len(response.data) == 1
+    assert response.data["count"] == 1
 
 
 @pytest.mark.django_db
@@ -76,4 +76,4 @@ def test_anonymous_can_list_agenda(api_client):
     response = api_client.get(url)
 
     assert response.status_code == 200
-    assert len(response.data) >= 1
+    assert response.data["count"] >= 1

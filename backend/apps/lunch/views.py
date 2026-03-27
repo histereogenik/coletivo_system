@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.common.exports import cents_to_reais, create_xlsx_response
+from apps.common.pagination import OptionalPagination
 from apps.common.permissions import SuperuserOnly
 from apps.lunch.models import Lunch, Package
 from apps.lunch.serializers import LunchSerializer, PackageSerializer
@@ -30,7 +31,17 @@ class LunchFilter(django_filters.FilterSet):
 
     class Meta:
         model = Lunch
-        fields = ["payment_status", "date", "member", "package", "has_package", "value_cents", "value_cents_min", "value_cents_max"]
+        fields = [
+            "payment_status",
+            "date",
+            "member",
+            "credit_owner",
+            "package",
+            "has_package",
+            "value_cents",
+            "value_cents_min",
+            "value_cents_max",
+        ]
 
 
 class PackageFilter(django_filters.FilterSet):
@@ -45,16 +56,22 @@ class PackageFilter(django_filters.FilterSet):
 
 
 class LunchViewSet(viewsets.ModelViewSet):
-    queryset = Lunch.objects.select_related("member", "package").order_by("-date", "-created_at")
+    queryset = Lunch.objects.select_related("member", "credit_owner", "package").order_by(
+        "-date", "-created_at"
+    )
     serializer_class = LunchSerializer
     permission_classes = [SuperuserOnly]
     filterset_class = LunchFilter
+    pagination_class = OptionalPagination
 
     def perform_destroy(self, instance):
         # Remove linked financial entry to keep financial data consistent
         entry = getattr(instance, "financial_entry", None)
         if entry:
             entry.delete()
+        credit_entry = getattr(instance, "credit_entry", None)
+        if credit_entry:
+            credit_entry.delete()
         super().perform_destroy(instance)
 
     @action(detail=False, methods=["get"], url_path="summary")
@@ -117,6 +134,7 @@ class PackageViewSet(viewsets.ModelViewSet):
     serializer_class = PackageSerializer
     permission_classes = [SuperuserOnly]
     filterset_class = PackageFilter
+    pagination_class = OptionalPagination
 
     def perform_destroy(self, instance):
         entry = getattr(instance, "financial_entry", None)

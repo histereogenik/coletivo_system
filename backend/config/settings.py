@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.duties",
     "apps.agenda",
     "apps.financial",
+    "apps.credits",
     "apps.common",
     "apps.dashboard",
 ]

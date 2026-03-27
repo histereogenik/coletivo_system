@@ -67,6 +67,8 @@ class Package(models.Model):
             raise ValidationError(missing)
 
     def save(self, *args, **kwargs):
+        if self.unit_value_cents in (None, 0) and self.value_cents and self.quantity:
+            self.unit_value_cents = self.value_cents // self.quantity
         self.full_clean()
         return super().save(*args, **kwargs)
 
@@ -86,6 +88,13 @@ class Lunch(models.Model):
         TROCA = "TROCA", "Troca"
 
     member = models.ForeignKey(Member, related_name="lunches", on_delete=models.CASCADE)
+    credit_owner = models.ForeignKey(
+        Member,
+        related_name="credit_paid_lunches",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
     package = models.ForeignKey(
         Package,
         related_name="lunches",

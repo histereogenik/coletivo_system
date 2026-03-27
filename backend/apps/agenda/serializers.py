@@ -3,6 +3,7 @@ from rest_framework import serializers
 from apps.agenda.models import AgendaEntry
 from apps.common.validators import validate_text_length
 from apps.common.roles import promote_role
+from apps.credits.services import sync_agenda_credit_entries
 from apps.duties.models import Duty
 from apps.users.models import Member
 
@@ -124,6 +125,9 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
             instance.duty.members.add(*selected_members)
             for m in selected_members:
                 promote_role(m, Member.Role.SUSTENTADOR)
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        sync_agenda_credit_entries(instance, actor=actor)
         return instance
 
     def update(self, instance, validated_data):
@@ -134,4 +138,7 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
             instance.duty.members.add(*selected_members)
             for m in selected_members:
                 promote_role(m, Member.Role.SUSTENTADOR)
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        sync_agenda_credit_entries(instance, actor=actor)
         return instance

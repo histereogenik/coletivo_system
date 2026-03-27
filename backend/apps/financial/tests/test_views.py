@@ -69,8 +69,7 @@ def test_anonymous_can_list_entries(api_client):
     url = reverse("financial-entry-list")
     response = api_client.get(url)
 
-    assert response.status_code == 200
-    assert len(response.data) >= 1
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -86,4 +85,7 @@ def test_filter_by_entry_type(api_client, superuser):
     response = api_client.get(url, {"entry_type": FinancialEntry.EntryType.ENTRADA})
 
     assert response.status_code == 200
-    assert all(item["entry_type"] == FinancialEntry.EntryType.ENTRADA for item in response.data)
+    assert all(
+        item["entry_type"] == FinancialEntry.EntryType.ENTRADA
+        for item in response.data["results"]
+    )
