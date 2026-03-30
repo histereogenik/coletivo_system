@@ -66,3 +66,10 @@ class CreditSummarySerializer(serializers.Serializer):
             **summary,
         }
 
+
+class CreditSummaryListSerializer(serializers.Serializer):
+    owner = serializers.IntegerField(source="id")
+    owner_name = serializers.CharField(source="full_name")
+    credits_cents = serializers.IntegerField()
+    debits_cents = serializers.IntegerField()
+    balance_cents = serializers.IntegerField()

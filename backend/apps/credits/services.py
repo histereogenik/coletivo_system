@@ -210,9 +210,11 @@ def create_manual_credit_entry(
     if entry_type == CreditEntry.EntryType.DEBITO:
         ensure_credit_balance(owner.id, value_cents, field_name="owner")
 
+    resolved_beneficiary = owner if entry_type == CreditEntry.EntryType.CREDITO else beneficiary
+
     return CreditEntry.objects.create(
         owner=owner,
-        beneficiary=beneficiary,
+        beneficiary=resolved_beneficiary,
         entry_type=entry_type,
         origin=CreditEntry.Origin.MANUAL,
         value_cents=value_cents,

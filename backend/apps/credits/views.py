@@ -1,13 +1,17 @@
 import django_filters
+from django.db.models import Case, F, IntegerField, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.pagination import DefaultPagination
 from apps.common.permissions import SuperuserOnly
 from apps.credits.models import CreditEntry
 from apps.credits.serializers import (
     CreditEntrySerializer,
+    CreditSummaryListSerializer,
     CreditSummarySerializer,
     ManualCreditEntrySerializer,
 )
@@ -49,15 +53,54 @@ class CreditEntryViewSet(viewsets.ReadOnlyModelViewSet):
 
 class CreditSummaryView(APIView):
     permission_classes = [SuperuserOnly]
+    pagination_class = DefaultPagination
 
     def get(self, request):
         owner_id = request.query_params.get("owner")
-        if not owner_id:
-            return Response({"detail": "Informe o integrante dono dos créditos."}, status=400)
+        if owner_id:
+            member = get_object_or_404(Member, pk=owner_id)
+            serializer = CreditSummarySerializer(CreditSummarySerializer.from_member(member))
+            return Response(serializer.data)
 
-        member = get_object_or_404(Member, pk=owner_id)
-        serializer = CreditSummarySerializer(CreditSummarySerializer.from_member(member))
-        return Response(serializer.data)
+        queryset = Member.objects.filter(credit_entries__isnull=False).annotate(
+            credits_cents=Coalesce(
+                Sum(
+                    Case(
+                        When(
+                            credit_entries__entry_type=CreditEntry.EntryType.CREDITO,
+                            then="credit_entries__value_cents",
+                        ),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                ),
+                0,
+            ),
+            debits_cents=Coalesce(
+                Sum(
+                    Case(
+                        When(
+                            credit_entries__entry_type=CreditEntry.EntryType.DEBITO,
+                            then="credit_entries__value_cents",
+                        ),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                ),
+                0,
+            ),
+        ).annotate(balance_cents=F("credits_cents") - F("debits_cents"))
+
+        search = (request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(full_name__icontains=search)
+
+        queryset = queryset.filter(balance_cents__gt=0).order_by("full_name").distinct()
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = CreditSummaryListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class ManualCreditCreateView(APIView):

@@ -5,6 +5,8 @@ export type Lunch = {
   id: number;
   member: number;
   member_name?: string;
+  credit_owner?: number | null;
+  credit_owner_name?: string | null;
   value_cents: number;
   date: string;
   payment_status: string;
