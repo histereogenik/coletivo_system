@@ -30,14 +30,12 @@ Base local: `http://localhost:8001`
 - O frontend obtem o cookie `csrftoken` em `GET /api/auth/csrf/` e o envia automaticamente nas chamadas seguintes.
 
 ## Permissoes
-- `GET /api/users/health/` e publico.
 - `POST /api/users/public-registrations/` e publico e sofre throttle anonimo.
 - `GET /api/users/public-registrations/meta/` e publico.
 - CRUD de membros exige `SuperuserOnly`.
 - Revisao administrativa de inscricoes publicas exige `SuperuserOnly`.
 
 ## Endpoints de membros
-- Health: `GET /api/users/health/`
 - CRUD: `/api/users/members/`
   - Listar: `GET /api/users/members/`
   - Criar: `POST /api/users/members/`

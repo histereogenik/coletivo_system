@@ -1,6 +1,5 @@
 import django_filters
 from django.db import transaction
-from django.http import JsonResponse
 from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -23,16 +22,6 @@ from apps.users.serializers import (
 
 class PublicRegistrationThrottle(AnonRateThrottle):
     scope = "public_registration"
-
-
-class UserHealthView(APIView):
-    """Basic health endpoint for the users service slice."""
-
-    authentication_classes = []
-    permission_classes = []
-
-    def get(self, request):
-        return JsonResponse({"status": "ok", "service": "users"}, status=200)
 
 
 class PublicRegistrationMetaView(APIView):
