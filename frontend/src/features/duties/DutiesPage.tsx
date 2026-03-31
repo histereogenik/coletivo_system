@@ -236,7 +236,10 @@ export function DutiesPage() {
           <TextInput
             label="Nome"
             value={formState.name ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, name: e.currentTarget.value }))}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setFormState((prev) => ({ ...prev, name: value }));
+            }}
           />
           <TextInput
             label="Remuneração (R$)"

@@ -506,9 +506,10 @@ export function MembersPage() {
               label="Buscar"
               placeholder="Nome do integrante"
               value={memberFilters.search}
-              onChange={(event) =>
-                setMemberFilters((prev) => ({ ...prev, search: event.currentTarget.value }))
-              }
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setMemberFilters((prev) => ({ ...prev, search: value }));
+              }}
             />
             <Select
               label="Categoria"
@@ -629,12 +630,13 @@ export function MembersPage() {
               label="Buscar"
               placeholder="Nome ou e-mail"
               value={registrationFilters.search}
-              onChange={(event) =>
+              onChange={(event) => {
+                const value = event.currentTarget.value;
                 setRegistrationFilters((prev) => ({
                   ...prev,
-                  search: event.currentTarget.value,
-                }))
-              }
+                  search: value,
+                }));
+              }}
             />
             <Select
               label="Status"
@@ -770,9 +772,10 @@ export function MembersPage() {
           <TextInput
             label="Nome completo"
             value={memberFormState.full_name ?? ""}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, full_name: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, full_name: value }));
+            }}
             maxLength={NAME_FIELD_MAX_LENGTH}
           />
           <Switch
@@ -836,36 +839,40 @@ export function MembersPage() {
             label="Telefone"
             value={memberFormState.phone ?? ""}
             disabled={Boolean(memberFormState.is_child)}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, phone: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, phone: value }));
+            }}
             placeholder="+5511999999999"
           />
           <TextInput
             label="E-mail"
             value={memberFormState.email ?? ""}
             disabled={Boolean(memberFormState.is_child)}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, email: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, email: value }));
+            }}
             placeholder="nome@exemplo.com"
           />
           <TextInput
             label="Endereço"
             value={memberFormState.address ?? ""}
             disabled={Boolean(memberFormState.is_child)}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, address: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, address: value }));
+            }}
             maxLength={TEXT_FIELD_MAX_LENGTH}
           />
           <TextInput
             label="Como conheceu"
             value={memberFormState.heard_about ?? ""}
             disabled={Boolean(memberFormState.is_child)}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, heard_about: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, heard_about: value }));
+            }}
             maxLength={TEXT_FIELD_MAX_LENGTH}
           />
           <Textarea
@@ -876,9 +883,10 @@ export function MembersPage() {
               />
             }
             value={memberFormState.observations ?? ""}
-            onChange={(event) =>
-              setMemberFormState((prev) => ({ ...prev, observations: event.currentTarget.value }))
-            }
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMemberFormState((prev) => ({ ...prev, observations: value }));
+            }}
             minRows={3}
             maxLength={TEXT_FIELD_MAX_LENGTH}
             styles={{ label: { width: "100%" } }}

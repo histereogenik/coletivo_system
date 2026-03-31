@@ -503,7 +503,10 @@ export function FinancialPage() {
               />
             }
             value={formState.description ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, description: e.currentTarget.value }))}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setFormState((prev) => ({ ...prev, description: value }));
+            }}
             maxLength={TEXT_FIELD_MAX_LENGTH}
             styles={{ label: { width: "100%" } }}
           />
