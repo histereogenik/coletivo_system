@@ -25,6 +25,7 @@ import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
@@ -372,6 +373,7 @@ export function PackagesPage() {
           label="Integrante"
           data={memberOptions}
           searchable
+          filter={accentInsensitiveOptionsFilter}
           clearable
           value={filters.member}
           onChange={(val) => setFilters((prev) => ({ ...prev, member: val }))}
@@ -526,6 +528,7 @@ export function PackagesPage() {
             label="Integrante"
             data={memberOptions}
             searchable
+            filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage="Nenhum integrante"
             value={formState.member ? formState.member.toString() : null}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}

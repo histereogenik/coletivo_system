@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCents, parseReaisToCents } from "../../shared/currency";
 import { extractErrorMessage } from "../../shared/errors";
 import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
@@ -381,6 +382,7 @@ export function CreditsPage() {
           <Select
             label="Integrante"
             searchable
+            filter={accentInsensitiveOptionsFilter}
             data={ownerOptions}
             value={selectedOwnerId ? String(selectedOwnerId) : null}
             onChange={(value) => setSelectedOwnerId(value ? Number(value) : null)}

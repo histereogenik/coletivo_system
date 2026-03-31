@@ -27,6 +27,7 @@ import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
 import { fetchCreditSummaries } from "../credits/api";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCents, formatCentsInput, parseReaisToCents } from "../../shared/currency";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
@@ -467,6 +468,7 @@ export function LunchesPage() {
           label="Integrante"
           data={memberOptions}
           searchable
+          filter={accentInsensitiveOptionsFilter}
           clearable
           value={filters.member}
           onChange={(val) => setFilters((prev) => ({ ...prev, member: val }))}
@@ -631,6 +633,7 @@ export function LunchesPage() {
             label="Integrante"
             data={memberOptionsSelect}
             searchable
+            filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
             value={formState.member ? formState.member.toString() : null}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
@@ -683,6 +686,7 @@ export function LunchesPage() {
               label="Banco de trocas de"
               data={creditOwnerOptionsForForm}
               searchable
+              filter={accentInsensitiveOptionsFilter}
               nothingFoundMessage="Nenhum integrante com trocas disponíveis"
               value={formState.credit_owner ? formState.credit_owner.toString() : null}
               onChange={(val) =>
