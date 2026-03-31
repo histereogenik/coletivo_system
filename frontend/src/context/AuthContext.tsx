@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router-dom";
-import { api } from "../shared/api";
+import { api, ensureCsrfCookie } from "../shared/api";
 import { fetchAuthStatus } from "../shared/authStatus";
 
 type AuthContextType = {
@@ -30,7 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     setIsAuthResolved(true);
     sessionStorage.removeItem("hasAuth");
-    void api.post("/api/auth/logout/", {}, { withCredentials: true }).catch(() => {});
+    void ensureCsrfCookie()
+      .then(() => api.post("/api/auth/logout/", {}, { withCredentials: true }))
+      .catch(() => {});
     notifications.show({ message: "Sessão encerrada.", color: "blue" });
     navigate("/login");
   }, [navigate]);
@@ -41,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    void ensureCsrfCookie().catch(() => {});
+
     if (hydrated.current) return;
 
     if (!sessionStorage.getItem("hasAuth")) {

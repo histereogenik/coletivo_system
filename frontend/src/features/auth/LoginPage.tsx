@@ -21,7 +21,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { PublicHeader } from "../../components/PublicHeader";
 import { useAuth } from "../../context/AuthContext";
-import { api } from "../../shared/api";
+import { api, ensureCsrfCookie } from "../../shared/api";
 
 const schema = z.object({
   username: z.string().min(3, "Informe o usuário"),
@@ -63,6 +63,7 @@ export function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      await ensureCsrfCookie();
       await api.post("/api/auth/cookie/token/", values, {
         withCredentials: true,
       });

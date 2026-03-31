@@ -1,16 +1,16 @@
-# Usuários e Autenticação
+# Usuarios e Autenticacao
 
 Base local: `http://localhost:8001`
 
-## Visão geral
-- A API usa autenticação JWT por cookie HttpOnly como padrão do frontend.
-- Também é possível usar JWT por header `Authorization: Bearer <token>` para testes manuais.
-- Rotas administrativas de membros e revisão de cadastros públicos exigem superusuário.
-- Rotas públicas de inscrição não exigem autenticação.
+## Visao geral
+- A API usa autenticacao JWT por cookie HttpOnly como padrao do frontend.
+- Rotas administrativas de membros e revisao de cadastros publicos exigem superusuario.
+- Rotas publicas de inscricao nao exigem autenticacao.
 
-## Autenticação
+## Autenticacao
 
 ### Fluxo por cookie HttpOnly
+- Obter cookie CSRF: `GET /api/auth/csrf/`
 - Login com cookie: `POST /api/auth/cookie/token/`
   ```json
   {
@@ -19,21 +19,22 @@ Base local: `http://localhost:8001`
   }
   ```
 - Refresh com cookie: `POST /api/auth/cookie/token/refresh/`
-  - Pode ser chamado sem body se o cookie `refresh_token` já existir.
+  - Pode ser chamado sem body se o cookie `refresh_token` ja existir.
 - Logout: `POST /api/auth/logout/`
-- Status da sessão atual: `GET /api/auth/status/`
+- Status da sessao atual: `GET /api/auth/status/`
+- No fluxo por cookie, `access_token` e `refresh_token` ficam apenas em cookies HttpOnly.
+- As respostas de login e refresh retornam apenas mensagens de sucesso no JSON, sem expor tokens.
 
-### Fluxo por Bearer token
-- Obter token: `POST /api/auth/token/`
-- Renovar token: `POST /api/auth/token/refresh/`
-- Enviar `Authorization: Bearer <access_token>` nas rotas protegidas.
+### Observacao sobre CSRF
+- O fluxo por cookie exige header `X-CSRFToken` nas operacoes unsafe (`POST`, `PATCH`, `DELETE`).
+- O frontend obtem o cookie `csrftoken` em `GET /api/auth/csrf/` e o envia automaticamente nas chamadas seguintes.
 
-## Permissões
-- `GET /api/users/health/` é público.
-- `POST /api/users/public-registrations/` é público e sofre throttle anônimo.
-- `GET /api/users/public-registrations/meta/` é público.
+## Permissoes
+- `GET /api/users/health/` e publico.
+- `POST /api/users/public-registrations/` e publico e sofre throttle anonimo.
+- `GET /api/users/public-registrations/meta/` e publico.
 - CRUD de membros exige `SuperuserOnly`.
-- Revisão administrativa de inscrições públicas exige `SuperuserOnly`.
+- Revisao administrativa de inscricoes publicas exige `SuperuserOnly`.
 
 ## Endpoints de membros
 - Health: `GET /api/users/health/`
@@ -45,8 +46,8 @@ Base local: `http://localhost:8001`
   - Remover: `DELETE /api/users/members/{id}/`
   - Exportar XLSX: `GET /api/users/members/export/`
 
-### Paginação de membros
-- O endpoint de membros usa paginação opcional.
+### Paginacao de membros
+- O endpoint de membros usa paginacao opcional.
 - Sem `page`, retorna a lista completa.
 - Com `page`, retorna resposta paginada:
   - `GET /api/users/members/?page=1&page_size=15`
@@ -66,89 +67,89 @@ Exemplo:
   "is_child": false,
   "phone": "+5511988887777",
   "email": "ana.pereira@example.com",
-  "address": "Rua das Flores, 123, São Paulo - SP",
-  "heard_about": "Indicação de amigos",
+  "address": "Rua das Flores, 123, Sao Paulo - SP",
+  "heard_about": "Indicacao de amigos",
   "role": "MENSALISTA",
   "diet": "VEGETARIANO",
-  "observations": "Prefere chegar às 12h30."
+  "observations": "Prefere chegar as 12h30."
 }
 ```
 
-### Payload de membro criança
+### Payload de membro crianca
 ```json
 {
   "full_name": "Pedro Pereira",
   "is_child": true,
   "responsible": 1,
   "diet": "CARNIVORO",
-  "observations": "Almoça com a mãe."
+  "observations": "Almoca com a mae."
 }
 ```
 
 ### Regras principais de membro
-- `full_name`: mínimo de 3 caracteres.
-- `email`: único, case-insensitive.
+- `full_name`: minimo de 3 caracteres.
+- `email`: unico, case-insensitive.
 - `phone`: normalizado para E.164.
-- `diet`: obrigatório.
-- Se `is_child=true`, `responsible` é obrigatório.
-- Crianças não mantêm `email`, `phone`, `role` ou `heard_about`.
+- `diet`: obrigatorio.
+- Se `is_child=true`, `responsible` e obrigatorio.
+- Criancas nao mantem `email`, `phone`, `role` ou `heard_about`.
 
-## Cadastros públicos
+## Cadastros publicos
 
-### Endpoints públicos
-- Enviar inscrição: `POST /api/users/public-registrations/`
-- Metadados do formulário: `GET /api/users/public-registrations/meta/`
+### Endpoints publicos
+- Enviar inscricao: `POST /api/users/public-registrations/`
+- Metadados do formulario: `GET /api/users/public-registrations/meta/`
 
 ### Endpoints administrativos
-- Listar inscrições: `GET /api/users/public-registrations-admin/`
-- Detalhar inscrição: `GET /api/users/public-registrations-admin/{id}/`
+- Listar inscricoes: `GET /api/users/public-registrations-admin/`
+- Detalhar inscricao: `GET /api/users/public-registrations-admin/{id}/`
 - Aprovar: `POST /api/users/public-registrations-admin/{id}/approve/`
 - Rejeitar: `POST /api/users/public-registrations-admin/{id}/reject/`
 
-### Payload público
+### Payload publico
 ```json
 {
   "full_name": "Carlos Lima",
   "phone": "+5521999990000",
   "email": "carlos.lima@example.com",
   "address": "Rua A, 42 - Rio de Janeiro/RJ",
-  "heard_about": "Indicação de amigos",
+  "heard_about": "Indicacao de amigos",
   "role": "AVULSO",
   "diet": "CARNIVORO",
-  "observations": "Posso ajudar quando necessário.",
+  "observations": "Posso ajudar quando necessario.",
   "children": [
     {
       "full_name": "Ana Lima",
       "diet": "VEGETARIANO",
-      "observations": "Não consome leite."
+      "observations": "Nao consome leite."
     }
   ]
 }
 ```
 
-### Filtros administrativos de inscrições
+### Filtros administrativos de inscricoes
 - `status`: `PENDENTE | APROVADO | REJEITADO`
 - `search`: busca por nome ou e-mail
 
 Exemplo:
 `GET /api/users/public-registrations-admin/?status=PENDENTE&search=carlos`
 
-### Aprovação e rejeição
+### Aprovacao e rejeicao
 - Aprovar cria:
   - 1 membro adulto
-  - 0..N membros criança com `responsible` apontando para o adulto criado
+  - 0..N membros crianca com `responsible` apontando para o adulto criado
 - Rejeitar muda o status para `REJEITADO` e aceita `review_notes`
 
-Payload de rejeição:
+Payload de rejeicao:
 ```json
 {
-  "review_notes": "Cadastro incompleto para aprovação neste momento."
+  "review_notes": "Cadastro incompleto para aprovacao neste momento."
 }
 ```
 
-### Regras principais das inscrições públicas
-- `role` e `diet` do adulto são obrigatórios.
-- `diet` é obrigatório para cada criança.
-- `email`, quando informado, não pode conflitar com membro existente.
-- Também não pode conflitar com outra inscrição pendente.
-- A inscrição sempre nasce como `PENDENTE`.
+### Regras principais das inscricoes publicas
+- `role` e `diet` do adulto sao obrigatorios.
+- `diet` e obrigatorio para cada crianca.
+- `email`, quando informado, nao pode conflitar com membro existente.
+- Tambem nao pode conflitar com outra inscricao pendente.
+- A inscricao sempre nasce como `PENDENTE`.

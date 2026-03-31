@@ -1,9 +1,40 @@
+import logging
+
 from django.conf import settings
+from django.middleware.csrf import get_token
 from rest_framework import status
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from apps.authentication.authentication import enforce_csrf
+
+logger = logging.getLogger("apps.authentication")
+
+
+def get_client_ip(request) -> str:
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def set_csrf_cookie(response: Response, request):
+    csrf_token = get_token(request)
+    response.set_cookie(
+        settings.CSRF_COOKIE_NAME,
+        csrf_token,
+        max_age=settings.CSRF_COOKIE_AGE,
+        domain=settings.CSRF_COOKIE_DOMAIN,
+        path=settings.CSRF_COOKIE_PATH,
+        secure=settings.CSRF_COOKIE_SECURE,
+        httponly=settings.CSRF_COOKIE_HTTPONLY,
+        samesite=settings.CSRF_COOKIE_SAMESITE,
+    )
 
 
 def set_auth_cookies(response: Response, access: str, refresh: str | None = None):
@@ -29,39 +60,112 @@ def clear_auth_cookies(response: Response):
     response.delete_cookie("refresh_token", **delete_params)
 
 
+def build_cookie_auth_response(*, detail: str, request, access: str, refresh: str | None = None) -> Response:
+    response = Response({"detail": detail}, status=status.HTTP_200_OK)
+    set_auth_cookies(response, access, refresh)
+    set_csrf_cookie(response, request)
+    return response
+
+
 class CookieTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
+
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        access = response.data.get("access")
-        refresh = response.data.get("refresh")
-        if access:
-            set_auth_cookies(response, access, refresh)
-        return response
+        enforce_csrf(request)
+        serializer = self.get_serializer(data=request.data)
+        username = str(request.data.get("username", "")).strip()
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except APIException:
+            logger.warning(
+                "Falha de login por cookie.",
+                extra={"username": username, "client_ip": get_client_ip(request)},
+            )
+            raise
+
+        access = serializer.validated_data["access"]
+        refresh = serializer.validated_data["refresh"]
+        logger.info(
+            "Login por cookie realizado com sucesso.",
+            extra={"username": username, "client_ip": get_client_ip(request)},
+        )
+        return build_cookie_auth_response(
+            detail="Login realizado com sucesso.",
+            request=request,
+            access=access,
+            refresh=refresh,
+        )
 
 
 class CookieTokenRefreshView(TokenRefreshView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_refresh"
+
     def post(self, request, *args, **kwargs):
-        # Allow refresh to come from cookie if not provided in body.
+        enforce_csrf(request)
         refresh_token = request.data.get("refresh") or request.COOKIES.get("refresh_token")
         if not refresh_token:
+            logger.warning(
+                "Refresh por cookie falhou por ausencia de refresh token.",
+                extra={"client_ip": get_client_ip(request)},
+            )
             return Response(
-                {"refresh": ["Este campo é obrigatório."]}, status=status.HTTP_400_BAD_REQUEST
+                {"refresh": ["Este campo e obrigatorio."]},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = self.get_serializer(data={"refresh": refresh_token})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except APIException:
+            logger.warning(
+                "Refresh por cookie falhou por token invalido.",
+                extra={"client_ip": get_client_ip(request)},
+            )
+            raise
+
         access = serializer.validated_data.get("access")
         new_refresh = serializer.validated_data.get("refresh") or refresh_token
-        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
-        if access:
-            set_auth_cookies(response, access, new_refresh)
-        return response
+        if not access:
+            logger.warning(
+                "Refresh por cookie nao retornou novo access token.",
+                extra={"client_ip": get_client_ip(request)},
+            )
+            return Response(
+                {"detail": "Nao foi possivel renovar a sessao."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        logger.info(
+            "Sessao renovada por cookie.",
+            extra={"client_ip": get_client_ip(request)},
+        )
+        return build_cookie_auth_response(
+            detail="Sessao renovada com sucesso.",
+            request=request,
+            access=access,
+            refresh=new_refresh,
+        )
 
 
 class LogoutView(TokenRefreshView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_refresh"
+
     def post(self, request, *args, **kwargs):
+        enforce_csrf(request)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)
+        set_csrf_cookie(response, request)
+        logger.info(
+            "Sessao encerrada por cookie.",
+            extra={
+                "user_id": getattr(request.user, "id", None),
+                "client_ip": get_client_ip(request),
+            },
+        )
         return response
 
 
@@ -70,14 +174,25 @@ class AuthStatusView(APIView):
 
     def get(self, request):
         user = request.user
-        return Response({"id": user.id, "username": user.get_username()})
+        response = Response({"id": user.id, "username": user.get_username()})
+        set_csrf_cookie(response, request)
+        return response
+
+
+class CsrfCookieView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        response = Response({"detail": "CSRF cookie definido."}, status=status.HTTP_200_OK)
+        set_csrf_cookie(response, request)
+        return response
 
 
 __all__ = [
-    "TokenObtainPairView",
-    "TokenRefreshView",
     "CookieTokenObtainPairView",
     "CookieTokenRefreshView",
     "LogoutView",
     "AuthStatusView",
+    "CsrfCookieView",
 ]

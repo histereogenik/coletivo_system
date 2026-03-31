@@ -9,11 +9,25 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
+EXCEL_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
 
 def cents_to_reais(value_cents: int | None) -> Decimal | str:
     if value_cents is None:
         return ""
     return Decimal(value_cents) / Decimal(100)
+
+
+def sanitize_excel_value(value):
+    if not isinstance(value, str):
+        return value
+
+    stripped = value.lstrip()
+    if value.startswith(EXCEL_FORMULA_PREFIXES) or (
+        stripped and stripped.startswith(EXCEL_FORMULA_PREFIXES)
+    ):
+        return f"'{value}"
+    return value
 
 
 def create_xlsx_response(
@@ -27,7 +41,7 @@ def create_xlsx_response(
         cell.font = Font(bold=True)
 
     for row in rows:
-        worksheet.append(list(row))
+        worksheet.append([sanitize_excel_value(value) for value in row])
 
     for idx, column in enumerate(worksheet.columns, start=1):
         max_len = 0
