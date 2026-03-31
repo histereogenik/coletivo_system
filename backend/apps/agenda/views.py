@@ -2,10 +2,9 @@ import django_filters
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from apps.common.exports import create_xlsx_response
-
 from apps.agenda.models import AgendaEntry
 from apps.agenda.serializers import AgendaEntrySerializer
+from apps.common.exports import create_xlsx_response
 from apps.common.permissions import SuperuserOnly
 
 

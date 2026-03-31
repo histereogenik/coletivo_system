@@ -86,6 +86,5 @@ def test_filter_by_entry_type(api_client, superuser):
 
     assert response.status_code == 200
     assert all(
-        item["entry_type"] == FinancialEntry.EntryType.ENTRADA
-        for item in response.data["results"]
+        item["entry_type"] == FinancialEntry.EntryType.ENTRADA for item in response.data["results"]
     )

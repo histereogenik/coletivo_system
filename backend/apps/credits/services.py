@@ -17,15 +17,15 @@ def get_credit_summary(owner_id: int, *, exclude_entry_id: int | None = None) ->
         queryset = queryset.exclude(id=exclude_entry_id)
 
     credit_total = (
-        queryset.filter(entry_type=CreditEntry.EntryType.CREDITO).aggregate(total=Sum("value_cents"))[
-            "total"
-        ]
+        queryset.filter(entry_type=CreditEntry.EntryType.CREDITO).aggregate(
+            total=Sum("value_cents")
+        )["total"]
         or 0
     )
     debit_total = (
-        queryset.filter(entry_type=CreditEntry.EntryType.DEBITO).aggregate(total=Sum("value_cents"))[
-            "total"
-        ]
+        queryset.filter(entry_type=CreditEntry.EntryType.DEBITO).aggregate(
+            total=Sum("value_cents")
+        )["total"]
         or 0
     )
     return {
@@ -75,9 +75,7 @@ def sync_agenda_credit_entries(
     }
 
     remuneration_cents = agenda_entry.duty.remuneration_cents
-    should_generate = (
-        agenda_entry.status == AgendaEntry.Status.CONCLUIDO and remuneration_cents > 0
-    )
+    should_generate = agenda_entry.status == AgendaEntry.Status.CONCLUIDO and remuneration_cents > 0
 
     if not should_generate:
         for entry in existing_entries.values():

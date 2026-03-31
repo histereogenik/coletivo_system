@@ -31,12 +31,8 @@ class PublicRegistrationMetaView(APIView):
     def get(self, request):
         return Response(
             {
-                "role": [
-                    {"value": value, "label": label} for value, label in Member.Role.choices
-                ],
-                "diet": [
-                    {"value": value, "label": label} for value, label in Member.Diet.choices
-                ],
+                "role": [{"value": value, "label": label} for value, label in Member.Role.choices],
+                "diet": [{"value": value, "label": label} for value, label in Member.Diet.choices],
             }
         )
 

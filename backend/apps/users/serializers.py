@@ -39,9 +39,7 @@ def normalize_email_value(
         if registration_instance:
             registration_qs = registration_qs.exclude(pk=registration_instance.pk)
         if registration_qs.exists():
-            raise serializers.ValidationError(
-                "Já existe uma inscrição pendente com este e-mail."
-            )
+            raise serializers.ValidationError("Já existe uma inscrição pendente com este e-mail.")
 
     return email
 

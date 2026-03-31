@@ -14,4 +14,3 @@ class CreditEntryFactory(factory.django.DjangoModelFactory):
     origin = CreditEntry.Origin.MANUAL
     value_cents = 1000
     description = factory.Faker("sentence")
-

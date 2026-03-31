@@ -4,8 +4,7 @@ from django.conf import settings
 from django.middleware.csrf import get_token
 from rest_framework import status
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -60,7 +59,9 @@ def clear_auth_cookies(response: Response):
     response.delete_cookie("refresh_token", **delete_params)
 
 
-def build_cookie_auth_response(*, detail: str, request, access: str, refresh: str | None = None) -> Response:
+def build_cookie_auth_response(
+    *, detail: str, request, access: str, refresh: str | None = None
+) -> Response:
     response = Response({"detail": detail}, status=status.HTTP_200_OK)
     set_auth_cookies(response, access, refresh)
     set_csrf_cookie(response, request)

@@ -17,4 +17,3 @@ urlpatterns = [
     path("manual-debit/", ManualDebitCreateView.as_view(), name="credit-manual-debit"),
     path("", include(router.urls)),
 ]
-

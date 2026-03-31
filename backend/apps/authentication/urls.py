@@ -1,9 +1,10 @@
 from django.urls import path
+
 from apps.authentication.views import (
     AuthStatusView,
-    CsrfCookieView,
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
+    CsrfCookieView,
     LogoutView,
 )
 

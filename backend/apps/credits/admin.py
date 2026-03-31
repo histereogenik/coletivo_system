@@ -27,4 +27,3 @@ class CreditEntryAdmin(admin.ModelAdmin):
         "lunch",
         "created_by",
     )
-

@@ -62,34 +62,38 @@ class CreditSummaryView(APIView):
             serializer = CreditSummarySerializer(CreditSummarySerializer.from_member(member))
             return Response(serializer.data)
 
-        queryset = Member.objects.filter(credit_entries__isnull=False).annotate(
-            credits_cents=Coalesce(
-                Sum(
-                    Case(
-                        When(
-                            credit_entries__entry_type=CreditEntry.EntryType.CREDITO,
-                            then="credit_entries__value_cents",
-                        ),
-                        default=Value(0),
-                        output_field=IntegerField(),
-                    )
+        queryset = (
+            Member.objects.filter(credit_entries__isnull=False)
+            .annotate(
+                credits_cents=Coalesce(
+                    Sum(
+                        Case(
+                            When(
+                                credit_entries__entry_type=CreditEntry.EntryType.CREDITO,
+                                then="credit_entries__value_cents",
+                            ),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
                 ),
-                0,
-            ),
-            debits_cents=Coalesce(
-                Sum(
-                    Case(
-                        When(
-                            credit_entries__entry_type=CreditEntry.EntryType.DEBITO,
-                            then="credit_entries__value_cents",
-                        ),
-                        default=Value(0),
-                        output_field=IntegerField(),
-                    )
+                debits_cents=Coalesce(
+                    Sum(
+                        Case(
+                            When(
+                                credit_entries__entry_type=CreditEntry.EntryType.DEBITO,
+                                then="credit_entries__value_cents",
+                            ),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
                 ),
-                0,
-            ),
-        ).annotate(balance_cents=F("credits_cents") - F("debits_cents"))
+            )
+            .annotate(balance_cents=F("credits_cents") - F("debits_cents"))
+        )
 
         search = (request.query_params.get("search") or "").strip()
         if search:

@@ -4,7 +4,11 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from apps.users.models import Member, PublicRegistration
-from apps.users.tests.factories import MemberFactory, PublicRegistrationChildFactory, PublicRegistrationFactory
+from apps.users.tests.factories import (
+    MemberFactory,
+    PublicRegistrationChildFactory,
+    PublicRegistrationFactory,
+)
 
 User = get_user_model()
 

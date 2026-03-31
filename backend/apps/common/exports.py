@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from decimal import Decimal
 from io import BytesIO
-from typing import Iterable
 
 from django.http import HttpResponse
 from openpyxl import Workbook

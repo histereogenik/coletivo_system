@@ -11,7 +11,6 @@ from apps.duties.tests.factories import DutyFactory
 from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
-from apps.users.models import Member
 from apps.users.tests.factories import MemberFactory
 
 
@@ -269,4 +268,3 @@ def test_switching_from_cash_to_credit_removes_financial_entry():
 
     assert FinancialEntry.objects.filter(lunch=lunch).count() == 0
     assert CreditEntry.objects.filter(lunch=lunch).count() == 1
-

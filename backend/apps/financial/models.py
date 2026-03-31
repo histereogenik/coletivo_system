@@ -4,6 +4,7 @@ from django.db import models
 
 from apps.common.text_limits import MAX_TEXT_LENGTH
 
+
 class FinancialEntry(models.Model):
     class EntryType(models.TextChoices):
         ENTRADA = "ENTRADA", "Entrada"

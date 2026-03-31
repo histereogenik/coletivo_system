@@ -2,7 +2,6 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 
 from apps.common.exports import create_xlsx_response
-
 from apps.common.permissions import SuperuserOnly
 from apps.duties.models import Duty
 from apps.duties.serializers import DutySerializer

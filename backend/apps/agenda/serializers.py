@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
 from apps.agenda.models import AgendaEntry
-from apps.common.validators import validate_text_length
 from apps.common.roles import promote_role
+from apps.common.validators import validate_text_length
 from apps.credits.services import sync_agenda_credit_entries
 from apps.duties.models import Duty
 from apps.users.models import Member

@@ -120,7 +120,4 @@ class CreditEntry(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return (
-            f"{self.get_entry_type_display()} - {self.owner.full_name} - "
-            f"{self.value_cents}c"
-        )
+        return f"{self.get_entry_type_display()} - {self.owner.full_name} - " f"{self.value_cents}c"
