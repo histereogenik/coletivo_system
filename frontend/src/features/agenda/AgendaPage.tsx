@@ -326,18 +326,20 @@ export function AgendaPage() {
             <TimeInput
               label="Início"
               value={formState.start_time ?? ""}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, start_time: event.currentTarget.value || "" }))
-              }
+              onChange={(event) => {
+                const value = event.currentTarget.value || "";
+                setFormState((prev) => ({ ...prev, start_time: value }));
+              }}
               withSeconds={false}
               placeholder="09:00"
             />
             <TimeInput
               label="Término"
               value={formState.end_time ?? ""}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, end_time: event.currentTarget.value || "" }))
-              }
+              onChange={(event) => {
+                const value = event.currentTarget.value || "";
+                setFormState((prev) => ({ ...prev, end_time: value }));
+              }}
               withSeconds={false}
               placeholder="Opcional"
             />
@@ -376,7 +378,10 @@ export function AgendaPage() {
               />
             }
             value={formState.notes ?? ""}
-            onChange={(e) => setFormState((prev) => ({ ...prev, notes: e.currentTarget.value }))}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setFormState((prev) => ({ ...prev, notes: value }));
+            }}
             placeholder="Observações adicionais"
             minRows={3}
             maxLength={TEXT_FIELD_MAX_LENGTH}
