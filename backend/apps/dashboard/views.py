@@ -5,13 +5,14 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.permissions import SuperuserOnly
 from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch
 from apps.users.models import Member
 
 
 class DashboardSummaryView(APIView):
-    permission_classes = []  # Public GET
+    permission_classes = [SuperuserOnly]
 
     def get(self, request):
         today = timezone.now().date()

@@ -75,3 +75,21 @@ def test_superuser_can_create_member(api_client, superuser):
     assert response.status_code == 201
     created = Member.objects.get(email=payload["email"])
     assert created.full_name == payload["full_name"]
+
+
+@pytest.mark.django_db
+def test_member_search_is_accent_insensitive_and_includes_children_by_responsible(
+    api_client, superuser
+):
+    responsible = MemberFactory(full_name="Nádia Souza")
+    child = MemberFactory(full_name="Lucas Souza", is_child=True, responsible=responsible)
+    other_member = MemberFactory(full_name="Fernanda Lima")
+    api_client.force_authenticate(user=superuser)
+
+    response = api_client.get(reverse("member-list"), {"search": "Nadia"})
+
+    assert response.status_code == 200
+    returned_ids = {member["id"] for member in response.data}
+    assert responsible.id in returned_ids
+    assert child.id in returned_ids
+    assert other_member.id not in returned_ids

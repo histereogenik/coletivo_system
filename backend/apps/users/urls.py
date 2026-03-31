@@ -6,7 +6,6 @@ from apps.users.views import (
     PublicRegistrationAdminViewSet,
     PublicRegistrationMetaView,
     PublicRegistrationSubmissionView,
-    UserHealthView,
 )
 
 router = DefaultRouter()
@@ -18,7 +17,6 @@ router.register(
 )
 
 urlpatterns = [
-    path("health/", UserHealthView.as_view(), name="users-health"),
     path(
         "public-registrations/",
         PublicRegistrationSubmissionView.as_view(),

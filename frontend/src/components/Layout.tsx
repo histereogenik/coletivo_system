@@ -7,6 +7,7 @@ const navItems = [
   { label: "Dashboard", to: "/painel" },
   { label: "Agenda", to: "/painel/agenda" },
   { label: "Financeiro", to: "/painel/financeiro" },
+  { label: "Trocas", to: "/painel/creditos" },
   { label: "Almoços", to: "/painel/lunches" },
   { label: "Pacotes", to: "/painel/pacotes" },
   { label: "Integrantes", to: "/painel/integrantes" },
@@ -57,7 +58,13 @@ export function Layout() {
                 </Button>
               </>
             ) : (
-              <Button component={Link} to="/login" variant="light" size={isMobile ? "xs" : "sm"} miw={72}>
+              <Button
+                component={Link}
+                to="/login"
+                variant="light"
+                size={isMobile ? "xs" : "sm"}
+                miw={72}
+              >
                 Entrar
               </Button>
             )}

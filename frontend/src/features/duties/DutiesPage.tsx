@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { fetchMembers } from "../lunch/membersApi";
 import { createDuty, deleteDuty, fetchDuties, updateDuty, type Duty } from "./api";
 
@@ -258,6 +259,7 @@ export function DutiesPage() {
             value={(formState.member_ids || []).map((id) => id.toString())}
             onChange={(vals) => setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))}
             searchable
+            filter={accentInsensitiveOptionsFilter}
             placeholder="Selecione integrantes"
           />
           <Group justify="flex-end" mt="sm">

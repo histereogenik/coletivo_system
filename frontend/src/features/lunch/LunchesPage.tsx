@@ -25,7 +25,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
+import { fetchCreditSummaries } from "../credits/api";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
+import { formatCents, formatCentsInput, parseReaisToCents } from "../../shared/currency";
 import { extractErrorMessage } from "../../shared/errors";
 import "dayjs/locale/pt-br";
 import {
@@ -77,6 +80,8 @@ const paymentModeLabels: Record<string, string> = {
   TROCA: "Troca",
 };
 
+const creditOwnerPageSize = 500;
+
 export function LunchesPage() {
   const actionResponsiveStyles = `
     .lunch-actions {
@@ -100,6 +105,7 @@ export function LunchesPage() {
   const [editing, setEditing] = useState<Lunch | null>(null);
   const [formState, setFormState] = useState<Partial<Lunch> & { use_package?: boolean }>({
     member: undefined,
+    credit_owner: undefined,
     value_cents: 0,
     date: new Date().toISOString().slice(0, 10),
     payment_status: "EM_ABERTO",
@@ -190,6 +196,12 @@ export function LunchesPage() {
     enabled: isAuthenticated,
   });
 
+  const creditOwnersQuery = useQuery({
+    queryKey: ["lunch-credit-owners"],
+    queryFn: () => fetchCreditSummaries({ page_size: creditOwnerPageSize }),
+    enabled: isAuthenticated,
+  });
+
   const mutation = useMutation({
     mutationFn: (id: number) => markLunchPaid(id),
     onSuccess: () => {
@@ -240,23 +252,32 @@ export function LunchesPage() {
       notifications.show({ message: extractErrorMessage(err, "Erro ao remover almoço."), color: "red" }),
   });
 
+  const usingCredit = formState.payment_mode === "TROCA" && !formState.use_package;
+
   const handleSubmit = () => {
     if (!formState.member || !dateValue) {
       notifications.show({ message: "Preencha integrante e data.", color: "red" });
       return;
     }
-    const parsedValue = valueReais
-      ? parseFloat(valueReais.replace(/\./g, "").replace(",", "."))
-      : 0;
+    if (usingCredit && !formState.credit_owner) {
+      notifications.show({ message: "Selecione o banco de trocas.", color: "red" });
+      return;
+    }
+    const parsedValueCents = parseReaisToCents(valueReais);
+    if (!Number.isFinite(parsedValueCents)) {
+      notifications.show({ message: "Informe um valor válido.", color: "red" });
+      return;
+    }
     const dateIso = toIsoDate(dateValue) || "";
 
     const payload: Partial<Lunch> & { use_package?: boolean } = {
       ...formState,
-      value_cents: Number.isNaN(parsedValue) ? 0 : Math.round(parsedValue * 100),
+      value_cents: parsedValueCents,
       date: dateIso,
       use_package: formState.use_package ? true : undefined,
       package: formState.use_package ? formState.package : null,
-      payment_status: formState.use_package ? "PAGO" : formState.payment_status,
+      credit_owner: usingCredit ? formState.credit_owner : null,
+      payment_status: formState.use_package || usingCredit ? "PAGO" : formState.payment_status,
     };
 
     if (editing) {
@@ -266,13 +287,11 @@ export function LunchesPage() {
     }
   };
 
-  const formatCents = (cents: number) =>
-    (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
   const openNew = useCallback(() => {
     setEditing(null);
     setFormState({
       member: undefined,
+      credit_owner: undefined,
       value_cents: 0,
       date: new Date().toISOString().slice(0, 10),
       payment_status: "EM_ABERTO",
@@ -289,6 +308,7 @@ export function LunchesPage() {
     setEditing(item);
     setFormState({
       member: item.member,
+      credit_owner: item.credit_owner ?? undefined,
       value_cents: item.value_cents,
       date: item.date,
       payment_status: item.payment_status,
@@ -296,12 +316,7 @@ export function LunchesPage() {
       use_package: !!item.package,
       package: item.package ?? undefined,
     });
-    setValueReais(
-      (item.value_cents / 100).toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
-    );
+    setValueReais(formatCentsInput(item.value_cents));
     setDateValue(parseIsoAsLocalDate(item.date));
     modalHandlers.open();
   };
@@ -357,8 +372,8 @@ export function LunchesPage() {
     );
   }
 
-  if (isLoading || membersQuery.isLoading) return <Text>Carregando...</Text>;
-  if (isError || !data || membersQuery.isError || !membersQuery.data)
+  if (isLoading || membersQuery.isLoading || creditOwnersQuery.isLoading) return <Text>Carregando...</Text>;
+  if (isError || !data || membersQuery.isError || !membersQuery.data || creditOwnersQuery.isError)
     return <Text c="red">Erro ao carregar almoços.</Text>;
 
   const canMarkPaid = (lunch: Lunch) => lunch.payment_status !== "PAGO";
@@ -375,6 +390,31 @@ export function LunchesPage() {
     value: m.id.toString(),
     label: m.full_name,
   }));
+  const creditOwnerResults = creditOwnersQuery.data?.results ?? [];
+  const creditOwnerBalanceById = new Map(
+    creditOwnerResults.map((summary) => [summary.owner, summary.balance_cents])
+  );
+  const creditOwnerOptions = creditOwnerResults.map((summary) => ({
+    value: summary.owner.toString(),
+    label: `${summary.owner_name} • ${formatCents(summary.balance_cents)}`,
+  }));
+  const selectedCreditOwner =
+    formState.credit_owner != null
+      ? members.find((member) => member.id === formState.credit_owner)
+      : undefined;
+  const creditOwnerOptionsForForm =
+    selectedCreditOwner &&
+    !creditOwnerOptions.some((option) => option.value === selectedCreditOwner.id.toString())
+        ? [
+          ...creditOwnerOptions,
+          {
+            value: selectedCreditOwner.id.toString(),
+            label: `${selectedCreditOwner.full_name} • ${formatCents(
+              creditOwnerBalanceById.get(selectedCreditOwner.id) ?? 0
+            )}`,
+          },
+        ]
+      : creditOwnerOptions;
   const packageMembers = members.filter((m) => m.has_package);
   const memberOptionsForForm = formState.use_package ? packageMembers : members;
   const memberOptionsSelect = memberOptionsForForm.map((m: MemberOption) => ({
@@ -428,6 +468,7 @@ export function LunchesPage() {
           label="Integrante"
           data={memberOptions}
           searchable
+          filter={accentInsensitiveOptionsFilter}
           clearable
           value={filters.member}
           onChange={(val) => setFilters((prev) => ({ ...prev, member: val }))}
@@ -574,22 +615,25 @@ export function LunchesPage() {
         title={editing ? "Editar almoço" : "Novo almoço"}
       >
         <div className="flex flex-col gap-3">
-          <Switch
-            label="Usar pacote"
-            checked={!!formState.use_package}
-            onChange={(e) =>
-              setFormState((prev) => ({
-                ...prev,
-                use_package: e.currentTarget.checked,
-                member: e.currentTarget.checked ? undefined : prev.member,
-                payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
-              }))
-            }
-          />
+            <Switch
+              label="Usar pacote"
+              checked={!!formState.use_package}
+              onChange={(e) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  use_package: e.currentTarget.checked,
+                  member: e.currentTarget.checked ? undefined : prev.member,
+                  credit_owner: e.currentTarget.checked ? undefined : prev.credit_owner,
+                  payment_mode: e.currentTarget.checked ? "PIX" : prev.payment_mode,
+                  payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
+                }))
+              }
+            />
           <Select
             label="Integrante"
             data={memberOptionsSelect}
             searchable
+            filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
             value={formState.member ? formState.member.toString() : null}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
@@ -615,7 +659,7 @@ export function LunchesPage() {
               { value: "EM_ABERTO", label: "Em aberto" },
             ]}
             value={formState.payment_status}
-            disabled={!!formState.use_package}
+            disabled={!!formState.use_package || usingCredit}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
           <Select
@@ -628,8 +672,31 @@ export function LunchesPage() {
             ]}
             value={formState.payment_mode}
             disabled={!!formState.use_package}
-            onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
+            onChange={(val) =>
+              setFormState((prev) => ({
+                ...prev,
+                payment_mode: val || "PIX",
+                payment_status: val === "TROCA" ? "PAGO" : prev.payment_status,
+                credit_owner: val === "TROCA" ? prev.credit_owner : undefined,
+              }))
+            }
           />
+          {usingCredit && (
+            <Select
+              label="Banco de trocas de"
+              data={creditOwnerOptionsForForm}
+              searchable
+              filter={accentInsensitiveOptionsFilter}
+              nothingFoundMessage="Nenhum integrante com trocas disponíveis"
+              value={formState.credit_owner ? formState.credit_owner.toString() : null}
+              onChange={(val) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  credit_owner: val ? Number(val) : undefined,
+                }))
+              }
+            />
+          )}
           <Group justify="flex-end" mt="sm">
             <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
               {editing ? "Salvar" : "Criar"}

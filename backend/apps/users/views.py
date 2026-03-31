@@ -1,6 +1,6 @@
 import django_filters
+import unicodedata
 from django.db import transaction
-from django.http import JsonResponse
 from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -25,14 +25,9 @@ class PublicRegistrationThrottle(AnonRateThrottle):
     scope = "public_registration"
 
 
-class UserHealthView(APIView):
-    """Basic health endpoint for the users service slice."""
-
-    authentication_classes = []
-    permission_classes = []
-
-    def get(self, request):
-        return JsonResponse({"status": "ok", "service": "users"}, status=200)
+def normalize_search_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
 
 
 class PublicRegistrationMetaView(APIView):
@@ -42,12 +37,8 @@ class PublicRegistrationMetaView(APIView):
     def get(self, request):
         return Response(
             {
-                "role": [
-                    {"value": value, "label": label} for value, label in Member.Role.choices
-                ],
-                "diet": [
-                    {"value": value, "label": label} for value, label in Member.Diet.choices
-                ],
+                "role": [{"value": value, "label": label} for value, label in Member.Role.choices],
+                "diet": [{"value": value, "label": label} for value, label in Member.Diet.choices],
             }
         )
 
@@ -68,13 +59,36 @@ class PublicRegistrationSubmissionView(APIView):
 
 
 class MemberFilter(django_filters.FilterSet):
-    search = django_filters.CharFilter(field_name="full_name", lookup_expr="icontains")
+    search = django_filters.CharFilter(method="filter_search")
     role = django_filters.CharFilter(field_name="role")
     diet = django_filters.CharFilter(field_name="diet")
 
     class Meta:
         model = Member
         fields = ["search", "role", "diet"]
+
+    def filter_search(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        normalized_query = normalize_search_text(value).strip()
+        if not normalized_query:
+            return queryset
+
+        matching_ids: list[int] = []
+        for member in queryset.select_related("responsible"):
+            candidate_names = [member.full_name]
+            if member.responsible_id:
+                candidate_names.append(member.responsible.full_name)
+
+            if any(
+                normalized_query in normalize_search_text(candidate_name)
+                for candidate_name in candidate_names
+                if candidate_name
+            ):
+                matching_ids.append(member.id)
+
+        return queryset.filter(id__in=matching_ids)
 
 
 class PublicRegistrationFilter(django_filters.FilterSet):

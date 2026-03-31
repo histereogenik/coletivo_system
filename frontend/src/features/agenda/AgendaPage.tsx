@@ -14,6 +14,7 @@ import { useMemo, useState } from "react";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
 import { fetchMembers } from "../lunch/membersApi";
 import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
@@ -354,6 +355,7 @@ export function AgendaPage() {
             value={(formState.member_ids || []).map((id) => id.toString())}
             onChange={(vals) => setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))}
             searchable
+            filter={accentInsensitiveOptionsFilter}
             placeholder="Escolha integrantes"
           />
           <Select

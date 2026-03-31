@@ -63,6 +63,7 @@ def test_dashboard_summary(api_client, superuser):
     LunchFactory(date=today - timedelta(days=1), payment_status="EM_ABERTO")
 
     url = reverse("dashboard-summary")
+    api_client.force_authenticate(user=superuser)
     response = api_client.get(url)
 
     assert response.status_code == 200
@@ -74,3 +75,12 @@ def test_dashboard_summary(api_client, superuser):
     assert data["members"]["avulsos"] >= 1
     assert data["lunches"]["total"] >= 2
     assert data["lunches"]["total_em_aberto"] >= 1
+
+
+@pytest.mark.django_db
+def test_dashboard_summary_requires_authentication(api_client):
+    url = reverse("dashboard-summary")
+
+    response = api_client.get(url)
+
+    assert response.status_code == 401

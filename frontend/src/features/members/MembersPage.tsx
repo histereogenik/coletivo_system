@@ -34,6 +34,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
+import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { extractErrorMessage } from "../../shared/errors";
 import {
   formatCharacterCounter,
@@ -795,6 +796,7 @@ export function MembersPage() {
             <Select
               label="Responsável"
               searchable
+              filter={accentInsensitiveOptionsFilter}
               data={responsibleOptions}
               value={memberFormState.responsible ? String(memberFormState.responsible) : null}
               onChange={(value) =>

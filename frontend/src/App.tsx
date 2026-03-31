@@ -10,6 +10,7 @@ import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
 import { AgendaPage } from "./features/agenda/AgendaPage";
 import { LoginPage } from "./features/auth/LoginPage";
+import { CreditsPage } from "./features/credits/CreditsPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { DutiesPage } from "./features/duties/DutiesPage";
 import { FinancialPage } from "./features/financial/FinancialPage";
@@ -41,6 +42,7 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="financeiro" element={<FinancialPage />} />
+              <Route path="creditos" element={<CreditsPage />} />
               <Route path="lunches" element={<LunchesPage />} />
               <Route path="pacotes" element={<PackagesPage />} />
               <Route path="integrantes" element={<MembersPage />} />
@@ -50,6 +52,7 @@ function App() {
 
           <Route path="/agenda" element={<LegacyPanelRedirect to="/painel/agenda" />} />
           <Route path="/financeiro" element={<LegacyPanelRedirect to="/painel/financeiro" />} />
+          <Route path="/creditos" element={<LegacyPanelRedirect to="/painel/creditos" />} />
           <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/lunches" />} />
           <Route path="/pacotes" element={<LegacyPanelRedirect to="/painel/pacotes" />} />
           <Route path="/integrantes" element={<LegacyPanelRedirect to="/painel/integrantes" />} />

@@ -1,8 +1,9 @@
-﻿from django.db import transaction
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
 from apps.common.roles import promote_role
+from apps.credits.services import sync_lunch_credit_entry
 from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch, Package
 from apps.users.models import Member
@@ -33,6 +34,7 @@ class PackageSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         extra_kwargs = {
+            "value_cents": {"required": False},
             "remaining_quantity": {"required": False},
             "status": {"required": False},
         }
@@ -166,6 +168,12 @@ class PackageSerializer(serializers.ModelSerializer):
 class LunchSerializer(serializers.ModelSerializer):
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
+    credit_owner = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    credit_owner_name = serializers.CharField(source="credit_owner.full_name", read_only=True)
     package = serializers.PrimaryKeyRelatedField(
         queryset=Package.objects.all(),
         required=False,
@@ -182,6 +190,8 @@ class LunchSerializer(serializers.ModelSerializer):
             "id",
             "member",
             "member_name",
+            "credit_owner",
+            "credit_owner_name",
             "package",
             "use_package",
             "package_remaining",
@@ -206,6 +216,17 @@ class LunchSerializer(serializers.ModelSerializer):
         )
         use_package = attrs.get("use_package", False)
         date = attrs.get("date") or getattr(self.instance, "date", None)
+        payment_mode = (
+            attrs.get("payment_mode")
+            if "payment_mode" in attrs
+            else getattr(self.instance, "payment_mode", Lunch.PaymentMode.PIX)
+        )
+        credit_owner = (
+            attrs.get("credit_owner")
+            if "credit_owner" in attrs
+            else getattr(self.instance, "credit_owner", None)
+        )
+        using_credit = payment_mode == Lunch.PaymentMode.TROCA
 
         if use_package and not package:
             if not member or not date:
@@ -227,6 +248,10 @@ class LunchSerializer(serializers.ModelSerializer):
             attrs["package"] = package
             attrs["value_cents"] = package.unit_value_cents
 
+        if package and using_credit:
+            raise serializers.ValidationError(
+                {"credit_owner": "Não é possível usar pacote e crédito no mesmo almoço."}
+            )
         if package and member and package.member_id != member.id:
             raise serializers.ValidationError({"package": "Pacote não pertence ao integrante."})
         if package and package.remaining_quantity <= 0:
@@ -235,6 +260,16 @@ class LunchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"package": "Pacote expirado para a data do almoço."})
         if package and "value_cents" not in attrs:
             attrs["value_cents"] = package.unit_value_cents
+
+        if using_credit:
+            if not credit_owner:
+                raise serializers.ValidationError(
+                    {"credit_owner": "Informe quem usará o banco de créditos."}
+                )
+            attrs["payment_status"] = Lunch.PaymentStatus.PAGO
+        else:
+            attrs["credit_owner"] = None
+
         return attrs
 
     def create(self, validated_data):
@@ -248,6 +283,7 @@ class LunchSerializer(serializers.ModelSerializer):
                 package.remaining_quantity -= 1
                 package.save(update_fields=["remaining_quantity", "updated_at"])
             promote_role(instance.member, Member.Role.MENSALISTA)
+            self._sync_credit_entry(instance)
             self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
         return instance
 
@@ -270,24 +306,29 @@ class LunchSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 new_package.remaining_quantity -= 1
                 new_package.save(update_fields=["remaining_quantity", "updated_at"])
+            self._sync_credit_entry(instance)
             self._sync_financial_entry(
                 instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date
             )
         return instance
+
+    def _sync_credit_entry(self, instance):
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        sync_lunch_credit_entry(instance, actor=actor)
 
     def _sync_financial_entry(self, instance, prev_status, prev_value, prev_date):
         entry = getattr(instance, "financial_entry", None)
         is_paid_now = instance.payment_status == Lunch.PaymentStatus.PAGO
         was_paid = prev_status == Lunch.PaymentStatus.PAGO
 
-        if instance.package_id:
+        if instance.package_id or instance.payment_mode == Lunch.PaymentMode.TROCA:
             if entry:
                 entry.delete()
             return
 
         if is_paid_now and instance.value_cents > 0:
-            label = "Pagamento pacote" if instance.package_id else "Pagamento almoço"
-            description = f"{label} - {instance.member.full_name} - {instance.date}"
+            description = f"Pagamento almoço - {instance.member.full_name} - {instance.date}"
             if entry:
                 if (
                     (prev_value != instance.value_cents)

@@ -3,7 +3,8 @@
 Base local: `http://localhost:8001`
 
 ## Permissões
-- Apenas superusuários podem criar/listar/atualizar/remover entradas de agenda.
+- Toda a agenda é administrativa.
+- Leitura, criação, atualização, remoção e exportação exigem superusuário.
 
 ## Endpoints
 - CRUD: `/api/agenda/entries/`
@@ -12,39 +13,54 @@ Base local: `http://localhost:8001`
   - Detalhar: `GET /api/agenda/entries/{id}/`
   - Atualizar parcial: `PATCH /api/agenda/entries/{id}/`
   - Remover: `DELETE /api/agenda/entries/{id}/`
+- Exportar XLSX: `GET /api/agenda/entries/export/`
 
-## Payloads
-
-### Criar entrada (agendamento)
+## Payload de criação
 ```json
 {
-  "date": "2025-12-02",
+  "date": "2026-03-30",
   "start_time": "09:00",
-  "end_time": "10:00",
+  "end_time": "12:00",
   "duty": 3,
-  "member_ids": [5, 3],
+  "member_ids": [5, 8],
   "status": "PLANEJADO",
-  "notes": "Cobertura de manhã."
+  "notes": "Cobertura da manhã."
 }
 ```
-- `members_input` é um alias de `member_ids`, se preferir.
-- Resposta inclui `members` como objetos `{id, full_name}` e `duty_name`.
 
-### Filtros (GET)
-- Por data exata: `/api/agenda/entries/?date=2025-12-02`
-- Por intervalo: `/api/agenda/entries/?date_range_after=2025-12-01&date_range_before=2025-12-10`
-- Por duty: `/api/agenda/entries/?duty=3`
-- Por membro: `/api/agenda/entries/?member=5`
-- Por status: `/api/agenda/entries/?status=PLANEJADO`
+## Filtros
+- `date`
+- `date_from`
+- `date_to`
+- `date_range_after`
+- `date_range_before`
+- `duty`
+- `member`
+- `status`
 
-## Regras de negócio e validação
-- `start_time` < `end_time` (se `end_time` informado).
-- IDs de membros inexistentes → erro em `member_ids_invalid`.
-- Membros não precisam estar previamente no duty: ao agendar, eles são associados ao duty e promovidos a `SUSTENTADOR`.
-- Conflitos de horário: o mesmo membro não pode ter dois agendamentos sobrepostos na mesma data. Em caso de conflito, retorna:
-  - `member_ids`: "Conflito de horário..."
-  - `member_conflicts`: lista de objetos `{member, agenda_entry}` para tratar no frontend.
+Exemplo:
+`GET /api/agenda/entries/?date_from=2026-03-01&date_to=2026-03-31&status=CONCLUIDO`
 
-## Modelos (referência)
-- `AgendaEntry`: `date`, `start_time`, `end_time` (opcional), `duty` (FK), `members` (M2M), `status` (`PLANEJADO|CONCLUIDO|CANCELADO`), `notes`.
+## Regras de negócio
+- `start_time` deve ser menor que `end_time`, quando `end_time` existir.
+- `member_ids` aceita múltiplos integrantes.
+- Ao agendar um integrante em uma função, ele é associado ao duty e pode ser promovido para `SUSTENTADOR`.
+- O mesmo integrante não pode ter dois agendamentos sobrepostos na mesma data.
+- Em caso de conflito, a API retorna detalhes em `member_ids` e `member_conflicts`.
 
+## Integração com trocas
+- Quando uma entrada fica com `status=CONCLUIDO`, o backend sincroniza trocas automáticas no app `credits`.
+- Cada integrante vinculado recebe uma entrada de troca com:
+  - `origin = AGENDA`
+  - `entry_type = CREDITO`
+  - `value_cents = duty.remuneration_cents`
+- Se a agenda sair de `CONCLUIDO`, mudar integrantes ou mudar a função/remuneração, os lançamentos automáticos são ressincronizados.
+- A sincronização é idempotente: salvar repetidamente não duplica créditos.
+
+## Campos principais do retorno
+- `members`: lista de objetos `{id, full_name}`
+- `duty_name`
+- `status`
+- `notes`
+- `created_at`
+- `updated_at`
