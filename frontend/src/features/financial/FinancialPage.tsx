@@ -105,14 +105,17 @@ export function FinancialPage() {
     value: string;
     date_from: DateValue;
     date_to: DateValue;
+    search: string;
   }>({
     entry_type: null,
     category: null,
     value: "",
     date_from: null,
     date_to: null,
+    search: "",
   });
   const [valueInput, setValueInput] = useState<string>("");
+  const [searchInput, setSearchInput] = useState("");
 
   const { data: summary } = useQuery({
     queryKey: [
@@ -120,6 +123,7 @@ export function FinancialPage() {
       filters.entry_type,
       filters.category,
       filters.value,
+      filters.search,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
@@ -132,6 +136,7 @@ export function FinancialPage() {
           : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        search: filters.search.trim() || undefined,
       }),
     enabled: isAuthenticated,
   });
@@ -142,6 +147,7 @@ export function FinancialPage() {
       filters.entry_type,
       filters.category,
       filters.value,
+      filters.search,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
       page,
@@ -156,6 +162,7 @@ export function FinancialPage() {
           : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        search: filters.search.trim() || undefined,
         page,
         page_size: pageSize,
       }),
@@ -203,7 +210,7 @@ export function FinancialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to]);
+  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to, filters.search]);
 
   useEffect(() => {
     setValueInput(filters.value);
@@ -273,6 +280,7 @@ export function FinancialPage() {
       value: "",
       date_from: null,
       date_to: null,
+      search: "",
     });
 
   if (!isAuthenticated) {
@@ -326,7 +334,7 @@ export function FinancialPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
         {summaryStats.filtered &&
-        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value) ? (
+        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value || filters.search) ? (
           <SummaryCard
             title="Balanço do filtro"
             value={formatCents(summaryStats.filtered.saldo_cents)}
@@ -356,6 +364,18 @@ export function FinancialPage() {
       </SimpleGrid>
 
       <Group gap="sm" align="flex-end" mb="md">
+        <TextInput
+          label="Pesquisar"
+          placeholder="Buscar por descrição ou integrante"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.currentTarget.value)}
+          onBlur={() => setFilters((prev) => ({ ...prev, search: searchInput.trim() }))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
+            }
+          }}
+        />
         <Select
           label="Tipo"
           data={[

@@ -458,7 +458,7 @@ export function LunchesPage() {
           <SummaryCard
             title="Valor total recebido"
             value={formatCents(summary?.received_cents ?? 0)}
-            subtitle={`Valor de almoços em aberto: ${formatCents(summary?.open_cents ?? 0)}`}
+            subtitle={`Quantidade: ${summary?.count ?? 0} almoço(s) | Valor em aberto: ${formatCents(summary?.open_cents ?? 0)}`}
             icon={<IconSoup size={20} />}
           />
         </Box>
