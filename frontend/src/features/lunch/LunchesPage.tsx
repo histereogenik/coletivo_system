@@ -82,6 +82,11 @@ const paymentModeLabels: Record<string, string> = {
 
 const creditOwnerPageSize = 500;
 
+const formatCreditOwnerBalanceLabel = (balanceCents: number) => {
+  if (balanceCents < 0) return `Dívida ${formatCents(Math.abs(balanceCents))}`;
+  return `Saldo ${formatCents(balanceCents)}`;
+};
+
 export function LunchesPage() {
   const actionResponsiveStyles = `
     .lunch-actions {
@@ -202,12 +207,20 @@ export function LunchesPage() {
     enabled: isAuthenticated,
   });
 
+  const invalidateLunchDependencies = () => {
+    queryClient.invalidateQueries({ queryKey: ["lunches"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["financial"] });
+    queryClient.invalidateQueries({ queryKey: ["lunch-credit-owners"] });
+    queryClient.invalidateQueries({ queryKey: ["credit-summaries"] });
+    queryClient.invalidateQueries({ queryKey: ["credit-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["credit-entries"] });
+  };
+
   const mutation = useMutation({
     mutationFn: (id: number) => markLunchPaid(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lunches"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["financial"] });
+      invalidateLunchDependencies();
       notifications.show({ message: "Pagamento marcado.", color: "green" });
     },
     onError: () => notifications.show({ message: "Erro ao marcar pago.", color: "red" }),
@@ -216,9 +229,7 @@ export function LunchesPage() {
   const createMutation = useMutation({
     mutationFn: (payload: Partial<Lunch> & { use_package?: boolean }) => createLunch(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lunches"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["financial"] });
+      invalidateLunchDependencies();
       notifications.show({ message: "Almoço criado.", color: "green" });
       modalHandlers.close();
     },
@@ -230,9 +241,7 @@ export function LunchesPage() {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Lunch> & { use_package?: boolean } }) =>
       updateLunch(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lunches"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["financial"] });
+      invalidateLunchDependencies();
       notifications.show({ message: "Almoço atualizado.", color: "green" });
       modalHandlers.close();
     },
@@ -243,9 +252,7 @@ export function LunchesPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteLunch(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lunches"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["financial"] });
+      invalidateLunchDependencies();
       notifications.show({ message: "Almoço removido.", color: "green" });
     },
     onError: (err: unknown) =>
@@ -259,8 +266,9 @@ export function LunchesPage() {
       notifications.show({ message: "Preencha integrante e data.", color: "red" });
       return;
     }
-    if (usingCredit && !formState.credit_owner) {
-      notifications.show({ message: "Selecione o banco de trocas.", color: "red" });
+    const creditOwner = usingCredit ? formState.credit_owner ?? formState.member : undefined;
+    if (usingCredit && !creditOwner) {
+      notifications.show({ message: "Selecione a conta de trocas.", color: "red" });
       return;
     }
     const parsedValueCents = parseReaisToCents(valueReais);
@@ -276,7 +284,7 @@ export function LunchesPage() {
       date: dateIso,
       use_package: formState.use_package ? true : undefined,
       package: formState.use_package ? formState.package : null,
-      credit_owner: usingCredit ? formState.credit_owner : null,
+      credit_owner: usingCredit ? creditOwner : null,
       payment_status: formState.use_package || usingCredit ? "PAGO" : formState.payment_status,
     };
 
@@ -396,7 +404,7 @@ export function LunchesPage() {
   );
   const creditOwnerOptions = creditOwnerResults.map((summary) => ({
     value: summary.owner.toString(),
-    label: `${summary.owner_name} • ${formatCents(summary.balance_cents)}`,
+    label: `${summary.owner_name} • ${formatCreditOwnerBalanceLabel(summary.balance_cents)}`,
   }));
   const selectedCreditOwner =
     formState.credit_owner != null
@@ -409,7 +417,7 @@ export function LunchesPage() {
           ...creditOwnerOptions,
           {
             value: selectedCreditOwner.id.toString(),
-            label: `${selectedCreditOwner.full_name} • ${formatCents(
+            label: `${selectedCreditOwner.full_name} • ${formatCreditOwnerBalanceLabel(
               creditOwnerBalanceById.get(selectedCreditOwner.id) ?? 0
             )}`,
           },
@@ -636,7 +644,21 @@ export function LunchesPage() {
             filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
             value={formState.member ? formState.member.toString() : null}
-            onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
+            onChange={(val) => {
+              const memberId = val ? Number(val) : undefined;
+              setFormState((prev) => {
+                const shouldSyncCreditOwner =
+                  prev.payment_mode === "TROCA" &&
+                  !prev.use_package &&
+                  (!prev.credit_owner || prev.credit_owner === prev.member);
+
+                return {
+                  ...prev,
+                  member: memberId,
+                  credit_owner: shouldSyncCreditOwner ? memberId : prev.credit_owner,
+                };
+              });
+            }}
           />
           <TextInput
             label="Valor (R$)"
@@ -677,17 +699,17 @@ export function LunchesPage() {
                 ...prev,
                 payment_mode: val || "PIX",
                 payment_status: val === "TROCA" ? "PAGO" : prev.payment_status,
-                credit_owner: val === "TROCA" ? prev.credit_owner : undefined,
+                credit_owner: val === "TROCA" ? prev.credit_owner ?? prev.member : undefined,
               }))
             }
           />
           {usingCredit && (
             <Select
-              label="Banco de trocas de"
+              label="Conta de trocas"
               data={creditOwnerOptionsForForm}
               searchable
               filter={accentInsensitiveOptionsFilter}
-              nothingFoundMessage="Nenhum integrante com trocas disponíveis"
+              nothingFoundMessage="Nenhum integrante encontrado"
               value={formState.credit_owner ? formState.credit_owner.toString() : null}
               onChange={(val) =>
                 setFormState((prev) => ({

@@ -64,6 +64,18 @@ const creditEntryTypeColors: Record<CreditEntry["entry_type"], string> = {
   DEBITO: "red",
 };
 
+const getBalanceColor = (balanceCents: number) => {
+  if (balanceCents < 0) return "red";
+  if (balanceCents > 0) return "green";
+  return "gray";
+};
+
+const formatBalanceLabel = (balanceCents: number) => {
+  if (balanceCents < 0) return `Dívida ${formatCents(Math.abs(balanceCents))}`;
+  if (balanceCents > 0) return `Saldo ${formatCents(balanceCents)}`;
+  return "Saldo R$ 0,00";
+};
+
 const formatPtDateTime = (value?: string | null) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -314,7 +326,11 @@ export function CreditsPage() {
                       <Table.Td ta="right">{formatCents(summary.credits_cents)}</Table.Td>
                       <Table.Td ta="right">{formatCents(summary.debits_cents)}</Table.Td>
                       <Table.Td ta="right">
-                        <Text fw={600}>{formatCents(summary.balance_cents)}</Text>
+                        <Text fw={600} c={getBalanceColor(summary.balance_cents)}>
+                          {summary.balance_cents < 0
+                            ? formatBalanceLabel(summary.balance_cents)
+                            : formatCents(summary.balance_cents)}
+                        </Text>
                       </Table.Td>
                       <Table.Td ta="right">
                         <Button
@@ -372,9 +388,9 @@ export function CreditsPage() {
             {selectedOwnerId && selectedSummaryQuery.data && (
               <Badge
                 size="lg"
-                color={selectedSummaryQuery.data.balance_cents > 0 ? "green" : "gray"}
+                color={getBalanceColor(selectedSummaryQuery.data.balance_cents)}
               >
-                Saldo {formatCents(selectedSummaryQuery.data.balance_cents)}
+                {formatBalanceLabel(selectedSummaryQuery.data.balance_cents)}
               </Badge>
             )}
           </Group>

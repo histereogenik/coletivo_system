@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers
@@ -7,8 +7,6 @@ from apps.agenda.models import AgendaEntry
 from apps.credits.models import CreditEntry
 from apps.lunch.models import Lunch
 from apps.users.models import Member
-
-User = get_user_model()
 
 
 def get_credit_summary(owner_id: int, *, exclude_entry_id: int | None = None) -> dict[str, int]:
@@ -44,6 +42,10 @@ def lock_members(member_ids: list[int] | set[int]) -> None:
     if not ids:
         return
     list(Member.objects.select_for_update().filter(id__in=ids).order_by("id"))
+
+
+def can_use_credit_advance(member: Member) -> bool:
+    return member.role == Member.Role.SUSTENTADOR
 
 
 def ensure_credit_balance(
@@ -152,11 +154,14 @@ def sync_lunch_credit_entry(
     if current_entry and current_entry.owner_id == lunch.credit_owner_id:
         exclude_entry_id = current_entry.id
 
-    ensure_credit_balance(
-        lunch.credit_owner_id,
-        lunch.value_cents,
-        exclude_entry_id=exclude_entry_id,
-    )
+    owner = lunch.credit_owner
+
+    if not can_use_credit_advance(owner):
+        ensure_credit_balance(
+            lunch.credit_owner_id,
+            lunch.value_cents,
+            exclude_entry_id=exclude_entry_id,
+        )
 
     description = f"Almoço com crédito - {lunch.member.full_name} - {lunch.date}"
 
