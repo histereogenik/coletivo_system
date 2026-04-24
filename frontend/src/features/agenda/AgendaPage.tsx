@@ -11,6 +11,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
@@ -88,6 +89,7 @@ export function AgendaPage() {
     return { from: toIsoDateLocal(monday), to: toIsoDateLocal(sunday) };
   });
   const [editing, setEditing] = useState<AgendaEntry | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<AgendaEntry | null>(null);
   const [formState, setFormState] = useState<Partial<AgendaEntry> & { member_ids?: number[] }>({
     date: toIsoDateLocal(new Date()),
     start_time: "09:00",
@@ -158,6 +160,8 @@ export function AgendaPage() {
     onSuccess: () => {
       invalidateAgenda();
       notifications.show({ message: "Registro removido.", color: "green" });
+      setEntryToDelete(null);
+      modalHandlers.close();
     },
     onError: (err: unknown) => {
       const data = (err as { response?: { data?: unknown } })?.response?.data;
@@ -394,9 +398,7 @@ export function AgendaPage() {
               <Button
                 variant="outline"
                 color="red"
-                onClick={() => {
-                  if (editing) deleteMutation.mutate(editing.id);
-                }}
+                onClick={() => setEntryToDelete(editing)}
                 loading={deleteMutation.isPending}
               >
                 Remover
@@ -410,6 +412,15 @@ export function AgendaPage() {
           </Group>
         </div>
       </Modal>
+      <ConfirmDeleteModal
+        opened={!!entryToDelete}
+        message={`Excluir o registro ${entryToDelete?.duty_name || "da agenda"}? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setEntryToDelete(null)}
+        onConfirm={() => {
+          if (entryToDelete) deleteMutation.mutate(entryToDelete.id);
+        }}
+      />
     </Container>
   );
 }

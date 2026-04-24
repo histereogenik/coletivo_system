@@ -31,6 +31,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
@@ -140,6 +141,7 @@ export function MembersPage() {
   const [rejectModalOpened, rejectModalHandlers] = useDisclosure(false);
 
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [memberFormState, setMemberFormState] = useState<Partial<Member>>(defaultMemberFormState);
   const [membersPage, setMembersPage] = useState(1);
   const [memberFilters, setMemberFilters] = useState<{
@@ -261,6 +263,7 @@ export function MembersPage() {
     onSuccess: () => {
       invalidateMembers();
       notifications.show({ message: "Integrante removido.", color: "green" });
+      setMemberToDelete(null);
     },
     onError: (err: unknown) => {
       notifications.show({
@@ -596,7 +599,7 @@ export function MembersPage() {
                               loading={
                                 deleteMemberMutation.isPending && deleteMemberMutation.variables === member.id
                               }
-                              onClick={() => deleteMemberMutation.mutate(member.id)}
+                              onClick={() => setMemberToDelete(member)}
                             >
                               <IconTrash size={16} />
                             </Button>
@@ -761,6 +764,16 @@ export function MembersPage() {
           )}
         </Tabs.Panel>
       </Tabs>
+
+      <ConfirmDeleteModal
+        opened={!!memberToDelete}
+        message={`Excluir o integrante ${memberToDelete?.full_name}? Esta ação não pode ser desfeita.`}
+        loading={deleteMemberMutation.isPending}
+        onClose={() => setMemberToDelete(null)}
+        onConfirm={() => {
+          if (memberToDelete) deleteMemberMutation.mutate(memberToDelete.id);
+        }}
+      />
 
       <Modal
         opened={memberModalOpened}

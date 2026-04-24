@@ -16,6 +16,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
 import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
@@ -27,6 +28,7 @@ export function DutiesPage() {
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
   const [editing, setEditing] = useState<Duty | null>(null);
+  const [dutyToDelete, setDutyToDelete] = useState<Duty | null>(null);
   const [formState, setFormState] = useState<Partial<Duty> & { member_ids?: number[] }>({
     name: "",
     remuneration_cents: 0,
@@ -214,7 +216,7 @@ export function DutiesPage() {
                     variant="outline"
                     color="red"
                     loading={deleteMutation.isPending && deleteMutation.variables === duty.id}
-                    onClick={() => deleteMutation.mutate(duty.id)}
+                    onClick={() => setDutyToDelete(duty)}
                     aria-label="Remover"
                   >
                     <IconTrash size={16} />
@@ -225,6 +227,19 @@ export function DutiesPage() {
           ))}
         </Table.Tbody>
       </Table>
+      <ConfirmDeleteModal
+        opened={!!dutyToDelete}
+        message={`Excluir a função ${dutyToDelete?.name}? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setDutyToDelete(null)}
+        onConfirm={() => {
+          if (dutyToDelete) {
+            deleteMutation.mutate(dutyToDelete.id, {
+              onSuccess: () => setDutyToDelete(null),
+            });
+          }
+        }}
+      />
       {duties.length > 0 && (
         <Group justify="center" mt="md">
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />

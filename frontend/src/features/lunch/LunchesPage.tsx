@@ -23,6 +23,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
 import { fetchCreditSummaries } from "../credits/api";
@@ -139,6 +140,7 @@ export function LunchesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
   const [page, setPage] = useState(1);
+  const [lunchToDelete, setLunchToDelete] = useState<Lunch | null>(null);
   const pageSize = 15;
 
   const { data: summary } = useQuery({
@@ -254,6 +256,7 @@ export function LunchesPage() {
     onSuccess: () => {
       invalidateLunchDependencies();
       notifications.show({ message: "Almoço removido.", color: "green" });
+      setLunchToDelete(null);
     },
     onError: (err: unknown) =>
       notifications.show({ message: extractErrorMessage(err, "Erro ao remover almoço."), color: "red" }),
@@ -598,7 +601,7 @@ export function LunchesPage() {
                           variant="outline"
                           color="red"
                           loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                          onClick={() => deleteMutation.mutate(item.id)}
+                          onClick={() => setLunchToDelete(item)}
                           aria-label="Remover"
                         >
                           <IconTrash size={16} />
@@ -617,6 +620,17 @@ export function LunchesPage() {
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
       )}
+      <ConfirmDeleteModal
+        opened={!!lunchToDelete}
+        message={`Excluir o almoço de ${lunchToDelete?.member_name || `#${lunchToDelete?.member}`} em ${
+          lunchToDelete ? formatPtDate(lunchToDelete.date) : ""
+        }? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setLunchToDelete(null)}
+        onConfirm={() => {
+          if (lunchToDelete) deleteMutation.mutate(lunchToDelete.id);
+        }}
+      />
       <Modal
         opened={modalOpened}
         onClose={modalHandlers.close}

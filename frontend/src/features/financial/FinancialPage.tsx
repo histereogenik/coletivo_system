@@ -26,6 +26,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
@@ -98,6 +99,7 @@ export function FinancialPage() {
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
   const [page, setPage] = useState(1);
+  const [entryToDelete, setEntryToDelete] = useState<FinancialEntry | null>(null);
   const pageSize = 15;
   const [filters, setFilters] = useState<{
     entry_type: "ENTRADA" | "SAIDA" | null;
@@ -201,6 +203,7 @@ export function FinancialPage() {
     onSuccess: () => {
       invalidateRelated();
       notifications.show({ message: "Lançamento removido.", color: "green" });
+      setEntryToDelete(null);
     },
     onError: () => notifications.show({ message: "Erro ao remover lançamento.", color: "red" }),
   });
@@ -470,7 +473,7 @@ export function FinancialPage() {
                         variant="outline"
                         color="red"
                         loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                        onClick={() => deleteMutation.mutate(item.id)}
+                        onClick={() => setEntryToDelete(item)}
                         aria-label="Remover"
                       >
                         <IconTrash size={16} />
@@ -488,6 +491,15 @@ export function FinancialPage() {
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
       )}
+      <ConfirmDeleteModal
+        opened={!!entryToDelete}
+        message={`Excluir o lançamento "${entryToDelete?.description || "sem descrição"}"? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setEntryToDelete(null)}
+        onConfirm={() => {
+          if (entryToDelete) deleteMutation.mutate(entryToDelete.id);
+        }}
+      />
 
       <Modal
         opened={modalOpened}

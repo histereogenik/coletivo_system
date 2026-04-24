@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
 import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
@@ -121,6 +122,7 @@ export function PackagesPage() {
     date_to: null,
   });
   const [page, setPage] = useState(1);
+  const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
   const pageSize = 15;
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
@@ -185,6 +187,7 @@ export function PackagesPage() {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       notifications.show({ message: "Pacote removido.", color: "green" });
+      setPackageToDelete(null);
     },
     onError: (err: unknown) =>
       notifications.show({ message: extractErrorMessage(err, "Erro ao remover pacote."), color: "red" }),
@@ -499,7 +502,7 @@ export function PackagesPage() {
                           variant="outline"
                           color="red"
                           loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                          onClick={() => deleteMutation.mutate(item.id)}
+                          onClick={() => setPackageToDelete(item)}
                           aria-label="Remover"
                         >
                           <IconTrash size={16} />
@@ -518,6 +521,15 @@ export function PackagesPage() {
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
       )}
+      <ConfirmDeleteModal
+        opened={!!packageToDelete}
+        message={`Excluir o pacote de ${packageToDelete?.member_name || `#${packageToDelete?.member}`}? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setPackageToDelete(null)}
+        onConfirm={() => {
+          if (packageToDelete) deleteMutation.mutate(packageToDelete.id);
+        }}
+      />
       <Modal
         opened={modalOpened}
         onClose={modalHandlers.close}
