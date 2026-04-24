@@ -89,22 +89,6 @@ const formatCreditOwnerBalanceLabel = (balanceCents: number) => {
 };
 
 export function LunchesPage() {
-  const actionResponsiveStyles = `
-    .lunch-actions {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-        overflow-x: auto;
-      }
-    .lunch-actions .lunch-actions-block {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: nowrap;
-      }
-  `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
@@ -445,7 +429,6 @@ export function LunchesPage() {
 
   return (
     <Container size="xl" py="md">
-      <style>{actionResponsiveStyles}</style>
       <Group mb="md">
         <IconSoup size={20} />
         <Title order={3}>Almoços</Title>
@@ -574,41 +557,39 @@ export function LunchesPage() {
                 <Table.Td>{paymentModeLabels[item.payment_mode || ""] || "-"}</Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
-                  <div className="lunch-actions">
-                    <div className="lunch-actions-block" style={{ justifyContent: "flex-end" }}>
-                      {canMarkPaid(item) && (
-                        <Tooltip label="Marcar pago">
-                          <Button
-                            size="xs"
-                            variant="light"
-                            loading={mutation.isPending && mutation.variables === item.id}
-                            onClick={() => mutation.mutate(item.id)}
-                            leftSection={<IconCheck size={16} />}
-                            aria-label="Marcar pago"
-                          >
-                            PG
-                          </Button>
-                        </Tooltip>
-                      )}
-                      <Tooltip label="Editar">
-                        <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
-                          <IconPencil size={16} />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Remover">
+                  <Group gap="xs" justify="flex-end" wrap="nowrap">
+                    {canMarkPaid(item) && (
+                      <Tooltip label="Marcar pago">
                         <Button
                           size="xs"
-                          variant="outline"
-                          color="red"
-                          loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                          onClick={() => setLunchToDelete(item)}
-                          aria-label="Remover"
+                          variant="light"
+                          loading={mutation.isPending && mutation.variables === item.id}
+                          onClick={() => mutation.mutate(item.id)}
+                          leftSection={<IconCheck size={16} />}
+                          aria-label="Marcar pago"
                         >
-                          <IconTrash size={16} />
+                          PG
                         </Button>
                       </Tooltip>
-                    </div>
-                  </div>
+                    )}
+                    <Tooltip label="Editar">
+                      <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                        <IconPencil size={16} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Remover">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="red"
+                        loading={deleteMutation.isPending && deleteMutation.variables === item.id}
+                        onClick={() => setLunchToDelete(item)}
+                        aria-label="Remover"
+                      >
+                        <IconTrash size={16} />
+                      </Button>
+                    </Tooltip>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}

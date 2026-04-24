@@ -76,22 +76,6 @@ const statusLabels: Record<string, string> = {
 };
 
 export function PackagesPage() {
-  const actionResponsiveStyles = `
-    .package-actions {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-        overflow-x: auto;
-      }
-    .package-actions .package-actions-block {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: nowrap;
-      }
-  `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
@@ -352,7 +336,6 @@ export function PackagesPage() {
 
   return (
     <Container size="xl" py="md">
-      <style>{actionResponsiveStyles}</style>
       <Group mb="md">
         <IconPackage size={20} />
         <Title order={3}>Pacotes</Title>
@@ -468,8 +451,8 @@ export function PackagesPage() {
                 </Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
-                  <div className="package-actions">
-                    <div className="package-actions-block">
+                  <Group gap="xs" justify="flex-end" wrap="nowrap">
+                    <Group gap="xs" wrap="nowrap">
                       <Button
                         size="xs"
                         variant="light"
@@ -489,8 +472,8 @@ export function PackagesPage() {
                       >
                         +1
                       </Button>
-                    </div>
-                    <div className="package-actions-block" style={{ justifyContent: "flex-end" }}>
+                    </Group>
+                    <Group gap="xs" wrap="nowrap">
                       <Tooltip label="Editar">
                         <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
                           <IconPencil size={16} />
@@ -508,8 +491,8 @@ export function PackagesPage() {
                           <IconTrash size={16} />
                         </Button>
                       </Tooltip>
-                    </div>
-                  </div>
+                    </Group>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
