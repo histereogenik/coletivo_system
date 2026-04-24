@@ -1,5 +1,5 @@
 ﻿import django_filters
-from django.db import models
+from django.db import models, transaction
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -64,6 +64,7 @@ class LunchViewSet(viewsets.ModelViewSet):
     filterset_class = LunchFilter
     pagination_class = OptionalPagination
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         # Remove linked financial entry to keep financial data consistent
         entry = getattr(instance, "financial_entry", None)
@@ -136,6 +137,7 @@ class PackageViewSet(viewsets.ModelViewSet):
     filterset_class = PackageFilter
     pagination_class = OptionalPagination
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         entry = getattr(instance, "financial_entry", None)
         if entry:

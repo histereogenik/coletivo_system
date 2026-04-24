@@ -86,3 +86,19 @@ def test_non_superuser_forbidden(api_client):
     response = api_client.get(url)
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_delete_package_referenced_by_lunch_returns_conflict(api_client, superuser):
+    package = PackageFactory()
+    LunchFactory(member=package.member, package=package)
+
+    api_client.force_authenticate(user=superuser)
+    url = reverse("package-detail", args=[package.id])
+
+    response = api_client.delete(url)
+
+    assert response.status_code == 409
+    assert response.data == {
+        "detail": "Não é possível excluir este registro porque ele está vinculado a outros dados."
+    }
