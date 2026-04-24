@@ -76,6 +76,11 @@ const formatBalanceLabel = (balanceCents: number) => {
   return "Saldo R$ 0,00";
 };
 
+const formatCreditEntryValue = (entry: CreditEntry) => {
+  const sign = entry.entry_type === "CREDITO" ? "+" : "-";
+  return `${sign} ${formatCents(entry.value_cents)}`;
+};
+
 const formatPtDateTime = (value?: string | null) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -489,12 +494,12 @@ export function CreditsPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
-                          <Table.Th style={{ minWidth: 180 }}>Beneficiário</Table.Th>
-                          <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
                           <Table.Th style={{ minWidth: 120 }} ta="right">
                             Valor
                           </Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
+                          <Table.Th style={{ minWidth: 180 }}>Beneficiário</Table.Th>
+                          <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -506,10 +511,10 @@ export function CreditsPage() {
                                 {creditEntryTypeLabels[entry.entry_type]}
                               </Badge>
                             </Table.Td>
+                            <Table.Td ta="right">{formatCreditEntryValue(entry)}</Table.Td>
                             <Table.Td>{creditOriginLabels[entry.origin]}</Table.Td>
                             <Table.Td>{entry.beneficiary_name || "-"}</Table.Td>
                             <Table.Td>{entry.description || "-"}</Table.Td>
-                            <Table.Td ta="right">{formatCents(entry.value_cents)}</Table.Td>
                           </Table.Tr>
                         ))}
                         {historyResults.length === 0 && (
