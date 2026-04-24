@@ -469,8 +469,10 @@ export function CreditsPage() {
               <Button
                 onClick={handleSubmitAdjustment}
                 loading={submitAdjustmentMutation.isPending}
+                color={adjustmentType === "DEBITO" ? "red" : "blue"}
+                miw={103}
               >
-                {adjustmentType === "CREDITO" ? "Salvar crédito" : "Salvar débito"}
+                {adjustmentType === "CREDITO" ? "Adicionar" : "Remover"}
               </Button>
             </Group>
           </Stack>
