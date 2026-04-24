@@ -531,6 +531,7 @@ export function PackagesPage() {
             filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage="Nenhum integrante"
             value={formState.member ? formState.member.toString() : null}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
           />
           <TextInput
@@ -567,6 +568,7 @@ export function PackagesPage() {
               { value: "EM_ABERTO", label: "Em aberto" },
             ]}
             value={formState.payment_status}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
           <Select
@@ -578,6 +580,7 @@ export function PackagesPage() {
               { value: "TROCA", label: "Troca" },
             ]}
             value={formState.payment_mode}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           <Group justify="flex-end" mt="sm">

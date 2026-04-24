@@ -802,6 +802,7 @@ export function MembersPage() {
               filter={accentInsensitiveOptionsFilter}
               data={responsibleOptions}
               value={memberFormState.responsible ? String(memberFormState.responsible) : null}
+              allowDeselect={false}
               onChange={(value) =>
                 setMemberFormState((prev) => ({
                   ...prev,
@@ -817,6 +818,7 @@ export function MembersPage() {
             data={memberRoleOptions}
             disabled={Boolean(memberFormState.is_child)}
             value={memberFormState.role}
+            allowDeselect={false}
             onChange={(value) =>
               setMemberFormState((prev) => ({
                 ...prev,
@@ -828,6 +830,7 @@ export function MembersPage() {
             label="Dieta"
             data={memberDietOptions}
             value={memberFormState.diet ?? null}
+            allowDeselect={false}
             onChange={(value) =>
               setMemberFormState((prev) => ({
                 ...prev,

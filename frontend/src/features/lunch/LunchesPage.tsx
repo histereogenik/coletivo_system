@@ -644,6 +644,7 @@ export function LunchesPage() {
             filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
             value={formState.member ? formState.member.toString() : null}
+            allowDeselect={false}
             onChange={(val) => {
               const memberId = val ? Number(val) : undefined;
               setFormState((prev) => {
@@ -682,6 +683,7 @@ export function LunchesPage() {
             ]}
             value={formState.payment_status}
             disabled={!!formState.use_package || usingCredit}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
           <Select
@@ -694,6 +696,7 @@ export function LunchesPage() {
             ]}
             value={formState.payment_mode}
             disabled={!!formState.use_package}
+            allowDeselect={false}
             onChange={(val) =>
               setFormState((prev) => ({
                 ...prev,
@@ -711,6 +714,7 @@ export function LunchesPage() {
               filter={accentInsensitiveOptionsFilter}
               nothingFoundMessage="Nenhum integrante encontrado"
               value={formState.credit_owner ? formState.credit_owner.toString() : null}
+              allowDeselect={false}
               onChange={(val) =>
                 setFormState((prev) => ({
                   ...prev,

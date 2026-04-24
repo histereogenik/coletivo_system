@@ -406,6 +406,7 @@ export function CreditsPage() {
             filter={accentInsensitiveOptionsFilter}
             data={ownerOptions}
             value={selectedOwnerId ? String(selectedOwnerId) : null}
+            allowDeselect={false}
             onChange={(value) => setSelectedOwnerId(value ? Number(value) : null)}
             placeholder="Selecione quem receberá o ajuste"
             nothingFoundMessage="Nenhum integrante encontrado"

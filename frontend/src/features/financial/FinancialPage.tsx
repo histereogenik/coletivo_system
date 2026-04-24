@@ -502,6 +502,7 @@ export function FinancialPage() {
               { value: "SAIDA", label: "Saída" },
             ]}
             value={formState.entry_type ?? undefined}
+            allowDeselect={false}
             onChange={(val) =>
               setFormState((prev) => ({
                 ...prev,
@@ -513,6 +514,7 @@ export function FinancialPage() {
             label="Categoria"
             data={categories}
             value={formState.category ?? undefined}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, category: val || "ALMOCO" }))}
           />
           <TextInput

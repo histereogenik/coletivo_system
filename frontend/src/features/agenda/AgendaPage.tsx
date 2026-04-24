@@ -348,6 +348,7 @@ export function AgendaPage() {
             label="Função"
             data={(dutiesQuery.data || []).map((d) => ({ value: d.id.toString(), label: d.name }))}
             value={formState.duty ? formState.duty.toString() : null}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, duty: val ? Number(val) : undefined }))}
             placeholder="Selecione"
           />
@@ -368,6 +369,7 @@ export function AgendaPage() {
               { value: "CANCELADO", label: "Cancelado" },
             ]}
             value={formState.status ?? undefined}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, status: val || "PLANEJADO" }))}
           />
           <Textarea
