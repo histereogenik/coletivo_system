@@ -195,6 +195,8 @@ export function LunchesPage() {
 
   const invalidateLunchDependencies = () => {
     queryClient.invalidateQueries({ queryKey: ["lunches"] });
+    queryClient.invalidateQueries({ queryKey: ["packages"] });
+    queryClient.invalidateQueries({ queryKey: ["package-history"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["financial"] });
     queryClient.invalidateQueries({ queryKey: ["lunch-credit-owners"] });

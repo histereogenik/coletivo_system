@@ -36,6 +36,21 @@ export type Package = {
   status: string;
 };
 
+export type PackageEntry = {
+  id: number;
+  package: number;
+  entry_type: "CREDITO" | "DEBITO";
+  origin: "MANUAL" | "LUNCH";
+  quantity: number;
+  description: string;
+  lunch?: number | null;
+  lunch_date?: string | null;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function fetchLunches(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get<PaginatedResponse<Lunch>>("/api/lunch/lunches/", { params });
   return data;
@@ -93,5 +108,24 @@ export async function decrementPackage(id: number, amount = 1) {
 
 export async function incrementPackage(id: number, amount = 1) {
   const { data } = await api.post<Package>(`/api/lunch/packages/${id}/increment/`, { amount });
+  return data;
+}
+
+export async function fetchPackageHistory(
+  id: number,
+  params?: Record<string, string | number | undefined>
+) {
+  const { data } = await api.get<PaginatedResponse<PackageEntry>>(
+    `/api/lunch/packages/${id}/history/`,
+    { params }
+  );
+  return data;
+}
+
+export async function adjustPackage(
+  id: number,
+  payload: { entry_type: PackageEntry["entry_type"]; quantity: number; description: string }
+) {
+  const { data } = await api.post<Package>(`/api/lunch/packages/${id}/adjust/`, payload);
   return data;
 }

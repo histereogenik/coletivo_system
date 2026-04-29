@@ -5,10 +5,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.common.exports import cents_to_reais, create_xlsx_response
-from apps.common.pagination import OptionalPagination
+from apps.common.pagination import DefaultPagination, OptionalPagination
 from apps.common.permissions import SuperuserOnly
-from apps.lunch.models import Lunch, Package
-from apps.lunch.serializers import LunchSerializer, PackageSerializer
+from apps.lunch.models import Lunch, Package, PackageEntry
+from apps.lunch.serializers import (
+    LunchSerializer,
+    ManualPackageEntrySerializer,
+    PackageEntrySerializer,
+    PackageSerializer,
+)
 
 
 class LunchFilter(django_filters.FilterSet):
@@ -73,6 +78,12 @@ class LunchViewSet(viewsets.ModelViewSet):
         credit_entry = getattr(instance, "credit_entry", None)
         if credit_entry:
             credit_entry.delete()
+        if instance.package_id:
+            package = instance.package
+            if package.remaining_quantity is None:
+                package.remaining_quantity = 0
+            package.remaining_quantity = min(package.remaining_quantity + 1, package.quantity)
+            package.save(update_fields=["remaining_quantity", "updated_at"])
         super().perform_destroy(instance)
 
     @action(detail=False, methods=["get"], url_path="summary")
@@ -208,3 +219,49 @@ class PackageViewSet(viewsets.ModelViewSet):
         package.save(update_fields=["remaining_quantity", "updated_at"])
         serializer = self.get_serializer(package)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="history")
+    def history(self, request, pk=None):
+        package = self.get_object()
+        queryset = package.entries.select_related("lunch", "created_by").order_by("-created_at", "-id")
+        paginator = DefaultPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = PackageEntrySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="adjust")
+    def adjust(self, request, pk=None):
+        package = self.get_object()
+        serializer = ManualPackageEntrySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        entry_type = serializer.validated_data["entry_type"]
+        quantity = serializer.validated_data["quantity"]
+
+        if package.remaining_quantity is None:
+            package.remaining_quantity = package.quantity
+
+        if entry_type == PackageEntry.EntryType.DEBITO:
+            if package.remaining_quantity < quantity:
+                return Response({"detail": "Saldo insuficiente no pacote."}, status=400)
+            package.remaining_quantity -= quantity
+        else:
+            target = package.remaining_quantity + quantity
+            if target > package.quantity:
+                return Response(
+                    {"detail": "Não é possível exceder a quantidade total do pacote."},
+                    status=400,
+                )
+            package.remaining_quantity = target
+
+        with transaction.atomic():
+            package.save(update_fields=["remaining_quantity", "updated_at"])
+            PackageEntry.objects.create(
+                package=package,
+                entry_type=entry_type,
+                origin=PackageEntry.Origin.MANUAL,
+                quantity=quantity,
+                description=serializer.validated_data["description"],
+                created_by=request.user if request.user.is_authenticated else None,
+            )
+
+        return Response(self.get_serializer(package).data)
