@@ -1,15 +1,17 @@
 import { Anchor, Box, Container, Group, Image, Stack, Text } from "@mantine/core";
 
 const currentYear = new Date().getFullYear();
+const trademark = "\u2122";
+const appVersion = "v1.1.0 - 30.04.2026";
 
 const clientInfo = {
-  companyName: "Alimento Imperativo™",
+  companyName: `Alimento Imperativo${trademark}`,
   email: "alimentoimperativo@gmail.com",
   phone: "+55 62 93618-0116",
 };
 
 const developerInfo = {
-  companyName: "TUSK Sistemas™",
+  companyName: `TUSK Sistemas${trademark}`,
   email: "humberto.nacif@icloud.com",
   phone: "+55 62 93618-0408",
 };
@@ -78,9 +80,14 @@ export function SystemFooter() {
           </Group>
         </Group>
 
-        <Text size="xs" c="dimmed" mt="sm">
-          Copyright {currentYear} {clientInfo.companyName}.
-        </Text>
+        <Group justify="space-between" gap="sm" mt="sm">
+          <Text size="xs" c="dimmed">
+            Copyright {currentYear} {clientInfo.companyName}.
+          </Text>
+          <Text size="8px" c="dimmed">
+            {appVersion}
+          </Text>
+        </Group>
       </Container>
     </Box>
   );
