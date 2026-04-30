@@ -497,7 +497,7 @@ export function CreditsPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }} ta="right">
+                          <Table.Th style={{ minWidth: 120 }}>
                             Valor
                           </Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
@@ -514,7 +514,7 @@ export function CreditsPage() {
                                 {creditEntryTypeLabels[entry.entry_type]}
                               </Badge>
                             </Table.Td>
-                            <Table.Td ta="right">{formatCreditEntryValue(entry)}</Table.Td>
+                            <Table.Td>{formatCreditEntryValue(entry)}</Table.Td>
                             <Table.Td>{creditOriginLabels[entry.origin]}</Table.Td>
                             <Table.Td>{entry.beneficiary_name || "-"}</Table.Td>
                             <Table.Td>{entry.description || "-"}</Table.Td>

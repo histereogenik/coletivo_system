@@ -103,6 +103,13 @@ class Lunch(models.Model):
         null=True,
         blank=True,
     )
+    package_beneficiary = models.ForeignKey(
+        Member,
+        related_name="benefited_package_lunches",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
     value_cents = models.PositiveIntegerField(help_text="Valor em centavos.")
     date = models.DateField()
     payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices)
@@ -141,6 +148,13 @@ class PackageEntry(models.Model):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
+    )
+    beneficiary = models.ForeignKey(
+        Member,
+        related_name="benefited_package_entries",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

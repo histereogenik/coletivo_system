@@ -93,14 +93,18 @@ export function LunchesPage() {
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
   const [editing, setEditing] = useState<Lunch | null>(null);
-  const [formState, setFormState] = useState<Partial<Lunch> & { use_package?: boolean }>({
+  const [formState, setFormState] = useState<
+    Partial<Lunch> & { use_package?: boolean; benefit_other_member?: boolean }
+  >({
     member: undefined,
     credit_owner: undefined,
+    package_beneficiary: undefined,
     value_cents: 0,
     date: new Date().toISOString().slice(0, 10),
     payment_status: "EM_ABERTO",
     payment_mode: "PIX",
     use_package: false,
+    benefit_other_member: false,
     package: undefined,
   });
   const [valueReais, setValueReais] = useState<string>("");
@@ -249,6 +253,8 @@ export function LunchesPage() {
   });
 
   const usingCredit = formState.payment_mode === "TROCA" && !formState.use_package;
+  const usingPackage = !!formState.use_package;
+  const benefitingOtherMember = usingPackage && !!formState.benefit_other_member;
 
   const handleSubmit = () => {
     if (!formState.member || !dateValue) {
@@ -266,13 +272,29 @@ export function LunchesPage() {
       return;
     }
     const dateIso = toIsoDate(dateValue) || "";
+    const packageBeneficiary =
+      benefitingOtherMember && formState.package_beneficiary
+        ? formState.package_beneficiary
+        : null;
+    if (benefitingOtherMember && !packageBeneficiary) {
+      notifications.show({ message: "Selecione quem será beneficiado pelo pacote.", color: "red" });
+      return;
+    }
+    const {
+      use_package: _usePackage,
+      benefit_other_member: _benefitOtherMember,
+      ...lunchFormState
+    } = formState;
+    void _usePackage;
+    void _benefitOtherMember;
 
     const payload: Partial<Lunch> & { use_package?: boolean } = {
-      ...formState,
+      ...lunchFormState,
       value_cents: parsedValueCents,
       date: dateIso,
       use_package: formState.use_package ? true : undefined,
       package: formState.use_package ? formState.package : null,
+      package_beneficiary: formState.use_package ? packageBeneficiary : null,
       credit_owner: usingCredit ? creditOwner : null,
       payment_status: formState.use_package || usingCredit ? "PAGO" : formState.payment_status,
     };
@@ -289,11 +311,13 @@ export function LunchesPage() {
     setFormState({
       member: undefined,
       credit_owner: undefined,
+      package_beneficiary: undefined,
       value_cents: 0,
       date: new Date().toISOString().slice(0, 10),
       payment_status: "EM_ABERTO",
       payment_mode: "PIX",
       use_package: false,
+      benefit_other_member: false,
       package: undefined,
     });
     setValueReais("");
@@ -306,11 +330,13 @@ export function LunchesPage() {
     setFormState({
       member: item.member,
       credit_owner: item.credit_owner ?? undefined,
+      package_beneficiary: item.package_beneficiary ?? undefined,
       value_cents: item.value_cents,
       date: item.date,
       payment_status: item.payment_status,
       payment_mode: item.payment_mode ?? "PIX",
       use_package: !!item.package,
+      benefit_other_member: !!item.package_beneficiary,
       package: item.package ?? undefined,
     });
     setValueReais(formatCentsInput(item.value_cents));
@@ -418,6 +444,12 @@ export function LunchesPage() {
     value: m.id.toString(),
     label: m.full_name,
   }));
+  const packageBeneficiaryOptions = members
+    .filter((member) => member.id !== formState.member)
+    .map((member: MemberOption) => ({
+      value: member.id.toString(),
+      label: member.full_name,
+    }));
 
   const clearFilters = () =>
     setFilters({
@@ -629,13 +661,15 @@ export function LunchesPage() {
                   use_package: e.currentTarget.checked,
                   member: e.currentTarget.checked ? undefined : prev.member,
                   credit_owner: e.currentTarget.checked ? undefined : prev.credit_owner,
+                  package_beneficiary: undefined,
                   payment_mode: e.currentTarget.checked ? "PIX" : prev.payment_mode,
                   payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
+                  benefit_other_member: false,
                 }))
               }
             />
           <Select
-            label="Integrante"
+            label={formState.use_package ? "Dono do pacote" : "Integrante"}
             data={memberOptionsSelect}
             searchable
             filter={accentInsensitiveOptionsFilter}
@@ -654,16 +688,52 @@ export function LunchesPage() {
                   ...prev,
                   member: memberId,
                   credit_owner: shouldSyncCreditOwner ? memberId : prev.credit_owner,
+                  package_beneficiary:
+                    prev.package_beneficiary && prev.package_beneficiary === memberId
+                      ? undefined
+                      : prev.package_beneficiary,
                 };
               });
             }}
           />
+          {usingPackage && (
+            <Switch
+              label="Beneficiar outra pessoa"
+              checked={!!formState.benefit_other_member}
+              onChange={(event) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  benefit_other_member: event.currentTarget.checked,
+                  package_beneficiary: event.currentTarget.checked
+                    ? prev.package_beneficiary
+                    : undefined,
+                }))
+              }
+            />
+          )}
+          {benefitingOtherMember && (
+            <Select
+              label="Beneficiado"
+              data={packageBeneficiaryOptions}
+              searchable
+              filter={accentInsensitiveOptionsFilter}
+              nothingFoundMessage="Nenhum integrante encontrado"
+              value={formState.package_beneficiary ? formState.package_beneficiary.toString() : null}
+              allowDeselect={false}
+              onChange={(val) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  package_beneficiary: val ? Number(val) : undefined,
+                }))
+              }
+            />
+          )}
           <TextInput
             label="Valor (R$)"
             value={valueReais}
             onChange={(e) => setValueReais(e.currentTarget.value)}
             placeholder="Ex: 35,00"
-            disabled={!!formState.use_package}
+            disabled={usingPackage}
           />
           <DateInput
             label="Data"
@@ -679,7 +749,7 @@ export function LunchesPage() {
               { value: "EM_ABERTO", label: "Em aberto" },
             ]}
             value={formState.payment_status}
-            disabled={!!formState.use_package || usingCredit}
+            disabled={usingPackage || usingCredit}
             allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
@@ -692,7 +762,7 @@ export function LunchesPage() {
               { value: "TROCA", label: "Troca" },
             ]}
             value={formState.payment_mode}
-            disabled={!!formState.use_package}
+            disabled={usingPackage}
             allowDeselect={false}
             onChange={(val) =>
               setFormState((prev) => ({

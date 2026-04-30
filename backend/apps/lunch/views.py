@@ -61,7 +61,9 @@ class PackageFilter(django_filters.FilterSet):
 
 
 class LunchViewSet(viewsets.ModelViewSet):
-    queryset = Lunch.objects.select_related("member", "credit_owner", "package").order_by(
+    queryset = Lunch.objects.select_related(
+        "member", "credit_owner", "package", "package_beneficiary"
+    ).order_by(
         "-date", "-created_at"
     )
     serializer_class = LunchSerializer
@@ -223,7 +225,9 @@ class PackageViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="history")
     def history(self, request, pk=None):
         package = self.get_object()
-        queryset = package.entries.select_related("lunch", "created_by").order_by("-created_at", "-id")
+        queryset = package.entries.select_related("lunch", "created_by", "beneficiary").order_by(
+            "-created_at", "-id"
+        )
         paginator = DefaultPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = PackageEntrySerializer(page, many=True)

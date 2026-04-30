@@ -12,6 +12,8 @@ export type Lunch = {
   payment_status: string;
   payment_mode?: string | null;
   package?: number | null;
+  package_beneficiary?: number | null;
+  package_beneficiary_name?: string | null;
   package_remaining?: number | null;
 };
 
@@ -45,6 +47,8 @@ export type PackageEntry = {
   description: string;
   lunch?: number | null;
   lunch_date?: string | null;
+  beneficiary?: number | null;
+  beneficiary_name?: string | null;
   created_by?: number | null;
   created_by_name?: string | null;
   created_at: string;

@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 
 from apps.lunch.models import Lunch, PackageEntry
 from apps.lunch.tests.factories import LunchFactory, PackageFactory
+from apps.users.tests.factories import MemberFactory
 
 User = get_user_model()
 
@@ -123,6 +124,7 @@ def test_manual_package_debit_creates_history_entry(api_client, superuser):
 @pytest.mark.django_db
 def test_package_history_includes_lunch_usage(api_client, superuser):
     package = PackageFactory(quantity=5, remaining_quantity=5)
+    beneficiary = MemberFactory()
     lunch = LunchFactory(member=package.member, package=package)
     PackageEntry.objects.create(
         package=package,
@@ -131,6 +133,7 @@ def test_package_history_includes_lunch_usage(api_client, superuser):
         quantity=1,
         description="Uso em almoço",
         lunch=lunch,
+        beneficiary=beneficiary,
     )
     api_client.force_authenticate(user=superuser)
     url = reverse("package-history", args=[package.id])
@@ -141,6 +144,8 @@ def test_package_history_includes_lunch_usage(api_client, superuser):
     assert response.data["count"] == 1
     assert response.data["results"][0]["origin"] == PackageEntry.Origin.LUNCH
     assert response.data["results"][0]["lunch"] == lunch.id
+    assert response.data["results"][0]["beneficiary"] == beneficiary.id
+    assert response.data["results"][0]["beneficiary_name"] == beneficiary.full_name
 
 
 @pytest.mark.django_db

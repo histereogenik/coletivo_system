@@ -694,11 +694,12 @@ export function PackagesPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }} ta="right">
+                          <Table.Th style={{ minWidth: 120 }}>
                             Quantidade
                           </Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
                           <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
+                          <Table.Th style={{ minWidth: 180 }}>Beneficiado</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -710,14 +711,15 @@ export function PackagesPage() {
                                 {packageEntryTypeLabels[entry.entry_type]}
                               </Badge>
                             </Table.Td>
-                            <Table.Td ta="right">{formatPackageEntryQuantity(entry)}</Table.Td>
+                            <Table.Td>{formatPackageEntryQuantity(entry)}</Table.Td>
                             <Table.Td>{packageOriginLabels[entry.origin]}</Table.Td>
                             <Table.Td>{entry.description || "-"}</Table.Td>
+                            <Table.Td>{entry.beneficiary_name || "-"}</Table.Td>
                           </Table.Tr>
                         ))}
                         {packageHistoryResults.length === 0 && (
                           <Table.Tr>
-                            <Table.Td colSpan={5}>
+                            <Table.Td colSpan={6}>
                               <Text c="dimmed">Nenhum lançamento encontrado para este pacote.</Text>
                             </Table.Td>
                           </Table.Tr>

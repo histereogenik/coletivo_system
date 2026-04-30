@@ -185,6 +185,7 @@ class PackageSerializer(serializers.ModelSerializer):
 class PackageEntrySerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
     lunch_date = serializers.DateField(source="lunch.date", read_only=True)
+    beneficiary_name = serializers.CharField(source="beneficiary.full_name", read_only=True)
 
     class Meta:
         model = PackageEntry
@@ -197,6 +198,8 @@ class PackageEntrySerializer(serializers.ModelSerializer):
             "description",
             "lunch",
             "lunch_date",
+            "beneficiary",
+            "beneficiary_name",
             "created_by",
             "created_by_name",
             "created_at",
@@ -208,6 +211,8 @@ class PackageEntrySerializer(serializers.ModelSerializer):
             "origin",
             "lunch",
             "lunch_date",
+            "beneficiary",
+            "beneficiary_name",
             "created_by",
             "created_by_name",
             "created_at",
@@ -235,6 +240,14 @@ class LunchSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    package_beneficiary = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    package_beneficiary_name = serializers.CharField(
+        source="package_beneficiary.full_name", read_only=True
+    )
     use_package = serializers.BooleanField(write_only=True, required=False, default=False)
     package_remaining = serializers.IntegerField(
         source="package.remaining_quantity", read_only=True
@@ -249,6 +262,8 @@ class LunchSerializer(serializers.ModelSerializer):
             "credit_owner",
             "credit_owner_name",
             "package",
+            "package_beneficiary",
+            "package_beneficiary_name",
             "use_package",
             "package_remaining",
             "value_cents",
@@ -264,6 +279,9 @@ class LunchSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Valor deve ser maior ou igual a zero.")
         return value
+
+    def _build_package_usage_description(self, instance: Lunch) -> str:
+        return f"Uso em almoço - {instance.date}"
 
     def validate(self, attrs):
         member = attrs.get("member") or getattr(self.instance, "member", None)
@@ -282,13 +300,16 @@ class LunchSerializer(serializers.ModelSerializer):
             if "credit_owner" in attrs
             else getattr(self.instance, "credit_owner", None)
         )
+        package_beneficiary = (
+            attrs.get("package_beneficiary")
+            if "package_beneficiary" in attrs
+            else getattr(self.instance, "package_beneficiary", None)
+        )
         using_credit = payment_mode == Lunch.PaymentMode.TROCA
 
         if use_package and not package:
             if not member or not date:
-                raise serializers.ValidationError(
-                    {"package": "Informe integrante e data do almoço."}
-                )
+                raise serializers.ValidationError({"package": "Informe integrante e data do almoço."})
             package = (
                 Package.objects.filter(
                     member=member,
@@ -316,6 +337,10 @@ class LunchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"package": "Pacote expirado para a data do almoço."})
         if package and "value_cents" not in attrs:
             attrs["value_cents"] = package.unit_value_cents
+        if package and package_beneficiary and member and package_beneficiary.id == member.id:
+            attrs["package_beneficiary"] = None
+        if not package:
+            attrs["package_beneficiary"] = None
 
         if using_credit:
             if not credit_owner:
@@ -343,8 +368,9 @@ class LunchSerializer(serializers.ModelSerializer):
                     entry_type=PackageEntry.EntryType.DEBITO,
                     origin=PackageEntry.Origin.LUNCH,
                     quantity=1,
-                    description=f"Uso em almoço - {instance.date}",
+                    description=self._build_package_usage_description(instance),
                     lunch=instance,
+                    beneficiary=instance.package_beneficiary,
                 )
             promote_role(instance.member, Member.Role.MENSALISTA)
             self._sync_credit_entry(instance)
@@ -372,6 +398,7 @@ class LunchSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 new_package.remaining_quantity -= 1
                 new_package.save(update_fields=["remaining_quantity", "updated_at"])
+            if new_package:
                 PackageEntry.objects.update_or_create(
                     lunch=instance,
                     defaults={
@@ -379,7 +406,8 @@ class LunchSerializer(serializers.ModelSerializer):
                         "entry_type": PackageEntry.EntryType.DEBITO,
                         "origin": PackageEntry.Origin.LUNCH,
                         "quantity": 1,
-                        "description": f"Uso em almoço - {instance.date}",
+                        "description": self._build_package_usage_description(instance),
+                        "beneficiary": instance.package_beneficiary,
                     },
                 )
             self._sync_credit_entry(instance)
