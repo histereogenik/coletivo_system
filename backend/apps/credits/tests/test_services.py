@@ -11,6 +11,7 @@ from apps.duties.tests.factories import DutyFactory
 from apps.financial.models import FinancialEntry
 from apps.lunch.models import Lunch
 from apps.lunch.serializers import LunchSerializer
+from apps.users.models import Member
 from apps.users.tests.factories import MemberFactory
 
 
@@ -170,6 +171,71 @@ def test_lunch_with_credit_requires_sufficient_balance():
 
     assert "credit_owner" in excinfo.value.detail
     assert CreditEntry.objects.filter(origin=CreditEntry.Origin.LUNCH).count() == 0
+
+
+@pytest.mark.django_db
+def test_sustentador_lunch_with_credit_creates_debt_without_balance():
+    member = MemberFactory(role=Member.Role.SUSTENTADOR)
+    payload = {
+        "member": member.id,
+        "credit_owner": member.id,
+        "value_cents": 1800,
+        "date": date.today(),
+        "payment_status": Lunch.PaymentStatus.EM_ABERTO,
+        "payment_mode": Lunch.PaymentMode.TROCA,
+    }
+
+    serializer = LunchSerializer(data=payload)
+    assert serializer.is_valid(), serializer.errors
+    lunch = serializer.save()
+
+    credit_entry = CreditEntry.objects.get(lunch=lunch)
+    assert credit_entry.entry_type == CreditEntry.EntryType.DEBITO
+    assert credit_entry.owner == member
+    assert credit_entry.beneficiary == member
+    assert get_credit_balance(member.id) == -1800
+    assert FinancialEntry.objects.filter(lunch=lunch).count() == 0
+    assert lunch.payment_status == Lunch.PaymentStatus.PAGO
+
+
+@pytest.mark.django_db
+def test_agenda_credit_offsets_existing_sustentador_debt():
+    member = MemberFactory(role=Member.Role.SUSTENTADOR)
+    lunch_serializer = LunchSerializer(
+        data={
+            "member": member.id,
+            "credit_owner": member.id,
+            "value_cents": 1800,
+            "date": date.today(),
+            "payment_status": Lunch.PaymentStatus.PAGO,
+            "payment_mode": Lunch.PaymentMode.TROCA,
+        }
+    )
+    assert lunch_serializer.is_valid(), lunch_serializer.errors
+    lunch_serializer.save()
+    assert get_credit_balance(member.id) == -1800
+
+    duty = DutyFactory(remuneration_cents=2500)
+    agenda_serializer = AgendaEntrySerializer(
+        data={
+            "date": "2026-03-27",
+            "start_time": "09:00",
+            "end_time": "11:00",
+            "duty": duty.id,
+            "status": "CONCLUIDO",
+            "member_ids": [member.id],
+        }
+    )
+    assert agenda_serializer.is_valid(), agenda_serializer.errors
+    agenda_entry = agenda_serializer.save()
+
+    assert CreditEntry.objects.filter(
+        owner=member,
+        agenda_entry=agenda_entry,
+        entry_type=CreditEntry.EntryType.CREDITO,
+        value_cents=2500,
+    ).count() == 1
+    assert get_credit_balance(member.id) == 700
 
 
 @pytest.mark.django_db

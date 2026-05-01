@@ -22,6 +22,17 @@ class FinancialEntryFilter(django_filters.FilterSet):
     value_cents = django_filters.NumberFilter(field_name="value_cents")
     value_cents_min = django_filters.NumberFilter(field_name="value_cents", lookup_expr="gte")
     value_cents_max = django_filters.NumberFilter(field_name="value_cents", lookup_expr="lte")
+    search = django_filters.CharFilter(method="filter_search")
+
+    def filter_search(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        return queryset.filter(
+            models.Q(description__icontains=value)
+            | models.Q(lunch__member__full_name__icontains=value)
+            | models.Q(package__member__full_name__icontains=value)
+        ).distinct()
 
     class Meta:
         model = FinancialEntry
@@ -35,6 +46,7 @@ class FinancialEntryFilter(django_filters.FilterSet):
             "value_cents",
             "value_cents_min",
             "value_cents_max",
+            "search",
         ]
 
 

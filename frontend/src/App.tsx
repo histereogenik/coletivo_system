@@ -1,4 +1,4 @@
-import { MantineProvider, Text } from "@mantine/core";
+import { Box, MantineProvider, Text } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
@@ -8,6 +8,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
+import { SystemFooter } from "./components/SystemFooter";
 import { AgendaPage } from "./features/agenda/AgendaPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { CreditsPage } from "./features/credits/CreditsPage";
@@ -32,34 +33,45 @@ function App() {
     <MantineProvider defaultColorScheme="light" theme={theme}>
       <Notifications />
       <QueryClientProvider client={queryClient}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/cadastro" element={<PublicRegistrationPage />} />
-          <Route path="/login" element={<LoginPage />} />
+        <Box style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          <Box style={{ flex: 1 }}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/cadastro" element={<PublicRegistrationPage />} />
+              <Route path="/login" element={<LoginPage />} />
 
-          <Route element={<RequireAuth />}>
-            <Route path="/painel" element={<Layout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="agenda" element={<AgendaPage />} />
-              <Route path="financeiro" element={<FinancialPage />} />
-              <Route path="creditos" element={<CreditsPage />} />
-              <Route path="lunches" element={<LunchesPage />} />
-              <Route path="pacotes" element={<PackagesPage />} />
-              <Route path="integrantes" element={<MembersPage />} />
-              <Route path="funcoes" element={<DutiesPage />} />
-            </Route>
-          </Route>
+              <Route element={<RequireAuth />}>
+                <Route path="/painel" element={<Layout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="agenda" element={<AgendaPage />} />
+                  <Route path="financeiro" element={<FinancialPage />} />
+                  <Route path="creditos" element={<CreditsPage />} />
+                  <Route path="lunches" element={<LunchesPage />} />
+                  <Route path="pacotes" element={<PackagesPage />} />
+                  <Route path="integrantes" element={<MembersPage />} />
+                  <Route path="funcoes" element={<DutiesPage />} />
+                </Route>
+              </Route>
 
-          <Route path="/agenda" element={<LegacyPanelRedirect to="/painel/agenda" />} />
-          <Route path="/financeiro" element={<LegacyPanelRedirect to="/painel/financeiro" />} />
-          <Route path="/creditos" element={<LegacyPanelRedirect to="/painel/creditos" />} />
-          <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/lunches" />} />
-          <Route path="/pacotes" element={<LegacyPanelRedirect to="/painel/pacotes" />} />
-          <Route path="/integrantes" element={<LegacyPanelRedirect to="/painel/integrantes" />} />
-          <Route path="/funcoes" element={<LegacyPanelRedirect to="/painel/funcoes" />} />
+              <Route path="/agenda" element={<LegacyPanelRedirect to="/painel/agenda" />} />
+              <Route
+                path="/financeiro"
+                element={<LegacyPanelRedirect to="/painel/financeiro" />}
+              />
+              <Route path="/creditos" element={<LegacyPanelRedirect to="/painel/creditos" />} />
+              <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/lunches" />} />
+              <Route path="/pacotes" element={<LegacyPanelRedirect to="/painel/pacotes" />} />
+              <Route
+                path="/integrantes"
+                element={<LegacyPanelRedirect to="/painel/integrantes" />}
+              />
+              <Route path="/funcoes" element={<LegacyPanelRedirect to="/painel/funcoes" />} />
 
-          <Route path="*" element={<Text>Página não encontrada.</Text>} />
-        </Routes>
+              <Route path="*" element={<Text>Pagina nao encontrada.</Text>} />
+            </Routes>
+          </Box>
+          <SystemFooter />
+        </Box>
       </QueryClientProvider>
     </MantineProvider>
   );

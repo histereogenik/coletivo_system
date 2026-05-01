@@ -13,29 +13,37 @@
   Title,
   Tooltip,
   Pagination,
+  SimpleGrid,
+  Stack,
+  Textarea,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { DateValue } from "@mantine/dates";
-import { IconPackage, IconPencil, IconTrash, IconPlus } from "@tabler/icons-react";
+import { IconPackage, IconPencil, IconTrash, IconPlus, IconEye } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
+import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
+import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../shared/api";
 import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { extractErrorMessage } from "../../shared/errors";
+import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
 import "dayjs/locale/pt-br";
 import {
   createPackage,
   deletePackage,
+  adjustPackage,
+  fetchPackageHistory,
   fetchPackages,
   updatePackage,
-  decrementPackage,
-  incrementPackage,
   Package,
+  type PackageEntry,
 } from "./api";
 import { fetchMembers, MemberOption } from "./membersApi";
 
@@ -74,23 +82,42 @@ const statusLabels: Record<string, string> = {
   EXPIRADO: "Expirado",
 };
 
+const packageHistoryPageSize = 10;
+
+const packageEntryTypeLabels: Record<PackageEntry["entry_type"], string> = {
+  CREDITO: "Crédito",
+  DEBITO: "Débito",
+};
+
+const packageEntryTypeColors: Record<PackageEntry["entry_type"], string> = {
+  CREDITO: "green",
+  DEBITO: "red",
+};
+
+const packageOriginLabels: Record<PackageEntry["origin"], string> = {
+  MANUAL: "Manual",
+  LUNCH: "Almoço",
+};
+
+const formatPackageEntryQuantity = (entry: PackageEntry) => {
+  const sign = entry.entry_type === "CREDITO" ? "+" : "-";
+  return `${sign} ${entry.quantity}`;
+};
+
+const formatPtDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export function PackagesPage() {
-  const actionResponsiveStyles = `
-    .package-actions {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-        overflow-x: auto;
-      }
-    .package-actions .package-actions-block {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: nowrap;
-      }
-  `;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [modalOpened, modalHandlers] = useDisclosure(false);
@@ -121,6 +148,13 @@ export function PackagesPage() {
     date_to: null,
   });
   const [page, setPage] = useState(1);
+  const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
+  const [detailModalOpened, detailModalHandlers] = useDisclosure(false);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [adjustmentType, setAdjustmentType] = useState<PackageEntry["entry_type"]>("CREDITO");
+  const [adjustmentQuantity, setAdjustmentQuantity] = useState<number | "">(1);
+  const [adjustmentDescription, setAdjustmentDescription] = useState("");
   const pageSize = 15;
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
@@ -155,6 +189,16 @@ export function PackagesPage() {
     enabled: isAuthenticated,
   });
 
+  const packageHistoryQuery = useQuery({
+    queryKey: ["package-history", selectedPackage?.id, historyPage, packageHistoryPageSize],
+    queryFn: () =>
+      fetchPackageHistory(selectedPackage?.id as number, {
+        page: historyPage,
+        page_size: packageHistoryPageSize,
+      }),
+    enabled: isAuthenticated && detailModalOpened && !!selectedPackage,
+  });
+
   const createMutation = useMutation({
     mutationFn: (payload: Partial<Package>) => createPackage(payload),
     onSuccess: () => {
@@ -185,30 +229,28 @@ export function PackagesPage() {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       notifications.show({ message: "Pacote removido.", color: "green" });
+      setPackageToDelete(null);
     },
     onError: (err: unknown) =>
       notifications.show({ message: extractErrorMessage(err, "Erro ao remover pacote."), color: "red" }),
   });
 
-  const decrementMutation = useMutation({
-    mutationFn: ({ id, amount }: { id: number; amount: number }) => decrementPackage(id, amount),
-    onSuccess: () => {
+  const adjustMutation = useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: { entry_type: PackageEntry["entry_type"]; quantity: number; description: string };
+    }) => adjustPackage(id, payload),
+    onSuccess: (updatedPackage) => {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      notifications.show({ message: "Pacote atualizado.", color: "green" });
-    },
-    onError: (err: unknown) => {
-      const msg = extractErrorMessage(err, "Erro ao atualizar pacote.");
-      notifications.show({ message: msg, color: "red" });
-    },
-  });
-
-  const incrementMutation = useMutation({
-    mutationFn: ({ id, amount }: { id: number; amount: number }) => incrementPackage(id, amount),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["packages"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["package-history"] });
+      setSelectedPackage(updatedPackage);
       notifications.show({ message: "Pacote ajustado.", color: "green" });
+      setAdjustmentQuantity(1);
+      setAdjustmentDescription("");
     },
     onError: (err: unknown) => {
       const msg = extractErrorMessage(err, "Erro ao ajustar pacote.");
@@ -229,8 +271,11 @@ export function PackagesPage() {
     const dateIso = toIsoDate(dateValue) || "";
     const expirationIso = toIsoDate(expirationValue) || "";
 
+    const { remaining_quantity: _remainingQuantity, ...packageFormState } = formState;
+    void _remainingQuantity;
+
     const payload: Partial<Package> = {
-      ...formState,
+      ...packageFormState,
       unit_value_cents: Number.isNaN(parsedUnitValue) ? 0 : Math.round(parsedUnitValue * 100),
       value_cents: totalValueCents,
       date: dateIso,
@@ -280,6 +325,38 @@ export function PackagesPage() {
     modalHandlers.open();
   };
 
+  const openDetails = (item: Package) => {
+    setSelectedPackage(item);
+    setHistoryPage(1);
+    setAdjustmentType("CREDITO");
+    setAdjustmentQuantity(1);
+    setAdjustmentDescription("");
+    detailModalHandlers.open();
+  };
+
+  const handleSubmitAdjustment = () => {
+    if (!selectedPackage) return;
+    const quantity = Number(adjustmentQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      notifications.show({ message: "Informe uma quantidade maior que zero.", color: "red" });
+      return;
+    }
+    const normalizedDescription = adjustmentDescription.trim();
+    if (!normalizedDescription) {
+      notifications.show({ message: "Descreva o ajuste do pacote.", color: "red" });
+      return;
+    }
+
+    adjustMutation.mutate({
+      id: selectedPackage.id,
+      payload: {
+        entry_type: adjustmentType,
+        quantity,
+        description: normalizedDescription,
+      },
+    });
+  };
+
   const members = membersQuery.data ?? [];
   const memberOptions = members.map((m: MemberOption) => ({
     value: m.id.toString(),
@@ -289,6 +366,12 @@ export function PackagesPage() {
   const packages = data?.results ?? [];
   const totalCount = data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const packageHistoryResults = packageHistoryQuery.data?.results ?? [];
+  const packageHistoryCount = packageHistoryQuery.data?.count ?? 0;
+  const packageHistoryTotalPages = Math.max(
+    1,
+    Math.ceil(packageHistoryCount / packageHistoryPageSize)
+  );
 
   useEffect(() => {
     setPage(1);
@@ -349,7 +432,6 @@ export function PackagesPage() {
 
   return (
     <Container size="xl" py="md">
-      <style>{actionResponsiveStyles}</style>
       <Group mb="md">
         <IconPackage size={20} />
         <Title order={3}>Pacotes</Title>
@@ -465,29 +547,13 @@ export function PackagesPage() {
                 </Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
-                  <div className="package-actions">
-                    <div className="package-actions-block">
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color="orange"
-                        onClick={() => decrementMutation.mutate({ id: item.id, amount: 1 })}
-                        loading={decrementMutation.isPending}
-                        aria-label="Deduzir 1"
-                      >
-                        -1
+                  <Group gap="xs" justify="flex-end" wrap="nowrap">
+                    <Tooltip label="Ver detalhes">
+                      <Button size="xs" variant="subtle" onClick={() => openDetails(item)} aria-label="Ver detalhes">
+                        <IconEye size={16} />
                       </Button>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => incrementMutation.mutate({ id: item.id, amount: 1 })}
-                        loading={incrementMutation.isPending}
-                        aria-label="Adicionar 1"
-                      >
-                        +1
-                      </Button>
-                    </div>
-                    <div className="package-actions-block" style={{ justifyContent: "flex-end" }}>
+                    </Tooltip>
+                    <Group gap="xs" wrap="nowrap">
                       <Tooltip label="Editar">
                         <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
                           <IconPencil size={16} />
@@ -499,14 +565,14 @@ export function PackagesPage() {
                           variant="outline"
                           color="red"
                           loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                          onClick={() => deleteMutation.mutate(item.id)}
+                          onClick={() => setPackageToDelete(item)}
                           aria-label="Remover"
                         >
                           <IconTrash size={16} />
                         </Button>
                       </Tooltip>
-                    </div>
-                  </div>
+                    </Group>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
@@ -518,6 +584,166 @@ export function PackagesPage() {
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
       )}
+      <ConfirmDeleteModal
+        opened={!!packageToDelete}
+        message={`Excluir o pacote de ${packageToDelete?.member_name || `#${packageToDelete?.member}`}? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setPackageToDelete(null)}
+        onConfirm={() => {
+          if (packageToDelete) deleteMutation.mutate(packageToDelete.id);
+        }}
+      />
+      <Modal
+        opened={detailModalOpened}
+        onClose={detailModalHandlers.close}
+        title="Detalhes do pacote"
+        size="xl"
+      >
+        <Stack gap="md">
+          <Group justify="space-between" align="flex-start">
+            <div>
+              <Title order={4}>
+                {selectedPackage?.member_name || `#${selectedPackage?.member ?? ""}`}
+              </Title>
+              <Text size="sm" c="dimmed">
+                Compra em {formatPtDate(selectedPackage?.date)} · Validade {formatPtDate(selectedPackage?.expiration)}
+              </Text>
+            </div>
+            {selectedPackage && (
+              <Badge size="lg" color={selectedPackage.status === "VALIDO" ? "green" : "red"}>
+                {statusLabels[selectedPackage.status] || selectedPackage.status}
+              </Badge>
+            )}
+          </Group>
+
+          {selectedPackage && (
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+              <SummaryCard title="Quantidade total" value={`${selectedPackage.quantity}`} />
+              <SummaryCard
+                title="Refeições usadas"
+                value={`${selectedPackage.quantity - selectedPackage.remaining_quantity}`}
+              />
+              <SummaryCard title="Saldo atual" value={`${selectedPackage.remaining_quantity}`} />
+            </SimpleGrid>
+          )}
+
+          <Stack gap="xs">
+            <Text fw={600}>Ajuste manual</Text>
+            <Group gap="sm">
+              <Button
+                variant={adjustmentType === "CREDITO" ? "filled" : "outline"}
+                onClick={() => setAdjustmentType("CREDITO")}
+              >
+                Adicionar refeição
+              </Button>
+              <Button
+                color="red"
+                variant={adjustmentType === "DEBITO" ? "filled" : "outline"}
+                onClick={() => setAdjustmentType("DEBITO")}
+              >
+                Remover refeição
+              </Button>
+            </Group>
+            <NumberInput
+              label="Quantidade"
+              value={adjustmentQuantity}
+              onChange={(value) => setAdjustmentQuantity(value === "" ? "" : Number(value))}
+              min={1}
+            />
+            <Textarea
+              label={
+                <FieldLabelWithCounter
+                  label="Descrição"
+                  counter={formatCharacterCounter(adjustmentDescription)}
+                />
+              }
+              value={adjustmentDescription}
+              onChange={(event) => setAdjustmentDescription(event.currentTarget.value)}
+              maxLength={TEXT_FIELD_MAX_LENGTH}
+              minRows={3}
+              styles={{ label: { width: "100%" } }}
+            />
+            <Group justify="flex-end">
+              <Button
+                onClick={handleSubmitAdjustment}
+                loading={adjustMutation.isPending}
+                color={adjustmentType === "DEBITO" ? "red" : "blue"}
+                miw={103}
+              >
+                {adjustmentType === "CREDITO" ? "Adicionar" : "Remover"}
+              </Button>
+            </Group>
+          </Stack>
+
+          {selectedPackage && (
+            <div>
+              <Title order={5} mb="xs">
+                Histórico
+              </Title>
+              {packageHistoryQuery.isLoading && <Text size="sm">Carregando histórico...</Text>}
+              {packageHistoryQuery.isError && (
+                <Text size="sm" c="red">
+                  Erro ao carregar o histórico do pacote.
+                </Text>
+              )}
+              {!packageHistoryQuery.isLoading && !packageHistoryQuery.isError && (
+                <>
+                  <ScrollArea>
+                    <Table highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>
+                            Quantidade
+                          </Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
+                          <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
+                          <Table.Th style={{ minWidth: 180 }}>Beneficiado</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {packageHistoryResults.map((entry) => (
+                          <Table.Tr key={entry.id}>
+                            <Table.Td>{formatPtDateTime(entry.created_at)}</Table.Td>
+                            <Table.Td>
+                              <Badge color={packageEntryTypeColors[entry.entry_type]}>
+                                {packageEntryTypeLabels[entry.entry_type]}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>{formatPackageEntryQuantity(entry)}</Table.Td>
+                            <Table.Td>{packageOriginLabels[entry.origin]}</Table.Td>
+                            <Table.Td>{entry.description || "-"}</Table.Td>
+                            <Table.Td>{entry.beneficiary_name || "-"}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                        {packageHistoryResults.length === 0 && (
+                          <Table.Tr>
+                            <Table.Td colSpan={6}>
+                              <Text c="dimmed">Nenhum lançamento encontrado para este pacote.</Text>
+                            </Table.Td>
+                          </Table.Tr>
+                        )}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+
+                  {packageHistoryCount > 0 && (
+                    <Group justify="center" mt="md">
+                      <Pagination
+                        total={packageHistoryTotalPages}
+                        value={historyPage}
+                        onChange={setHistoryPage}
+                        size="sm"
+                      />
+                    </Group>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </Stack>
+      </Modal>
       <Modal
         opened={modalOpened}
         onClose={modalHandlers.close}
@@ -531,6 +757,7 @@ export function PackagesPage() {
             filter={accentInsensitiveOptionsFilter}
             nothingFoundMessage="Nenhum integrante"
             value={formState.member ? formState.member.toString() : null}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
           />
           <TextInput
@@ -567,6 +794,7 @@ export function PackagesPage() {
               { value: "EM_ABERTO", label: "Em aberto" },
             ]}
             value={formState.payment_status}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
           />
           <Select
@@ -578,6 +806,7 @@ export function PackagesPage() {
               { value: "TROCA", label: "Troca" },
             ]}
             value={formState.payment_mode}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           <Group justify="flex-end" mt="sm">

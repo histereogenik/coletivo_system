@@ -26,6 +26,7 @@ import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { FieldLabelWithCounter } from "../../components/FieldLabelWithCounter";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
@@ -98,6 +99,7 @@ export function FinancialPage() {
   const [valueReais, setValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
   const [page, setPage] = useState(1);
+  const [entryToDelete, setEntryToDelete] = useState<FinancialEntry | null>(null);
   const pageSize = 15;
   const [filters, setFilters] = useState<{
     entry_type: "ENTRADA" | "SAIDA" | null;
@@ -105,14 +107,17 @@ export function FinancialPage() {
     value: string;
     date_from: DateValue;
     date_to: DateValue;
+    search: string;
   }>({
     entry_type: null,
     category: null,
     value: "",
     date_from: null,
     date_to: null,
+    search: "",
   });
   const [valueInput, setValueInput] = useState<string>("");
+  const [searchInput, setSearchInput] = useState("");
 
   const { data: summary } = useQuery({
     queryKey: [
@@ -120,6 +125,7 @@ export function FinancialPage() {
       filters.entry_type,
       filters.category,
       filters.value,
+      filters.search,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
     ],
@@ -132,6 +138,7 @@ export function FinancialPage() {
           : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        search: filters.search.trim() || undefined,
       }),
     enabled: isAuthenticated,
   });
@@ -142,6 +149,7 @@ export function FinancialPage() {
       filters.entry_type,
       filters.category,
       filters.value,
+      filters.search,
       toIsoDate(filters.date_from) ?? null,
       toIsoDate(filters.date_to) ?? null,
       page,
@@ -156,6 +164,7 @@ export function FinancialPage() {
           : undefined,
         date_from: toIsoDate(filters.date_from),
         date_to: toIsoDate(filters.date_to),
+        search: filters.search.trim() || undefined,
         page,
         page_size: pageSize,
       }),
@@ -194,6 +203,7 @@ export function FinancialPage() {
     onSuccess: () => {
       invalidateRelated();
       notifications.show({ message: "Lançamento removido.", color: "green" });
+      setEntryToDelete(null);
     },
     onError: () => notifications.show({ message: "Erro ao remover lançamento.", color: "red" }),
   });
@@ -203,7 +213,7 @@ export function FinancialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to]);
+  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to, filters.search]);
 
   useEffect(() => {
     setValueInput(filters.value);
@@ -273,6 +283,7 @@ export function FinancialPage() {
       value: "",
       date_from: null,
       date_to: null,
+      search: "",
     });
 
   if (!isAuthenticated) {
@@ -326,7 +337,7 @@ export function FinancialPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
         {summaryStats.filtered &&
-        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value) ? (
+        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value || filters.search) ? (
           <SummaryCard
             title="Balanço do filtro"
             value={formatCents(summaryStats.filtered.saldo_cents)}
@@ -356,6 +367,18 @@ export function FinancialPage() {
       </SimpleGrid>
 
       <Group gap="sm" align="flex-end" mb="md">
+        <TextInput
+          label="Pesquisar"
+          placeholder="Buscar por descrição ou integrante"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.currentTarget.value)}
+          onBlur={() => setFilters((prev) => ({ ...prev, search: searchInput.trim() }))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
+            }
+          }}
+        />
         <Select
           label="Tipo"
           data={[
@@ -450,7 +473,7 @@ export function FinancialPage() {
                         variant="outline"
                         color="red"
                         loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-                        onClick={() => deleteMutation.mutate(item.id)}
+                        onClick={() => setEntryToDelete(item)}
                         aria-label="Remover"
                       >
                         <IconTrash size={16} />
@@ -468,6 +491,15 @@ export function FinancialPage() {
           <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
         </Group>
       )}
+      <ConfirmDeleteModal
+        opened={!!entryToDelete}
+        message={`Excluir o lançamento "${entryToDelete?.description || "sem descrição"}"? Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onClose={() => setEntryToDelete(null)}
+        onConfirm={() => {
+          if (entryToDelete) deleteMutation.mutate(entryToDelete.id);
+        }}
+      />
 
       <Modal
         opened={modalOpened}
@@ -482,6 +514,7 @@ export function FinancialPage() {
               { value: "SAIDA", label: "Saída" },
             ]}
             value={formState.entry_type ?? undefined}
+            allowDeselect={false}
             onChange={(val) =>
               setFormState((prev) => ({
                 ...prev,
@@ -493,6 +526,7 @@ export function FinancialPage() {
             label="Categoria"
             data={categories}
             value={formState.category ?? undefined}
+            allowDeselect={false}
             onChange={(val) => setFormState((prev) => ({ ...prev, category: val || "ALMOCO" }))}
           />
           <TextInput

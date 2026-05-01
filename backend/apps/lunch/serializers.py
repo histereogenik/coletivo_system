@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.common.roles import promote_role
 from apps.credits.services import sync_lunch_credit_entry
 from apps.financial.models import FinancialEntry
-from apps.lunch.models import Lunch, Package
+from apps.lunch.models import Lunch, Package, PackageEntry
 from apps.users.models import Member
 
 
@@ -78,7 +78,7 @@ class PackageSerializer(serializers.ModelSerializer):
                 errors["unit_value_cents"] = "Valor deve ser maior ou igual a zero."
             elif quantity:
                 expected_total = unit_value_cents * quantity
-                if value_cents is not None and value_cents != expected_total:
+                if "value_cents" in attrs and value_cents is not None and value_cents != expected_total:
                     errors["value_cents"] = "Valor total deve corresponder ao valor do almoço."
                 attrs["unit_value_cents"] = unit_value_cents
                 attrs["value_cents"] = expected_total
@@ -95,6 +95,23 @@ class PackageSerializer(serializers.ModelSerializer):
             attrs["value_cents"] = inferred_unit * quantity
         if remaining_quantity is None:
             remaining_quantity = quantity
+        if (
+            self.instance
+            and "quantity" in attrs
+            and (
+                "remaining_quantity" not in attrs
+                or remaining_quantity == self.instance.remaining_quantity
+            )
+            and self.instance.quantity is not None
+            and self.instance.remaining_quantity is not None
+        ):
+            used_quantity = self.instance.quantity - self.instance.remaining_quantity
+            if quantity < used_quantity:
+                errors["quantity"] = (
+                    "Quantidade total não pode ser menor que refeições já usadas."
+                )
+            else:
+                remaining_quantity = quantity - used_quantity
         if (
             remaining_quantity is not None
             and quantity is not None
@@ -165,6 +182,50 @@ class PackageSerializer(serializers.ModelSerializer):
             entry.delete()
 
 
+class PackageEntrySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
+    lunch_date = serializers.DateField(source="lunch.date", read_only=True)
+    beneficiary_name = serializers.CharField(source="beneficiary.full_name", read_only=True)
+
+    class Meta:
+        model = PackageEntry
+        fields = [
+            "id",
+            "package",
+            "entry_type",
+            "origin",
+            "quantity",
+            "description",
+            "lunch",
+            "lunch_date",
+            "beneficiary",
+            "beneficiary_name",
+            "created_by",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "package",
+            "origin",
+            "lunch",
+            "lunch_date",
+            "beneficiary",
+            "beneficiary_name",
+            "created_by",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class ManualPackageEntrySerializer(serializers.Serializer):
+    entry_type = serializers.ChoiceField(choices=PackageEntry.EntryType.choices)
+    quantity = serializers.IntegerField(min_value=1)
+    description = serializers.CharField(allow_blank=False, trim_whitespace=True)
+
+
 class LunchSerializer(serializers.ModelSerializer):
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
@@ -178,6 +239,14 @@ class LunchSerializer(serializers.ModelSerializer):
         queryset=Package.objects.all(),
         required=False,
         allow_null=True,
+    )
+    package_beneficiary = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    package_beneficiary_name = serializers.CharField(
+        source="package_beneficiary.full_name", read_only=True
     )
     use_package = serializers.BooleanField(write_only=True, required=False, default=False)
     package_remaining = serializers.IntegerField(
@@ -193,6 +262,8 @@ class LunchSerializer(serializers.ModelSerializer):
             "credit_owner",
             "credit_owner_name",
             "package",
+            "package_beneficiary",
+            "package_beneficiary_name",
             "use_package",
             "package_remaining",
             "value_cents",
@@ -208,6 +279,9 @@ class LunchSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Valor deve ser maior ou igual a zero.")
         return value
+
+    def _build_package_usage_description(self, instance: Lunch) -> str:
+        return f"Uso em almoço - {instance.date}"
 
     def validate(self, attrs):
         member = attrs.get("member") or getattr(self.instance, "member", None)
@@ -226,13 +300,16 @@ class LunchSerializer(serializers.ModelSerializer):
             if "credit_owner" in attrs
             else getattr(self.instance, "credit_owner", None)
         )
+        package_beneficiary = (
+            attrs.get("package_beneficiary")
+            if "package_beneficiary" in attrs
+            else getattr(self.instance, "package_beneficiary", None)
+        )
         using_credit = payment_mode == Lunch.PaymentMode.TROCA
 
         if use_package and not package:
             if not member or not date:
-                raise serializers.ValidationError(
-                    {"package": "Informe integrante e data do almoço."}
-                )
+                raise serializers.ValidationError({"package": "Informe integrante e data do almoço."})
             package = (
                 Package.objects.filter(
                     member=member,
@@ -260,6 +337,10 @@ class LunchSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"package": "Pacote expirado para a data do almoço."})
         if package and "value_cents" not in attrs:
             attrs["value_cents"] = package.unit_value_cents
+        if package and package_beneficiary and member and package_beneficiary.id == member.id:
+            attrs["package_beneficiary"] = None
+        if not package:
+            attrs["package_beneficiary"] = None
 
         if using_credit:
             if not credit_owner:
@@ -282,6 +363,15 @@ class LunchSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 package.remaining_quantity -= 1
                 package.save(update_fields=["remaining_quantity", "updated_at"])
+                PackageEntry.objects.create(
+                    package=package,
+                    entry_type=PackageEntry.EntryType.DEBITO,
+                    origin=PackageEntry.Origin.LUNCH,
+                    quantity=1,
+                    description=self._build_package_usage_description(instance),
+                    lunch=instance,
+                    beneficiary=instance.package_beneficiary,
+                )
             promote_role(instance.member, Member.Role.MENSALISTA)
             self._sync_credit_entry(instance)
             self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
@@ -294,18 +384,32 @@ class LunchSerializer(serializers.ModelSerializer):
         prev_date = instance.date
         old_package = instance.package
         new_package = validated_data.get("package", instance.package)
-        if old_package and new_package and old_package.id == new_package.id:
-            old_package = None
+        package_changed = (old_package.id if old_package else None) != (
+            new_package.id if new_package else None
+        )
         with transaction.atomic():
             instance = super().update(instance, validated_data)
-            if old_package:
+            if old_package and package_changed:
                 old_package.remaining_quantity += 1
                 old_package.save(update_fields=["remaining_quantity", "updated_at"])
-            if new_package and (not old_package or new_package.id != old_package.id):
+                PackageEntry.objects.filter(lunch=instance, origin=PackageEntry.Origin.LUNCH).delete()
+            if new_package and package_changed:
                 if new_package.remaining_quantity <= 0:
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 new_package.remaining_quantity -= 1
                 new_package.save(update_fields=["remaining_quantity", "updated_at"])
+            if new_package:
+                PackageEntry.objects.update_or_create(
+                    lunch=instance,
+                    defaults={
+                        "package": new_package,
+                        "entry_type": PackageEntry.EntryType.DEBITO,
+                        "origin": PackageEntry.Origin.LUNCH,
+                        "quantity": 1,
+                        "description": self._build_package_usage_description(instance),
+                        "beneficiary": instance.package_beneficiary,
+                    },
+                )
             self._sync_credit_entry(instance)
             self._sync_financial_entry(
                 instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date

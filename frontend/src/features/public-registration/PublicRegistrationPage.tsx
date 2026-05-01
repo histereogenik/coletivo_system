@@ -325,6 +325,7 @@ export function PublicRegistrationPage() {
                     placeholder="Selecione"
                     data={roleOptions}
                     value={formValues.role}
+                    allowDeselect={false}
                     onChange={(value) => updateAdultField("role", value)}
                     error={adultErrors.role}
                     nothingFoundMessage="Nenhuma opção encontrada"
@@ -334,6 +335,7 @@ export function PublicRegistrationPage() {
                     placeholder="Selecione"
                     data={dietOptions}
                     value={formValues.diet}
+                    allowDeselect={false}
                     onChange={(value) => updateAdultField("diet", value)}
                     error={adultErrors.diet}
                     nothingFoundMessage="Nenhuma opção encontrada"
@@ -422,6 +424,7 @@ export function PublicRegistrationPage() {
                             placeholder="Selecione"
                             data={dietOptions}
                             value={child.diet}
+                            allowDeselect={false}
                             onChange={(value) => updateChildField(child.index, "diet", value)}
                             error={child.errors.diet}
                             nothingFoundMessage="Nenhuma opção encontrada"

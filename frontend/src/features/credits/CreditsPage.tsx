@@ -64,6 +64,23 @@ const creditEntryTypeColors: Record<CreditEntry["entry_type"], string> = {
   DEBITO: "red",
 };
 
+const getBalanceColor = (balanceCents: number) => {
+  if (balanceCents < 0) return "red";
+  if (balanceCents > 0) return "green";
+  return "gray";
+};
+
+const formatBalanceLabel = (balanceCents: number) => {
+  if (balanceCents < 0) return `Dívida ${formatCents(Math.abs(balanceCents))}`;
+  if (balanceCents > 0) return `Saldo ${formatCents(balanceCents)}`;
+  return "Saldo R$ 0,00";
+};
+
+const formatCreditEntryValue = (entry: CreditEntry) => {
+  const sign = entry.entry_type === "CREDITO" ? "+" : "-";
+  return `${sign} ${formatCents(entry.value_cents)}`;
+};
+
 const formatPtDateTime = (value?: string | null) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -314,7 +331,11 @@ export function CreditsPage() {
                       <Table.Td ta="right">{formatCents(summary.credits_cents)}</Table.Td>
                       <Table.Td ta="right">{formatCents(summary.debits_cents)}</Table.Td>
                       <Table.Td ta="right">
-                        <Text fw={600}>{formatCents(summary.balance_cents)}</Text>
+                        <Text fw={600} c={getBalanceColor(summary.balance_cents)}>
+                          {summary.balance_cents < 0
+                            ? formatBalanceLabel(summary.balance_cents)
+                            : formatCents(summary.balance_cents)}
+                        </Text>
                       </Table.Td>
                       <Table.Td ta="right">
                         <Button
@@ -372,9 +393,9 @@ export function CreditsPage() {
             {selectedOwnerId && selectedSummaryQuery.data && (
               <Badge
                 size="lg"
-                color={selectedSummaryQuery.data.balance_cents > 0 ? "green" : "gray"}
+                color={getBalanceColor(selectedSummaryQuery.data.balance_cents)}
               >
-                Saldo {formatCents(selectedSummaryQuery.data.balance_cents)}
+                {formatBalanceLabel(selectedSummaryQuery.data.balance_cents)}
               </Badge>
             )}
           </Group>
@@ -385,6 +406,7 @@ export function CreditsPage() {
             filter={accentInsensitiveOptionsFilter}
             data={ownerOptions}
             value={selectedOwnerId ? String(selectedOwnerId) : null}
+            allowDeselect={false}
             onChange={(value) => setSelectedOwnerId(value ? Number(value) : null)}
             placeholder="Selecione quem receberá o ajuste"
             nothingFoundMessage="Nenhum integrante encontrado"
@@ -448,8 +470,10 @@ export function CreditsPage() {
               <Button
                 onClick={handleSubmitAdjustment}
                 loading={submitAdjustmentMutation.isPending}
+                color={adjustmentType === "DEBITO" ? "red" : "blue"}
+                miw={103}
               >
-                {adjustmentType === "CREDITO" ? "Salvar crédito" : "Salvar débito"}
+                {adjustmentType === "CREDITO" ? "Adicionar" : "Remover"}
               </Button>
             </Group>
           </Stack>
@@ -473,12 +497,12 @@ export function CreditsPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>
+                            Valor
+                          </Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
                           <Table.Th style={{ minWidth: 180 }}>Beneficiário</Table.Th>
                           <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }} ta="right">
-                            Valor
-                          </Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -490,10 +514,10 @@ export function CreditsPage() {
                                 {creditEntryTypeLabels[entry.entry_type]}
                               </Badge>
                             </Table.Td>
+                            <Table.Td>{formatCreditEntryValue(entry)}</Table.Td>
                             <Table.Td>{creditOriginLabels[entry.origin]}</Table.Td>
                             <Table.Td>{entry.beneficiary_name || "-"}</Table.Td>
                             <Table.Td>{entry.description || "-"}</Table.Td>
-                            <Table.Td ta="right">{formatCents(entry.value_cents)}</Table.Td>
                           </Table.Tr>
                         ))}
                         {historyResults.length === 0 && (

@@ -99,7 +99,7 @@ class CreditSummaryView(APIView):
         if search:
             queryset = queryset.filter(full_name__icontains=search)
 
-        queryset = queryset.filter(balance_cents__gt=0).order_by("full_name").distinct()
+        queryset = queryset.exclude(balance_cents=0).order_by("full_name").distinct()
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)

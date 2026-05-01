@@ -99,3 +99,83 @@ def test_lunch_serializer_rejects_package_from_other_member():
     serializer = LunchSerializer(data=payload)
     assert not serializer.is_valid()
     assert "package" in serializer.errors
+
+
+@pytest.mark.django_db
+def test_lunch_serializer_creates_package_entry_with_beneficiary():
+    owner = MemberFactory()
+    beneficiary = MemberFactory()
+    package = Package.objects.create(
+        member=owner,
+        value_cents=10000,
+        unit_value_cents=2000,
+        date=date.today(),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    payload = {
+        "member": owner.id,
+        "package": package.id,
+        "package_beneficiary": beneficiary.id,
+        "value_cents": package.unit_value_cents,
+        "date": date.today(),
+        "payment_status": Lunch.PaymentStatus.PAGO,
+    }
+
+    serializer = LunchSerializer(data=payload)
+    assert serializer.is_valid(), serializer.errors
+    instance = serializer.save()
+
+    package.refresh_from_db()
+    assert package.remaining_quantity == 4
+    assert instance.package_beneficiary == beneficiary
+    assert instance.package_entry.beneficiary == beneficiary
+
+
+@pytest.mark.django_db
+def test_lunch_serializer_updates_package_entry_beneficiary_without_changing_package():
+    owner = MemberFactory()
+    first_beneficiary = MemberFactory()
+    second_beneficiary = MemberFactory()
+    package = Package.objects.create(
+        member=owner,
+        value_cents=10000,
+        unit_value_cents=2000,
+        date=date.today(),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    serializer = LunchSerializer(
+        data={
+            "member": owner.id,
+            "package": package.id,
+            "package_beneficiary": first_beneficiary.id,
+            "value_cents": package.unit_value_cents,
+            "date": date.today(),
+            "payment_status": Lunch.PaymentStatus.PAGO,
+        }
+    )
+    assert serializer.is_valid(), serializer.errors
+    lunch = serializer.save()
+
+    update_serializer = LunchSerializer(
+        lunch,
+        data={"package_beneficiary": second_beneficiary.id},
+        partial=True,
+    )
+    assert update_serializer.is_valid(), update_serializer.errors
+    updated = update_serializer.save()
+
+    package.refresh_from_db()
+    updated.refresh_from_db()
+    assert package.remaining_quantity == 4
+    assert updated.package_beneficiary == second_beneficiary
+    assert updated.package_entry.beneficiary == second_beneficiary

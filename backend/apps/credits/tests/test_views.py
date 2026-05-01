@@ -110,10 +110,10 @@ def test_credit_summary_returns_owner_balance(api_client, superuser):
 
 
 @pytest.mark.django_db
-def test_credit_summary_list_returns_only_positive_balances(api_client, superuser):
-    owner_with_balance = MemberFactory()
-    owner_zero_balance = MemberFactory()
-    owner_debited = MemberFactory()
+def test_credit_summary_list_returns_nonzero_balances(api_client, superuser):
+    owner_with_balance = MemberFactory(full_name="Ana Positivo")
+    owner_zero_balance = MemberFactory(full_name="Bruno Zerado")
+    owner_debited = MemberFactory(full_name="Carla Devedora")
 
     CreditEntryFactory(owner=owner_with_balance, beneficiary=owner_with_balance, value_cents=3000)
     CreditEntryFactory(owner=owner_zero_balance, beneficiary=owner_zero_balance, value_cents=1500)
@@ -134,8 +134,11 @@ def test_credit_summary_list_returns_only_positive_balances(api_client, superuse
     response = api_client.get(reverse("credit-summary"))
 
     assert response.status_code == 200
-    assert response.data["count"] == 1
-    assert response.data["results"][0]["owner"] == owner_with_balance.id
+    assert response.data["count"] == 2
+    results_by_owner = {item["owner"]: item for item in response.data["results"]}
+    assert set(results_by_owner) == {owner_with_balance.id, owner_debited.id}
+    assert results_by_owner[owner_with_balance.id]["balance_cents"] == 3000
+    assert results_by_owner[owner_debited.id]["balance_cents"] == -1000
 
 
 @pytest.mark.django_db

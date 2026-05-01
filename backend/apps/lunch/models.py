@@ -1,4 +1,5 @@
 ﻿from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -102,6 +103,13 @@ class Lunch(models.Model):
         null=True,
         blank=True,
     )
+    package_beneficiary = models.ForeignKey(
+        Member,
+        related_name="benefited_package_lunches",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
     value_cents = models.PositiveIntegerField(help_text="Valor em centavos.")
     date = models.DateField()
     payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices)
@@ -118,3 +126,65 @@ class Lunch(models.Model):
 
     def __str__(self):
         return f"{self.member.full_name} - Almoço - {self.date}"
+
+
+class PackageEntry(models.Model):
+    class EntryType(models.TextChoices):
+        CREDITO = "CREDITO", "Crédito"
+        DEBITO = "DEBITO", "Débito"
+
+    class Origin(models.TextChoices):
+        MANUAL = "MANUAL", "Manual"
+        LUNCH = "LUNCH", "Almoço"
+
+    package = models.ForeignKey(Package, related_name="entries", on_delete=models.CASCADE)
+    entry_type = models.CharField(max_length=10, choices=EntryType.choices)
+    origin = models.CharField(max_length=10, choices=Origin.choices)
+    quantity = models.PositiveIntegerField()
+    description = models.TextField()
+    lunch = models.OneToOneField(
+        Lunch,
+        related_name="package_entry",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
+    beneficiary = models.ForeignKey(
+        Member,
+        related_name="benefited_package_entries",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_package_entries",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def clean(self):
+        errors = {}
+        if self.quantity <= 0:
+            errors["quantity"] = "Quantidade deve ser maior que zero."
+        if not self.description.strip():
+            errors["description"] = "Descrição é obrigatória."
+        if self.origin == self.Origin.LUNCH and not self.lunch_id:
+            errors["lunch"] = "Lançamentos de almoço exigem um almoço vinculado."
+        if self.origin == self.Origin.MANUAL and self.lunch_id:
+            errors["lunch"] = "Lançamentos manuais não devem vincular almoço."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_entry_type_display()} - {self.package_id} - {self.quantity}"

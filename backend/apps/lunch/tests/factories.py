@@ -10,6 +10,7 @@ class LunchFactory(factory.django.DjangoModelFactory):
 
     member = factory.SubFactory(MemberFactory)
     credit_owner = None
+    package_beneficiary = None
     value_cents = 2500
     date = factory.Faker("date_this_year")
     payment_status = Lunch.PaymentStatus.PAGO

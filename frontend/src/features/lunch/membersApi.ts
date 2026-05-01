@@ -3,6 +3,8 @@
 export type MemberOption = {
   id: number;
   full_name: string;
+  is_child: boolean;
+  role: "SUSTENTADOR" | "MENSALISTA" | "AVULSO" | null;
   has_package: boolean;
 };
 
