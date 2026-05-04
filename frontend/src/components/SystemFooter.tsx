@@ -2,7 +2,7 @@ import { Anchor, Box, Container, Group, Image, Stack, Text } from "@mantine/core
 
 const currentYear = new Date().getFullYear();
 const trademark = "\u2122";
-const appVersion = "v1.1.0 - 30.04.2026";
+const appVersion = "v1.1.1 - 04.05.2026";
 
 const clientInfo = {
   companyName: `Alimento Imperativo${trademark}`,
@@ -21,6 +21,8 @@ export function SystemFooter() {
     <Box
       component="footer"
       style={{
+        position: "relative",
+        zIndex: 300,
         borderTop: "1px solid var(--mantine-color-gray-3)",
         backgroundColor: "var(--mantine-color-body)",
       }}
