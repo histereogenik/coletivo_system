@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.common.roles import promote_role
@@ -13,6 +12,7 @@ class PackageSerializer(serializers.ModelSerializer):
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
     unit_value_cents = serializers.IntegerField(required=False)
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Package
@@ -78,7 +78,11 @@ class PackageSerializer(serializers.ModelSerializer):
                 errors["unit_value_cents"] = "Valor deve ser maior ou igual a zero."
             elif quantity:
                 expected_total = unit_value_cents * quantity
-                if "value_cents" in attrs and value_cents is not None and value_cents != expected_total:
+                if (
+                    "value_cents" in attrs
+                    and value_cents is not None
+                    and value_cents != expected_total
+                ):
                     errors["value_cents"] = "Valor total deve corresponder ao valor do almoço."
                 attrs["unit_value_cents"] = unit_value_cents
                 attrs["value_cents"] = expected_total
@@ -124,15 +128,16 @@ class PackageSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         if expiration:
-            today = timezone.localdate()
-            attrs["status"] = (
-                Package.PackageStatus.EXPIRADO
-                if expiration < today
-                else Package.PackageStatus.VALIDO
+            attrs["status"] = Package.calculate_status(
+                expiration=expiration,
+                remaining_quantity=remaining_quantity,
             )
 
         attrs["remaining_quantity"] = remaining_quantity
         return attrs
+
+    def get_status(self, instance):
+        return instance.current_status
 
     def create(self, validated_data):
         instance = super().create(validated_data)
@@ -309,7 +314,9 @@ class LunchSerializer(serializers.ModelSerializer):
 
         if use_package and not package:
             if not member or not date:
-                raise serializers.ValidationError({"package": "Informe integrante e data do almoço."})
+                raise serializers.ValidationError(
+                    {"package": "Informe integrante e data do almoço."}
+                )
             package = (
                 Package.objects.filter(
                     member=member,
@@ -362,7 +369,7 @@ class LunchSerializer(serializers.ModelSerializer):
                 if package.remaining_quantity <= 0:
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 package.remaining_quantity -= 1
-                package.save(update_fields=["remaining_quantity", "updated_at"])
+                package.save(update_fields=["remaining_quantity", "status", "updated_at"])
                 PackageEntry.objects.create(
                     package=package,
                     entry_type=PackageEntry.EntryType.DEBITO,
@@ -391,13 +398,16 @@ class LunchSerializer(serializers.ModelSerializer):
             instance = super().update(instance, validated_data)
             if old_package and package_changed:
                 old_package.remaining_quantity += 1
-                old_package.save(update_fields=["remaining_quantity", "updated_at"])
-                PackageEntry.objects.filter(lunch=instance, origin=PackageEntry.Origin.LUNCH).delete()
+                old_package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+                PackageEntry.objects.filter(
+                    lunch=instance,
+                    origin=PackageEntry.Origin.LUNCH,
+                ).delete()
             if new_package and package_changed:
                 if new_package.remaining_quantity <= 0:
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
                 new_package.remaining_quantity -= 1
-                new_package.save(update_fields=["remaining_quantity", "updated_at"])
+                new_package.save(update_fields=["remaining_quantity", "status", "updated_at"])
             if new_package:
                 PackageEntry.objects.update_or_create(
                     lunch=instance,

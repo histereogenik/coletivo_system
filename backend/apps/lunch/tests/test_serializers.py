@@ -30,6 +30,56 @@ def test_package_serializer_sets_remaining_when_missing():
 
 
 @pytest.mark.django_db
+def test_package_serializer_returns_dynamic_status_for_expired_package():
+    package = Package.objects.create(
+        member=MemberFactory(),
+        value_cents=10000,
+        unit_value_cents=1000,
+        date=date.today(),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=5,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    Package.objects.filter(id=package.id).update(
+        expiration=date.today() - timedelta(days=1),
+        status=Package.PackageStatus.VALIDO,
+    )
+    package.refresh_from_db()
+
+    data = PackageSerializer(package).data
+
+    assert data["status"] == Package.PackageStatus.EXPIRADO
+
+
+@pytest.mark.django_db
+def test_package_serializer_returns_dynamic_status_for_empty_package():
+    package = Package.objects.create(
+        member=MemberFactory(),
+        value_cents=10000,
+        unit_value_cents=1000,
+        date=date.today(),
+        payment_status=Package.PaymentStatus.PAGO,
+        payment_mode=Package.PaymentMode.PIX,
+        quantity=5,
+        remaining_quantity=1,
+        expiration=date.today() + timedelta(days=30),
+        status=Package.PackageStatus.VALIDO,
+    )
+    Package.objects.filter(id=package.id).update(
+        remaining_quantity=0,
+        status=Package.PackageStatus.VALIDO,
+    )
+    package.refresh_from_db()
+
+    data = PackageSerializer(package).data
+
+    assert data["status"] == Package.PackageStatus.ESGOTADO
+
+
+@pytest.mark.django_db
 def test_lunch_serializer_uses_oldest_package_when_use_package():
     member = MemberFactory()
     old_package = Package.objects.create(

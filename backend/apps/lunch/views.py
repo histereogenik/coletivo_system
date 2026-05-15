@@ -1,5 +1,6 @@
 ﻿import django_filters
 from django.db import models, transaction
+from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -50,10 +51,24 @@ class LunchFilter(django_filters.FilterSet):
 
 
 class PackageFilter(django_filters.FilterSet):
+    status = django_filters.ChoiceFilter(
+        choices=Package.PackageStatus.choices,
+        method="filter_status",
+    )
     date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
     expiration_from = django_filters.DateFilter(field_name="expiration", lookup_expr="gte")
     expiration_to = django_filters.DateFilter(field_name="expiration", lookup_expr="lte")
+
+    def filter_status(self, queryset, name, value):
+        today = timezone.localdate()
+        if value == Package.PackageStatus.VALIDO:
+            return queryset.filter(remaining_quantity__gt=0, expiration__gte=today)
+        if value == Package.PackageStatus.EXPIRADO:
+            return queryset.filter(remaining_quantity__gt=0, expiration__lt=today)
+        if value == Package.PackageStatus.ESGOTADO:
+            return queryset.filter(remaining_quantity__lte=0)
+        return queryset
 
     class Meta:
         model = Package
@@ -85,7 +100,7 @@ class LunchViewSet(viewsets.ModelViewSet):
             if package.remaining_quantity is None:
                 package.remaining_quantity = 0
             package.remaining_quantity = min(package.remaining_quantity + 1, package.quantity)
-            package.save(update_fields=["remaining_quantity", "updated_at"])
+            package.save(update_fields=["remaining_quantity", "status", "updated_at"])
         super().perform_destroy(instance)
 
     @action(detail=False, methods=["get"], url_path="summary")
@@ -180,7 +195,7 @@ class PackageViewSet(viewsets.ModelViewSet):
                 package.quantity,
                 package.remaining_quantity,
                 package.expiration.strftime("%Y-%m-%d"),
-                package.get_status_display(),
+                package.get_current_status_display(),
                 package.get_payment_status_display(),
             ]
             for package in queryset
@@ -199,7 +214,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Saldo insuficiente no pacote."}, status=400)
 
         package.remaining_quantity -= amount
-        package.save(update_fields=["remaining_quantity", "updated_at"])
+        package.save(update_fields=["remaining_quantity", "status", "updated_at"])
         serializer = self.get_serializer(package)
         return Response(serializer.data)
 
@@ -218,7 +233,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             )
 
         package.remaining_quantity = target
-        package.save(update_fields=["remaining_quantity", "updated_at"])
+        package.save(update_fields=["remaining_quantity", "status", "updated_at"])
         serializer = self.get_serializer(package)
         return Response(serializer.data)
 
@@ -258,7 +273,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             package.remaining_quantity = target
 
         with transaction.atomic():
-            package.save(update_fields=["remaining_quantity", "updated_at"])
+            package.save(update_fields=["remaining_quantity", "status", "updated_at"])
             PackageEntry.objects.create(
                 package=package,
                 entry_type=entry_type,
