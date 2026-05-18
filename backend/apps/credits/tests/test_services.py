@@ -37,6 +37,10 @@ def test_concluding_agenda_creates_credit_entries_for_each_member():
     assert all(entry.origin == CreditEntry.Origin.AGENDA for entry in entries)
     assert all(entry.entry_type == CreditEntry.EntryType.CREDITO for entry in entries)
     assert all(entry.value_cents == 1800 for entry in entries)
+    assert all(
+        entry.description == f"Crédito por trabalho - {duty.name} - 27/03/2026"
+        for entry in entries
+    )
 
 
 @pytest.mark.django_db
@@ -126,12 +130,13 @@ def test_agenda_credit_is_updated_when_duty_changes():
 def test_lunch_paid_with_credit_creates_debit_and_no_financial_entry():
     owner = MemberFactory()
     consumer = MemberFactory()
+    lunch_date = date(2026, 3, 27)
     CreditEntryFactory(owner=owner, beneficiary=owner, value_cents=4000)
     payload = {
         "member": consumer.id,
         "credit_owner": owner.id,
         "value_cents": 1800,
-        "date": date.today(),
+        "date": lunch_date,
         "payment_status": Lunch.PaymentStatus.EM_ABERTO,
         "payment_mode": Lunch.PaymentMode.TROCA,
     }
@@ -144,6 +149,7 @@ def test_lunch_paid_with_credit_creates_debit_and_no_financial_entry():
     assert credit_entry.entry_type == CreditEntry.EntryType.DEBITO
     assert credit_entry.owner == owner
     assert credit_entry.beneficiary == consumer
+    assert credit_entry.description == f"Almoço com crédito - {consumer.full_name} - 27/03/2026"
     assert get_credit_balance(owner.id) == 2200
     assert FinancialEntry.objects.filter(lunch=lunch).count() == 0
     assert lunch.payment_status == Lunch.PaymentStatus.PAGO

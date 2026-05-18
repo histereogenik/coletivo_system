@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.common.dates import format_pt_date
 from apps.common.roles import promote_role
 from apps.credits.services import sync_lunch_credit_entry
 from apps.financial.models import FinancialEntry
@@ -161,7 +162,10 @@ class PackageSerializer(serializers.ModelSerializer):
         was_paid = prev_status == Package.PaymentStatus.PAGO
 
         if is_paid_now and instance.value_cents > 0:
-            description = f"Pagamento pacote - {instance.member.full_name} - {instance.date}"
+            description = (
+                f"Pagamento pacote - {instance.member.full_name} - "
+                f"{format_pt_date(instance.date)}"
+            )
             if entry:
                 if (
                     (prev_value != instance.value_cents)
@@ -286,7 +290,7 @@ class LunchSerializer(serializers.ModelSerializer):
         return value
 
     def _build_package_usage_description(self, instance: Lunch) -> str:
-        return f"Uso em almoço - {instance.date}"
+        return f"Uso em almoço - {format_pt_date(instance.date)}"
 
     def validate(self, attrs):
         member = attrs.get("member") or getattr(self.instance, "member", None)
@@ -442,7 +446,10 @@ class LunchSerializer(serializers.ModelSerializer):
             return
 
         if is_paid_now and instance.value_cents > 0:
-            description = f"Pagamento almoço - {instance.member.full_name} - {instance.date}"
+            description = (
+                f"Pagamento almoço - {instance.member.full_name} - "
+                f"{format_pt_date(instance.date)}"
+            )
             if entry:
                 if (
                     (prev_value != instance.value_cents)

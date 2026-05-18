@@ -3,18 +3,19 @@
 import pytest
 
 from apps.financial.models import FinancialEntry
-from apps.lunch.models import Lunch
-from apps.lunch.serializers import LunchSerializer
+from apps.lunch.models import Lunch, Package
+from apps.lunch.serializers import LunchSerializer, PackageSerializer
 from apps.users.tests.factories import MemberFactory
 
 
 @pytest.mark.django_db
 def test_paid_lunch_creates_financial_entry():
     member = MemberFactory()
+    lunch_date = date(2026, 1, 18)
     payload = {
         "member": member.id,
         "value_cents": 3000,
-        "date": date.today(),
+        "date": lunch_date,
         "payment_status": Lunch.PaymentStatus.PAGO,
     }
 
@@ -26,6 +27,28 @@ def test_paid_lunch_creates_financial_entry():
     assert entry.value_cents == payload["value_cents"]
     assert entry.entry_type == FinancialEntry.EntryType.ENTRADA
     assert entry.category == FinancialEntry.EntryCategory.ALMOCO
+    assert entry.description == f"Pagamento almoço - {member.full_name} - 18/01/2026"
+
+
+@pytest.mark.django_db
+def test_paid_package_creates_financial_entry_with_pt_br_date():
+    member = MemberFactory()
+    payload = {
+        "member": member.id,
+        "unit_value_cents": 1000,
+        "date": date(2026, 1, 18),
+        "payment_status": Package.PaymentStatus.PAGO,
+        "payment_mode": Package.PaymentMode.PIX,
+        "quantity": 5,
+        "expiration": date(2026, 2, 18),
+    }
+
+    serializer = PackageSerializer(data=payload)
+    assert serializer.is_valid(), serializer.errors
+    package = serializer.save()
+
+    entry = FinancialEntry.objects.get(package=package)
+    assert entry.description == f"Pagamento pacote - {member.full_name} - 18/01/2026"
 
 
 @pytest.mark.django_db
