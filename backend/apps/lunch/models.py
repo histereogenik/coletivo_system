@@ -18,8 +18,9 @@ class Package(models.Model):
         TROCA = "TROCA", "Troca"
 
     class PackageStatus(models.TextChoices):
-        EXPIRADO = "EXPIRADO", "Expirado"
         VALIDO = "VALIDO", "Válido"
+        EXPIRADO = "EXPIRADO", "Expirado"
+        ESGOTADO = "ESGOTADO", "Esgotado"
 
     member = models.ForeignKey(Member, related_name="packages", on_delete=models.CASCADE)
     unit_value_cents = models.PositiveIntegerField(help_text="Valor unitário em centavos.")
@@ -41,6 +42,24 @@ class Package(models.Model):
     class Meta:
         ordering = ["-date", "-created_at"]
 
+    @classmethod
+    def calculate_status(cls, *, expiration, remaining_quantity):
+        if remaining_quantity is not None and remaining_quantity <= 0:
+            return cls.PackageStatus.ESGOTADO
+        if expiration and expiration < timezone.localdate():
+            return cls.PackageStatus.EXPIRADO
+        return cls.PackageStatus.VALIDO
+
+    @property
+    def current_status(self):
+        return self.calculate_status(
+            expiration=self.expiration,
+            remaining_quantity=self.remaining_quantity,
+        )
+
+    def get_current_status_display(self):
+        return self.PackageStatus(self.current_status).label
+
     def clean(self):
         missing = {}
         if not self.quantity:
@@ -58,11 +77,9 @@ class Package(models.Model):
                 "Saldo de refeições não pode exceder a quantidade do pacote."
             )
         if self.expiration:
-            today = timezone.localdate()
-            self.status = (
-                self.PackageStatus.EXPIRADO
-                if self.expiration < today
-                else self.PackageStatus.VALIDO
+            self.status = self.calculate_status(
+                expiration=self.expiration,
+                remaining_quantity=self.remaining_quantity,
             )
         if missing:
             raise ValidationError(missing)

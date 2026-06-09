@@ -1,5 +1,7 @@
 ﻿import factory
 
+from datetime import date, timedelta
+
 from apps.lunch.models import Lunch, Package
 from apps.users.tests.factories import MemberFactory
 
@@ -29,5 +31,5 @@ class PackageFactory(factory.django.DjangoModelFactory):
     payment_mode = Package.PaymentMode.PIX
     quantity = 10
     remaining_quantity = 10
-    expiration = factory.Faker("date_this_year")
+    expiration = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
     status = Package.PackageStatus.VALIDO

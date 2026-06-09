@@ -4,6 +4,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from apps.agenda.models import AgendaEntry
+from apps.common.dates import format_pt_date
 from apps.credits.models import CreditEntry
 from apps.lunch.models import Lunch
 from apps.users.models import Member
@@ -87,7 +88,10 @@ def sync_agenda_credit_entries(
     selected_members = list(agenda_entry.members.all())
     desired_owner_ids = {member.id for member in selected_members}
 
-    description = f"Crédito por trabalho - {agenda_entry.duty.name} - {agenda_entry.date}"
+    description = (
+        f"Crédito por trabalho - {agenda_entry.duty.name} - "
+        f"{format_pt_date(agenda_entry.date)}"
+    )
 
     for member in selected_members:
         entry = existing_entries.pop(member.id, None)
@@ -163,7 +167,10 @@ def sync_lunch_credit_entry(
             exclude_entry_id=exclude_entry_id,
         )
 
-    description = f"Almoço com crédito - {lunch.member.full_name} - {lunch.date}"
+    description = (
+        f"Almoço com crédito - {lunch.member.full_name} - "
+        f"{format_pt_date(lunch.date)}"
+    )
 
     if current_entry:
         fields_to_update: list[str] = []

@@ -213,7 +213,8 @@ def test_delete_lunch_with_package_restores_package_balance(api_client, superuse
     assert create_response.status_code == 201
     package.refresh_from_db()
     assert package.remaining_quantity == 4
-    assert PackageEntry.objects.filter(package=package).count() == 1
+    entry = PackageEntry.objects.get(package=package)
+    assert entry.description == "Uso em almoço - 18/01/2026"
 
     delete_url = reverse("lunch-detail", args=[create_response.data["id"]])
     delete_response = api_client.delete(delete_url)

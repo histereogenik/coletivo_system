@@ -80,6 +80,13 @@ const paymentLabels: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   VALIDO: "Válido",
   EXPIRADO: "Expirado",
+  ESGOTADO: "Esgotado",
+};
+
+const statusColors: Record<string, string> = {
+  VALIDO: "green",
+  EXPIRADO: "red",
+  ESGOTADO: "gray",
 };
 
 const packageHistoryPageSize = 10;
@@ -129,11 +136,11 @@ export function PackagesPage() {
     payment_mode: "PIX",
     quantity: 1,
     remaining_quantity: undefined,
-    expiration: new Date().toISOString().slice(0, 10),
+    expiration: undefined,
   });
   const [unitValueReais, setUnitValueReais] = useState<string>("");
   const [dateValue, setDateValue] = useState<DateValue>(new Date());
-  const [expirationValue, setExpirationValue] = useState<DateValue>(new Date());
+  const [expirationValue, setExpirationValue] = useState<DateValue>(null);
   const [filters, setFilters] = useState<{
     member: string | null;
     payment_status: string | null;
@@ -298,11 +305,11 @@ export function PackagesPage() {
       payment_mode: "PIX",
       quantity: 1,
       remaining_quantity: undefined,
-      expiration: new Date().toISOString().slice(0, 10),
+      expiration: undefined,
     });
     setUnitValueReais("");
     setDateValue(new Date());
-    setExpirationValue(new Date());
+    setExpirationValue(null);
     modalHandlers.open();
   }, [modalHandlers]);
 
@@ -475,6 +482,7 @@ export function PackagesPage() {
           data={[
             { value: "VALIDO", label: "Válido" },
             { value: "EXPIRADO", label: "Expirado" },
+            { value: "ESGOTADO", label: "Esgotado" },
           ]}
           clearable
           value={filters.status}
@@ -527,7 +535,7 @@ export function PackagesPage() {
                 <Table.Td>{formatPtDate(item.date)}</Table.Td>
                 <Table.Td>{item.member_name || `#${item.member}`}</Table.Td>
                 <Table.Td>
-                  <Badge color={item.status === "VALIDO" ? "green" : "red"}>
+                  <Badge color={statusColors[item.status] || "gray"}>
                     {statusLabels[item.status] || item.status}
                   </Badge>
                 </Table.Td>
@@ -610,7 +618,7 @@ export function PackagesPage() {
               </Text>
             </div>
             {selectedPackage && (
-              <Badge size="lg" color={selectedPackage.status === "VALIDO" ? "green" : "red"}>
+              <Badge size="lg" color={statusColors[selectedPackage.status] || "gray"}>
                 {statusLabels[selectedPackage.status] || selectedPackage.status}
               </Badge>
             )}
@@ -782,6 +790,7 @@ export function PackagesPage() {
           />
           <DateInput
             label="Validade"
+            withAsterisk
             value={expirationValue}
             onChange={(val) => setExpirationValue(val ?? null)}
             valueFormat="DD/MM/YYYY"

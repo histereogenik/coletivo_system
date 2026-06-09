@@ -1,9 +1,12 @@
 ﻿import pytest
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
-from apps.lunch.models import Lunch
+from apps.lunch.models import Lunch, Package
 from apps.lunch.tests.factories import LunchFactory, PackageFactory
 from apps.users.tests.factories import MemberFactory
 
@@ -75,6 +78,44 @@ def test_superuser_can_filter_lunches_by_package(api_client, superuser):
     ids = {item["id"] for item in response.data}
     assert lunch_with_package.id in ids
     assert len(ids) == 1
+
+
+@pytest.mark.django_db
+def test_superuser_can_filter_packages_by_dynamic_status(api_client, superuser):
+    today = timezone.localdate()
+    valid_package = PackageFactory(
+        remaining_quantity=5,
+        expiration=today + timedelta(days=30),
+    )
+    expired_package = PackageFactory(
+        remaining_quantity=5,
+        expiration=today + timedelta(days=30),
+    )
+    exhausted_package = PackageFactory(
+        remaining_quantity=5,
+        expiration=today + timedelta(days=30),
+    )
+    Package.objects.filter(id=expired_package.id).update(
+        expiration=today - timedelta(days=1),
+        status=Package.PackageStatus.VALIDO,
+    )
+    Package.objects.filter(id=exhausted_package.id).update(
+        remaining_quantity=0,
+        status=Package.PackageStatus.VALIDO,
+    )
+
+    api_client.force_authenticate(user=superuser)
+    url = reverse("package-list")
+    valid_response = api_client.get(url, {"status": Package.PackageStatus.VALIDO})
+    expired_response = api_client.get(url, {"status": Package.PackageStatus.EXPIRADO})
+    exhausted_response = api_client.get(url, {"status": Package.PackageStatus.ESGOTADO})
+
+    assert valid_response.status_code == 200
+    assert expired_response.status_code == 200
+    assert exhausted_response.status_code == 200
+    assert {item["id"] for item in valid_response.data} == {valid_package.id}
+    assert {item["id"] for item in expired_response.data} == {expired_package.id}
+    assert {item["id"] for item in exhausted_response.data} == {exhausted_package.id}
 
 
 @pytest.mark.django_db
