@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.credits",
     "apps.common",
     "apps.dashboard",
+    "apps.fiscal",
 ]
 
 MIDDLEWARE = [
@@ -186,6 +187,46 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv(
     "same-origin",
 )
 X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
+
+FOCUS_NFE_ENVIRONMENT = os.getenv("FOCUS_NFE_ENVIRONMENT", "homologation").lower()
+if FOCUS_NFE_ENVIRONMENT not in {"homologation", "production"}:
+    raise RuntimeError("FOCUS_NFE_ENVIRONMENT deve ser homologation ou production.")
+FOCUS_NFE_BASE_URL = os.getenv(
+    "FOCUS_NFE_BASE_URL",
+    (
+        "https://api.focusnfe.com.br"
+        if FOCUS_NFE_ENVIRONMENT == "production"
+        else "https://homologacao.focusnfe.com.br"
+    ),
+)
+FOCUS_NFE_TOKEN = os.getenv("FOCUS_NFE_TOKEN", "")
+FOCUS_NFE_TIMEOUT_SECONDS = int(os.getenv("FOCUS_NFE_TIMEOUT_SECONDS", "30"))
+FOCUS_NFE_ALLOW_PRODUCTION = os.getenv("FOCUS_NFE_ALLOW_PRODUCTION", "False") == "True"
+FOCUS_WEBHOOK_URL = os.getenv("FOCUS_WEBHOOK_URL", "")
+FOCUS_WEBHOOK_SECRET = os.getenv("FOCUS_WEBHOOK_SECRET", "")
+FOCUS_WEBHOOK_AUTHORIZATION_HEADER = os.getenv(
+    "FOCUS_WEBHOOK_AUTHORIZATION_HEADER", "X-Focus-Webhook-Token"
+)
+
+FISCAL_ISSUER_CNPJ = "".join(filter(str.isdigit, os.getenv("FISCAL_ISSUER_CNPJ", "")))
+FISCAL_ISSUER_STATE = os.getenv("FISCAL_ISSUER_STATE", "GO").upper()
+FISCAL_MEAL_DESCRIPTION = os.getenv("FISCAL_MEAL_DESCRIPTION", "REFEICAO PREPARADA")
+FISCAL_PACKAGE_DESCRIPTION = os.getenv(
+    "FISCAL_PACKAGE_DESCRIPTION", "PACOTE DE REFEICOES PREPARADAS"
+)
+FISCAL_MEAL_NCM = os.getenv("FISCAL_MEAL_NCM", "21069090")
+FISCAL_MEAL_CFOP = os.getenv("FISCAL_MEAL_CFOP", "5101")
+FISCAL_MEAL_INTERSTATE_CFOP = os.getenv("FISCAL_MEAL_INTERSTATE_CFOP", "6101")
+FISCAL_MEAL_INTERSTATE_NON_CONTRIBUTOR_CFOP = os.getenv(
+    "FISCAL_MEAL_INTERSTATE_NON_CONTRIBUTOR_CFOP", "6107"
+)
+FISCAL_ICMS_CSOSN = os.getenv("FISCAL_ICMS_CSOSN", "102")
+FISCAL_PIX_PAYMENT_CODE = os.getenv("FISCAL_PIX_PAYMENT_CODE", "20")
+FISCAL_ALLOW_PACKAGE_EMISSION = os.getenv("FISCAL_ALLOW_PACKAGE_EMISSION", "False") == "True"
+FISCAL_PIS_CST = os.getenv("FISCAL_PIS_CST", "")
+FISCAL_COFINS_CST = os.getenv("FISCAL_COFINS_CST", "")
+FISCAL_IBS_CBS_CST = os.getenv("FISCAL_IBS_CBS_CST", "")
+FISCAL_IBS_CBS_CLASSIFICATION = os.getenv("FISCAL_IBS_CBS_CLASSIFICATION", "")
 
 if not DEBUG:
     if SECRET_KEY == DEFAULT_DEV_SECRET_KEY:
