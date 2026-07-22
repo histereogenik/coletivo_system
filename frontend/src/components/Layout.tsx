@@ -7,6 +7,7 @@ const navItems = [
   { label: "Dashboard", to: "/painel" },
   { label: "Agenda", to: "/painel/agenda" },
   { label: "Financeiro", to: "/painel/financeiro" },
+  { label: "Notas fiscais", to: "/painel/notas-fiscais" },
   { label: "Trocas", to: "/painel/creditos" },
   { label: "Almoços", to: "/painel/lunches" },
   { label: "Pacotes", to: "/painel/pacotes" },

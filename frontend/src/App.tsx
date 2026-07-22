@@ -37,6 +37,11 @@ const FinancialPage = lazy(() =>
     default: module.FinancialPage,
   }))
 );
+const FiscalDocumentsPage = lazy(() =>
+  import("./features/fiscal/FiscalDocumentsPage").then((module) => ({
+    default: module.FiscalDocumentsPage,
+  }))
+);
 const LandingPage = lazy(() =>
   import("./features/landing/LandingPage").then((module) => ({ default: module.LandingPage }))
 );
@@ -86,6 +91,7 @@ function App() {
                     <Route index element={<DashboardPage />} />
                     <Route path="agenda" element={<AgendaPage />} />
                     <Route path="financeiro" element={<FinancialPage />} />
+                    <Route path="notas-fiscais" element={<FiscalDocumentsPage />} />
                     <Route path="creditos" element={<CreditsPage />} />
                     <Route path="lunches" element={<LunchesPage />} />
                     <Route path="pacotes" element={<PackagesPage />} />
@@ -98,6 +104,10 @@ function App() {
                 <Route
                   path="/financeiro"
                   element={<LegacyPanelRedirect to="/painel/financeiro" />}
+                />
+                <Route
+                  path="/notas-fiscais"
+                  element={<LegacyPanelRedirect to="/painel/notas-fiscais" />}
                 />
                 <Route path="/creditos" element={<LegacyPanelRedirect to="/painel/creditos" />} />
                 <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/lunches" />} />

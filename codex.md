@@ -70,6 +70,7 @@ backend/
     dashboard/
     duties/
     financial/
+    fiscal/
     lunch/
     users/
   config/
@@ -101,6 +102,7 @@ helpers compartilhados em `shared`.
 - `/painel`: dashboard;
 - `/painel/agenda`;
 - `/painel/financeiro`;
+- `/painel/notas-fiscais`;
 - `/painel/creditos`;
 - `/painel/lunches`;
 - `/painel/pacotes`;
@@ -189,6 +191,20 @@ almoço ou pacote.
 - saídas aceitam `NOTA`, `STAFF`, `DESPESA` e `ESTORNO`;
 - lançamentos incompatíveis entre tipo e categoria são rejeitados;
 - oferece CRUD, filtros, resumo e exportação.
+
+### `fiscal`
+
+Model `FiscalDocument`: registra NF-e/NFC-e, ambiente, origem (almoço ou pacote), snapshots da
+operação, referência idempotente, situação na Focus/SEFAZ e URLs de XML/DANFE.
+
+- emissão manual somente para almoço avulso pago ou pacote pago;
+- CPF/consumidor não identificado gera NFC-e e CNPJ gera NF-e;
+- primeira versão limitada a operações internas em Goiás com CFOP 5101;
+- rejeições e payloads são preservados para auditoria;
+- produção possui trava adicional por variável de ambiente;
+- vendas antigas e regularização extemporânea não fazem parte do sistema.
+
+Contrato e configuração: `backend/DOCS/FISCAL_APP_DOC.md`.
 
 ### `credits`
 
