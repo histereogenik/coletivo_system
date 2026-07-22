@@ -1,24 +1,32 @@
 import {
-  Alert,
-  Anchor,
   Badge,
   Button,
   Container,
   Grid,
   Group,
   Modal,
+  NumberInput,
   Pagination,
   ScrollArea,
   Select,
+  SimpleGrid,
   Stack,
   Table,
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconFileInvoice, IconPlus, IconRefresh } from "@tabler/icons-react";
+import {
+  IconEye,
+  IconFileCode,
+  IconFileInvoice,
+  IconFileTypePdf,
+  IconPlus,
+  IconRefresh,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { formatCents } from "../../shared/currency";
@@ -56,6 +64,31 @@ const formatDate = (value?: string | null) => {
   return date.length === 3 ? `${date[2]}/${date[1]}/${date[0]}` : value;
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR");
+};
+
+const sourceLabels: Record<FiscalDocument["source_type"], string> = {
+  LUNCH: "Almoço avulso",
+  PACKAGE: "Pacote de refeições",
+  MANUAL: "Lançamento manual",
+};
+
+const paymentLabels: Record<string, string> = {
+  "01": "Dinheiro",
+  "20": "PIX",
+  "99": "Outros",
+};
+
+const documentTotalCents = (document: FiscalDocument) => {
+  if (document.manual_value_cents) return document.manual_value_cents;
+  return Math.round(
+    document.items.reduce((total, item) => total + Number(item.valor_bruto ?? 0), 0) * 100,
+  );
+};
+
 const emptyRecipient: FiscalRecipient = {
   name: "",
   tax_id: "",
@@ -69,14 +102,28 @@ const stateOptions = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ].map((state) => ({ value: state, label: state }));
 
+const localIsoDate = () => {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+};
+
 export function FiscalDocumentsPage() {
   const queryClient = useQueryClient();
   const [opened, handlers] = useDisclosure(false);
+  const [detailOpened, detailHandlers] = useDisclosure(false);
+  const [selectedDocument, setSelectedDocument] = useState<FiscalDocument | null>(null);
   const [page, setPage] = useState(1);
   const [documentType, setDocumentType] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [sourceType, setSourceType] = useState<"LUNCH" | "PACKAGE">("LUNCH");
+  const [sourceType, setSourceType] = useState<"LUNCH" | "PACKAGE" | "MANUAL">("LUNCH");
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [manualDate, setManualDate] = useState(localIsoDate());
+  const [manualDescription, setManualDescription] = useState("");
+  const [manualValue, setManualValue] = useState<string | number>("");
+  const [manualPaymentMethod, setManualPaymentMethod] = useState<"01" | "20" | "99">("99");
+  const [manualRequestKey, setManualRequestKey] = useState(crypto.randomUUID());
   const [buyerType, setBuyerType] = useState<"CONSUMER" | "COMPANY">("CONSUMER");
   const [presence, setPresence] = useState<string>("1");
   const [recipient, setRecipient] = useState<FiscalRecipient>(emptyRecipient);
@@ -112,6 +159,7 @@ export function FiscalDocumentsPage() {
   });
 
   const sourceOptions = useMemo(() => {
+    if (sourceType === "MANUAL") return [];
     if (sourceType === "LUNCH") {
       return (lunchesQuery.data?.results ?? [])
         .filter((item) => item.value_cents > 0 && item.payment_mode !== "TROCA" && !item.package)
@@ -189,15 +237,35 @@ export function FiscalDocumentsPage() {
   const openEmission = () => {
     setSourceType("LUNCH");
     setSourceId(null);
+    setManualDate(localIsoDate());
+    setManualDescription("");
+    setManualValue("");
+    setManualPaymentMethod("99");
+    setManualRequestKey(crypto.randomUUID());
     setBuyerType("CONSUMER");
     setPresence("1");
     setRecipient(emptyRecipient);
     handlers.open();
   };
 
+  const openDetails = (document: FiscalDocument) => {
+    setSelectedDocument(document);
+    detailHandlers.open();
+  };
+
   const submit = () => {
-    if (!sourceId) {
+    if (sourceType !== "MANUAL" && !sourceId) {
       notifications.show({ message: "Selecione a venda que será faturada.", color: "red" });
+      return;
+    }
+    if (
+      sourceType === "MANUAL" &&
+      (!manualDate || !manualDescription.trim() || Number(manualValue) <= 0)
+    ) {
+      notifications.show({
+        message: "Informe data, descrição e um valor manual maior que zero.",
+        color: "red",
+      });
       return;
     }
     if (buyerType === "COMPANY" && !recipient.tax_id) {
@@ -206,7 +274,17 @@ export function FiscalDocumentsPage() {
     }
     const payload: FiscalEmissionPayload = {
       source_type: sourceType,
-      source_id: Number(sourceId),
+      ...(sourceType === "MANUAL"
+        ? {
+            manual: {
+              sale_date: manualDate,
+              description: manualDescription.trim(),
+              value_cents: Math.round(Number(manualValue) * 100),
+              payment_method: manualPaymentMethod,
+              request_key: manualRequestKey,
+            },
+          }
+        : { source_id: Number(sourceId) }),
       recipient:
         buyerType === "COMPANY"
           ? recipient
@@ -234,18 +312,6 @@ export function FiscalDocumentsPage() {
           Emitir nota
         </Button>
       </Group>
-
-      <Alert mb="md" color={isProduction ? "red" : "blue"} title="Ambiente fiscal">
-        {isProduction
-          ? "O backend está configurado para PRODUÇÃO. Documentos autorizados possuem validade fiscal."
-          : "O backend está em homologação. Os documentos emitidos são testes sem validade fiscal."}
-        {configuration && !configuration.ready && (
-          <Text size="sm" mt="xs">
-            Emissão bloqueada: configuração fiscal incompleta ou produção ainda não liberada no
-            servidor.
-          </Text>
-        )}
-      </Alert>
 
       <Group mb="md" align="flex-end">
         <Select
@@ -301,11 +367,6 @@ export function FiscalDocumentsPage() {
                     <Badge color={statusColors[document.status] ?? "gray"}>
                       {statusLabels[document.status] ?? document.status}
                     </Badge>
-                    {document.error_message && (
-                      <Text size="xs" c="red" mt={4} maw={280}>
-                        {document.error_message}
-                      </Text>
-                    )}
                   </Table.Td>
                   <Table.Td>
                     {document.number ? `${document.number} / série ${document.series}` : "—"}
@@ -313,33 +374,63 @@ export function FiscalDocumentsPage() {
                   <Table.Td>{document.recipient.name || "Consumidor não identificado"}</Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
-                      {(document.status === "PENDING" || document.status === "PROCESSING") && (
+                      <Tooltip label="Ver detalhes">
                         <Button
                           size="xs"
                           variant="subtle"
-                          loading={
-                            refreshMutation.isPending && refreshMutation.variables === document.id
-                          }
-                          onClick={() => refreshMutation.mutate(document.id)}
-                          aria-label="Consultar situação"
+                          onClick={() => openDetails(document)}
+                          aria-label="Ver detalhes"
                         >
-                          <IconRefresh size={16} />
+                          <IconEye size={16} />
                         </Button>
+                      </Tooltip>
+                      {(document.status === "PENDING" || document.status === "PROCESSING") && (
+                        <Tooltip label="Consultar situação">
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            loading={
+                              refreshMutation.isPending &&
+                              refreshMutation.variables === document.id
+                            }
+                            onClick={() => refreshMutation.mutate(document.id)}
+                            aria-label="Consultar situação"
+                          >
+                            <IconRefresh size={16} />
+                          </Button>
+                        </Tooltip>
                       )}
                       {document.danfe_url && (
-                        <Anchor
-                          href={document.danfe_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          size="sm"
-                        >
-                          DANFE
-                        </Anchor>
+                        <Tooltip label="Visualizar DANFE (PDF)">
+                          <Button
+                            component="a"
+                            href={document.danfe_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            size="xs"
+                            variant="subtle"
+                            color="red"
+                            aria-label="Visualizar DANFE em PDF"
+                          >
+                            <IconFileTypePdf size={17} />
+                          </Button>
+                        </Tooltip>
                       )}
                       {document.xml_url && (
-                        <Anchor href={document.xml_url} target="_blank" rel="noreferrer" size="sm">
-                          XML
-                        </Anchor>
+                        <Tooltip label="Visualizar XML">
+                          <Button
+                            component="a"
+                            href={document.xml_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            size="xs"
+                            variant="subtle"
+                            color="orange"
+                            aria-label="Visualizar XML"
+                          >
+                            <IconFileCode size={17} />
+                          </Button>
+                        </Tooltip>
                       )}
                     </Group>
                   </Table.Td>
@@ -365,6 +456,170 @@ export function FiscalDocumentsPage() {
         </Group>
       )}
 
+      <Modal
+        opened={detailOpened}
+        onClose={detailHandlers.close}
+        title="Detalhes da nota fiscal"
+        size="xl"
+      >
+        {selectedDocument && (
+          <Stack gap="lg">
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Title order={4}>
+                  {selectedDocument.document_type === "NFE" ? "NF-e" : "NFC-e"}
+                  {selectedDocument.number ? ` nº ${selectedDocument.number}` : ""}
+                </Title>
+                <Text size="sm" c="dimmed">
+                  Referência {selectedDocument.reference}
+                </Text>
+              </div>
+              <Badge size="lg" color={statusColors[selectedDocument.status] ?? "gray"}>
+                {statusLabels[selectedDocument.status] ?? selectedDocument.status}
+              </Badge>
+            </Group>
+
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+              <div>
+                <Text size="xs" c="dimmed">Origem</Text>
+                <Text fw={500}>
+                  {sourceLabels[selectedDocument.source_type]}
+                  {selectedDocument.source_id ? ` #${selectedDocument.source_id}` : ""}
+                </Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Data do movimento</Text>
+                <Text fw={500}>{formatDate(selectedDocument.sale_date)}</Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Valor</Text>
+                <Text fw={500}>{formatCents(documentTotalCents(selectedDocument))}</Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Emissão</Text>
+                <Text fw={500}>{formatDateTime(selectedDocument.emitted_at)}</Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Autorização</Text>
+                <Text fw={500}>{formatDateTime(selectedDocument.authorized_at)}</Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Ambiente</Text>
+                <Text fw={500}>
+                  {selectedDocument.environment === "PRODUCTION" ? "Produção" : "Homologação"}
+                </Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Número / série</Text>
+                <Text fw={500}>
+                  {selectedDocument.number
+                    ? `${selectedDocument.number} / ${selectedDocument.series || "—"}`
+                    : "—"}
+                </Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Protocolo</Text>
+                <Text fw={500}>{selectedDocument.protocol || "—"}</Text>
+              </div>
+              <div>
+                <Text size="xs" c="dimmed">Status Focus / SEFAZ</Text>
+                <Text fw={500}>
+                  {selectedDocument.focus_status || "—"}
+                  {selectedDocument.sefaz_code ? ` / ${selectedDocument.sefaz_code}` : ""}
+                </Text>
+              </div>
+            </SimpleGrid>
+
+            <div>
+              <Text size="xs" c="dimmed">Chave de acesso</Text>
+              <Text fw={500} style={{ wordBreak: "break-all" }}>
+                {selectedDocument.access_key || "—"}
+              </Text>
+            </div>
+
+            <div>
+              <Text size="xs" c="dimmed">Destinatário</Text>
+              <Text fw={500}>
+                {selectedDocument.recipient.name || "Consumidor não identificado"}
+              </Text>
+              {selectedDocument.recipient.tax_id && (
+                <Text size="sm">{selectedDocument.recipient.tax_id}</Text>
+              )}
+              {selectedDocument.recipient.address && (
+                <Text size="sm" c="dimmed">
+                  {selectedDocument.recipient.address.street}, {selectedDocument.recipient.address.number}
+                  {selectedDocument.recipient.address.complement
+                    ? `, ${selectedDocument.recipient.address.complement}`
+                    : ""}
+                  {` — ${selectedDocument.recipient.address.city}/${selectedDocument.recipient.address.state}`}
+                </Text>
+              )}
+            </div>
+
+            {selectedDocument.manual_description && (
+              <div>
+                <Text size="xs" c="dimmed">Descrição</Text>
+                <Text>{selectedDocument.manual_description}</Text>
+              </div>
+            )}
+
+            {selectedDocument.payment_methods.length > 0 && (
+              <div>
+                <Text size="xs" c="dimmed">Pagamento</Text>
+                <Text>
+                  {selectedDocument.payment_methods
+                    .map((payment) =>
+                      paymentLabels[String(payment.forma_pagamento)] ??
+                      String(payment.forma_pagamento ?? "—"),
+                    )
+                    .join(", ")}
+                </Text>
+              </div>
+            )}
+
+            {selectedDocument.error_message && (
+              <div>
+                <Text size="xs" c="dimmed">Detalhe da situação</Text>
+                <Text>{selectedDocument.error_message}</Text>
+              </div>
+            )}
+
+            <Group justify="flex-end">
+              {selectedDocument.danfe_url && (
+                <Tooltip label="Visualizar DANFE (PDF)">
+                  <Button
+                    component="a"
+                    href={selectedDocument.danfe_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="light"
+                    color="red"
+                    aria-label="Visualizar DANFE em PDF"
+                  >
+                    <IconFileTypePdf size={20} />
+                  </Button>
+                </Tooltip>
+              )}
+              {selectedDocument.xml_url && (
+                <Tooltip label="Visualizar XML">
+                  <Button
+                    component="a"
+                    href={selectedDocument.xml_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="light"
+                    color="orange"
+                    aria-label="Visualizar XML"
+                  >
+                    <IconFileCode size={20} />
+                  </Button>
+                </Tooltip>
+              )}
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
       <Modal opened={opened} onClose={handlers.close} title="Emitir documento fiscal" size="lg">
         <Stack gap="md">
           <Grid>
@@ -376,27 +631,83 @@ export function FiscalDocumentsPage() {
                   ...(configuration?.package_emission_allowed
                     ? [{ value: "PACKAGE", label: "Pacote de refeições" }]
                     : []),
+                  ...(configuration?.manual_emission_allowed
+                    ? [{ value: "MANUAL", label: "Lançamento manual" }]
+                    : []),
                 ]}
                 value={sourceType}
                 allowDeselect={false}
                 onChange={(value) => {
-                  setSourceType((value as "LUNCH" | "PACKAGE") || "LUNCH");
+                  setSourceType(
+                    (value as "LUNCH" | "PACKAGE" | "MANUAL") || "LUNCH",
+                  );
                   setSourceId(null);
                 }}
               />
             </Grid.Col>
             <Grid.Col span={{ base: 12, sm: 7 }}>
-              <Select
-                label="Venda paga"
-                placeholder="Selecione a venda"
-                searchable
-                data={sourceOptions}
-                value={sourceId}
-                onChange={setSourceId}
-                nothingFoundMessage="Nenhuma venda elegível encontrada"
-              />
+              {sourceType !== "MANUAL" && (
+                <Select
+                  label="Venda paga"
+                  placeholder="Selecione a venda"
+                  searchable
+                  data={sourceOptions}
+                  value={sourceId}
+                  onChange={setSourceId}
+                  nothingFoundMessage="Nenhuma venda elegível encontrada"
+                />
+              )}
             </Grid.Col>
           </Grid>
+
+          {sourceType === "MANUAL" && (
+            <Grid>
+              <Grid.Col span={{ base: 12, sm: 4 }}>
+                <TextInput
+                  type="date"
+                  label="Data do movimento"
+                  required
+                  value={manualDate}
+                  onChange={(event) => setManualDate(event.currentTarget.value)}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 8 }}>
+                <TextInput
+                  label="Descrição"
+                  required
+                  value={manualDescription}
+                  onChange={(event) => setManualDescription(event.currentTarget.value)}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 6 }}>
+                <NumberInput
+                  label="Valor total"
+                  required
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  min={0.01}
+                  value={manualValue}
+                  onChange={setManualValue}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Select
+                  label="Forma de pagamento"
+                  data={[
+                    { value: "01", label: "Dinheiro" },
+                    { value: "20", label: "PIX" },
+                    { value: "99", label: "Outros / movimento consolidado" },
+                  ]}
+                  value={manualPaymentMethod}
+                  allowDeselect={false}
+                  onChange={(value) =>
+                    setManualPaymentMethod((value as "01" | "20" | "99") || "99")
+                  }
+                />
+              </Grid.Col>
+            </Grid>
+          )}
 
           <Grid>
             <Grid.Col span={{ base: 12, sm: 6 }}>

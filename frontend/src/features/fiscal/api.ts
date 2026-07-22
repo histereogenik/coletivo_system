@@ -14,10 +14,15 @@ export type FiscalDocument = {
   document_type: "NFE" | "NFCE";
   environment: "HOMOLOGATION" | "PRODUCTION";
   status: FiscalDocumentStatus;
-  source_type: "LUNCH" | "PACKAGE";
-  source_id: number;
+  source_type: "LUNCH" | "PACKAGE" | "MANUAL";
+  source_id: number | null;
+  manual_description: string;
+  manual_value_cents: number | null;
+  manual_payment_method: string;
   sale_date: string;
   recipient: FiscalRecipient;
+  items: Array<Record<string, unknown>>;
+  payment_methods: Array<Record<string, unknown>>;
   focus_status: string;
   number: string;
   series: string;
@@ -30,6 +35,7 @@ export type FiscalDocument = {
   emitted_at: string | null;
   authorized_at: string | null;
   created_at: string;
+  updated_at?: string;
 };
 
 export type FiscalAddress = {
@@ -52,8 +58,15 @@ export type FiscalRecipient = {
 };
 
 export type FiscalEmissionPayload = {
-  source_type: "LUNCH" | "PACKAGE";
-  source_id: number;
+  source_type: "LUNCH" | "PACKAGE" | "MANUAL";
+  source_id?: number;
+  manual?: {
+    sale_date: string;
+    description: string;
+    value_cents: number;
+    payment_method: "01" | "20" | "99";
+    request_key: string;
+  };
   recipient: FiscalRecipient;
   presence: 0 | 1 | 2 | 3 | 4 | 9;
 };
@@ -62,6 +75,7 @@ export type FiscalConfiguration = {
   environment: "homologation" | "production";
   production_allowed: boolean;
   package_emission_allowed: boolean;
+  manual_emission_allowed: boolean;
   webhook_configured: boolean;
   ready: boolean;
   missing: string[];

@@ -26,6 +26,7 @@ def document():
         document_type=FiscalDocument.DocumentType.NFCE,
         environment=FiscalDocument.Environment.HOMOLOGATION,
         status=FiscalDocument.Status.PROCESSING,
+        source_kind=FiscalDocument.SourceType.LUNCH,
         lunch=lunch,
         sale_date=lunch.date,
         recipient={},

@@ -56,6 +56,7 @@ class FiscalDocumentViewSet(viewsets.ReadOnlyModelViewSet):
                 "environment": settings.FOCUS_NFE_ENVIRONMENT,
                 "production_allowed": production_allowed,
                 "package_emission_allowed": settings.FISCAL_ALLOW_PACKAGE_EMISSION,
+                "manual_emission_allowed": settings.FISCAL_ALLOW_MANUAL_EMISSION,
                 "webhook_configured": bool(
                     settings.FOCUS_WEBHOOK_URL and settings.FOCUS_WEBHOOK_SECRET
                 ),

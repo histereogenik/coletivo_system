@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import patch
 
 import pytest
@@ -122,6 +123,37 @@ def test_focus_access_key_prefix_is_normalized_to_44_digits(mock_emit, api_clien
     assert response.status_code == 201
     assert response.data["access_key"] == "5" * 44
     assert len(FiscalDocument.objects.get().access_key) == 44
+
+
+@pytest.mark.django_db
+@override_settings(**FISCAL_SETTINGS, FOCUS_NFE_BASE_URL="https://homologacao.focusnfe.com.br")
+@patch(
+    "apps.fiscal.services.FocusNFeClient.emit",
+    return_value={
+        **authorized_response(),
+        "caminho_xml_nota_fiscal": "/arquivos_development/note.xml",
+        "caminho_danfe": "/arquivos_development/danfe.pdf",
+    },
+)
+def test_relative_focus_file_urls_are_resolved_against_environment(
+    mock_emit, api_client, superuser
+):
+    lunch = LunchFactory()
+    api_client.force_authenticate(user=superuser)
+
+    response = api_client.post(
+        reverse("fiscal-document-emit"),
+        {"source_type": "LUNCH", "source_id": lunch.id},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.data["xml_url"] == (
+        "https://homologacao.focusnfe.com.br/arquivos_development/note.xml"
+    )
+    assert response.data["danfe_url"] == (
+        "https://homologacao.focusnfe.com.br/arquivos_development/danfe.pdf"
+    )
 
 
 @pytest.mark.django_db
@@ -321,6 +353,65 @@ def test_package_emission_is_blocked_until_accounting_confirms_tax_event(api_cli
 
     assert response.status_code == 400
     assert "pacotes está bloqueada" in str(response.data["source_id"])
+
+
+@pytest.mark.django_db
+@override_settings(**(FISCAL_SETTINGS | {"FISCAL_ALLOW_MANUAL_EMISSION": True}))
+@patch("apps.fiscal.services.FocusNFeClient.emit", return_value=authorized_response())
+def test_emit_manual_consolidated_value_is_auditable_and_idempotent(
+    mock_emit, api_client, superuser
+):
+    api_client.force_authenticate(user=superuser)
+    request_key = uuid.uuid4()
+    payload = {
+        "source_type": "MANUAL",
+        "manual": {
+            "sale_date": "2026-07-22",
+            "description": "MOVIMENTO SEMANAL 20 A 26/07",
+            "value_cents": 125000,
+            "payment_method": "99",
+            "request_key": str(request_key),
+        },
+    }
+
+    first = api_client.post(reverse("fiscal-document-emit"), payload, format="json")
+    second = api_client.post(reverse("fiscal-document-emit"), payload, format="json")
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert mock_emit.call_count == 1
+    document = FiscalDocument.objects.get()
+    assert document.source_type == FiscalDocument.SourceType.MANUAL
+    assert document.source_id is None
+    assert document.manual_description == "MOVIMENTO SEMANAL 20 A 26/07"
+    focus_payload = mock_emit.call_args.args[2]
+    assert focus_payload["items"][0]["valor_bruto"] == "1250.00"
+    assert focus_payload["formas_pagamento"][0]["forma_pagamento"] == "99"
+    assert focus_payload["formas_pagamento"][0]["descricao_pagamento"]
+
+
+@pytest.mark.django_db
+@override_settings(**(FISCAL_SETTINGS | {"FISCAL_ALLOW_MANUAL_EMISSION": False}))
+def test_manual_emission_is_blocked_without_explicit_flag(api_client, superuser):
+    api_client.force_authenticate(user=superuser)
+
+    response = api_client.post(
+        reverse("fiscal-document-emit"),
+        {
+            "source_type": "MANUAL",
+            "manual": {
+                "sale_date": "2026-07-22",
+                "description": "MOVIMENTO SEMANAL",
+                "value_cents": 10000,
+                "payment_method": "99",
+                "request_key": str(uuid.uuid4()),
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "manual está bloqueada" in str(response.data["manual"])
 
 
 @pytest.mark.django_db

@@ -109,11 +109,39 @@ class FiscalRecipientSerializer(serializers.Serializer):
         return attrs
 
 
+class FiscalManualSourceSerializer(serializers.Serializer):
+    sale_date = serializers.DateField()
+    description = serializers.CharField(min_length=3, max_length=120)
+    value_cents = serializers.IntegerField(min_value=1)
+    payment_method = serializers.ChoiceField(choices=("01", "20", "99"))
+    request_key = serializers.UUIDField()
+
+
 class FiscalEmissionSerializer(serializers.Serializer):
-    source_type = serializers.ChoiceField(choices=("LUNCH", "PACKAGE"))
-    source_id = serializers.IntegerField(min_value=1)
+    source_type = serializers.ChoiceField(choices=("LUNCH", "PACKAGE", "MANUAL"))
+    source_id = serializers.IntegerField(min_value=1, required=False)
+    manual = FiscalManualSourceSerializer(required=False)
     recipient = FiscalRecipientSerializer(required=False, default=dict)
     presence = serializers.ChoiceField(choices=(0, 1, 2, 3, 4, 9), required=False, default=1)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs["source_type"] == "MANUAL":
+            if "manual" not in attrs:
+                raise serializers.ValidationError(
+                    {"manual": "Informe os dados do lançamento manual."}
+                )
+            if "source_id" in attrs:
+                raise serializers.ValidationError(
+                    {"source_id": "Lançamento manual não utiliza uma venda cadastrada."}
+                )
+        elif "source_id" not in attrs:
+            raise serializers.ValidationError({"source_id": "Selecione a venda que será faturada."})
+        elif "manual" in attrs:
+            raise serializers.ValidationError(
+                {"manual": "Dados manuais só podem ser usados na origem manual."}
+            )
+        return attrs
 
 
 class FiscalDocumentSerializer(serializers.ModelSerializer):
@@ -131,6 +159,9 @@ class FiscalDocumentSerializer(serializers.ModelSerializer):
             "status",
             "source_type",
             "source_id",
+            "manual_description",
+            "manual_value_cents",
+            "manual_payment_method",
             "sale_date",
             "recipient",
             "items",

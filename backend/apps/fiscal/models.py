@@ -6,6 +6,11 @@ from django.db import models
 
 
 class FiscalDocument(models.Model):
+    class SourceType(models.TextChoices):
+        LUNCH = "LUNCH", "Almoço avulso"
+        PACKAGE = "PACKAGE", "Pacote"
+        MANUAL = "MANUAL", "Lançamento manual"
+
     class DocumentType(models.TextChoices):
         NFE = "NFE", "NF-e"
         NFCE = "NFCE", "NFC-e"
@@ -25,6 +30,7 @@ class FiscalDocument(models.Model):
     document_type = models.CharField(max_length=4, choices=DocumentType.choices)
     environment = models.CharField(max_length=20, choices=Environment.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    source_kind = models.CharField(max_length=10, choices=SourceType.choices)
 
     lunch = models.ForeignKey(
         "lunch.Lunch",
@@ -40,6 +46,10 @@ class FiscalDocument(models.Model):
         blank=True,
         on_delete=models.PROTECT,
     )
+    manual_description = models.CharField(max_length=120, blank=True)
+    manual_value_cents = models.PositiveIntegerField(null=True, blank=True)
+    manual_payment_method = models.CharField(max_length=2, blank=True)
+    manual_request_key = models.UUIDField(null=True, blank=True, unique=True)
 
     sale_date = models.DateField()
     recipient = models.JSONField(default=dict)
@@ -75,23 +85,43 @@ class FiscalDocument(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    (models.Q(lunch__isnull=False) & models.Q(package__isnull=True))
-                    | (models.Q(lunch__isnull=True) & models.Q(package__isnull=False))
+                    (
+                        models.Q(source_kind="LUNCH")
+                        & models.Q(lunch__isnull=False)
+                        & models.Q(package__isnull=True)
+                        & models.Q(manual_value_cents__isnull=True)
+                    )
+                    | (
+                        models.Q(source_kind="PACKAGE")
+                        & models.Q(lunch__isnull=True)
+                        & models.Q(package__isnull=False)
+                        & models.Q(manual_value_cents__isnull=True)
+                    )
+                    | (
+                        models.Q(source_kind="MANUAL")
+                        & models.Q(lunch__isnull=True)
+                        & models.Q(package__isnull=True)
+                        & models.Q(manual_value_cents__gt=0)
+                        & models.Q(manual_request_key__isnull=False)
+                    )
                 ),
-                name="fiscal_document_has_exactly_one_source",
+                name="fiscal_document_has_valid_source",
             )
         ]
 
     @property
     def source_type(self):
-        return "LUNCH" if self.lunch_id else "PACKAGE"
+        return self.source_kind
 
     @property
     def source_id(self):
         return self.lunch_id or self.package_id
 
     def clean(self):
-        if bool(self.lunch_id) == bool(self.package_id):
+        source_count = sum(
+            (bool(self.lunch_id), bool(self.package_id), bool(self.manual_value_cents))
+        )
+        if source_count != 1:
             raise ValidationError("O documento fiscal deve possuir exatamente uma origem.")
 
     def __str__(self):

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -91,6 +92,7 @@ def _validate_source(source):
 def _source_fields(source):
     if isinstance(source, Lunch):
         return {
+            "source": source,
             "lunch": source,
             "package": None,
             "sale_date": source.date,
@@ -101,6 +103,7 @@ def _source_fields(source):
             "description": settings.FISCAL_MEAL_DESCRIPTION,
         }
     return {
+        "source": source,
         "lunch": None,
         "package": source,
         "sale_date": source.date,
@@ -109,6 +112,21 @@ def _source_fields(source):
         "total_cents": source.value_cents,
         "code": "PACOTE_REFEICAO",
         "description": settings.FISCAL_PACKAGE_DESCRIPTION,
+    }
+
+
+def _manual_source_fields(manual):
+    return {
+        "source": None,
+        "lunch": None,
+        "package": None,
+        "sale_date": manual["sale_date"],
+        "quantity": 1,
+        "unit_value_cents": manual["value_cents"],
+        "total_cents": manual["value_cents"],
+        "code": "LANCAMENTO_MANUAL",
+        "description": manual["description"],
+        "payment_method": manual["payment_method"],
     }
 
 
@@ -151,7 +169,19 @@ def _build_item(source_fields, cfop):
     return item
 
 
-def _build_payment(source, total_cents):
+def _build_payment(source_fields):
+    source = source_fields["source"]
+    total_cents = source_fields["total_cents"]
+    if source is None:
+        payment_code = source_fields["payment_method"]
+        payment = {
+            "indicador_pagamento": 0,
+            "forma_pagamento": payment_code,
+            "valor_pagamento": cents_to_decimal(total_cents),
+        }
+        if payment_code == "99":
+            payment["descricao_pagamento"] = "MOVIMENTO CONSOLIDADO"
+        return payment
     if source.payment_mode == source.PaymentMode.CARTAO:
         raise ValidationError(
             {
@@ -207,7 +237,7 @@ def _add_recipient(payload, recipient, document_type):
         payload["email_destinatario"] = recipient["email"]
 
 
-def _build_payload(document_type, source, source_fields, recipient, presence):
+def _build_payload(document_type, source_fields, recipient, presence):
     emitted_at = timezone.localtime()
     destination_state = (
         recipient.get("address", {}).get("state", settings.FISCAL_ISSUER_STATE)
@@ -222,7 +252,7 @@ def _build_payload(document_type, source, source_fields, recipient, presence):
     else:
         cfop = settings.FISCAL_MEAL_CFOP
     items = [_build_item(source_fields, cfop)]
-    payments = [_build_payment(source, source_fields["total_cents"])]
+    payments = [_build_payment(source_fields)]
     payload = {
         "cnpj_emitente": settings.FISCAL_ISSUER_CNPJ,
         "data_emissao": emitted_at.isoformat(),
@@ -251,17 +281,36 @@ def _source_filter(source):
 
 
 @transaction.atomic
-def _create_pending_document(*, source_type, source_id, recipient, presence, actor):
-    source = _get_source(source_type, source_id)
-    _validate_source(source)
-
-    if FiscalDocument.objects.filter(**_source_filter(source), status__in=ACTIVE_STATUSES).exists():
-        raise ValidationError({"source_id": "Esta venda já possui uma emissão fiscal ativa."})
+def _create_pending_document(
+    *, source_type, source_id=None, manual=None, recipient, presence, actor
+):
+    if source_type == FiscalDocument.SourceType.MANUAL:
+        if not settings.FISCAL_ALLOW_MANUAL_EMISSION:
+            raise ValidationError(
+                {
+                    "manual": (
+                        "Emissão manual está bloqueada até a contabilidade confirmar "
+                        "o uso de documentos consolidados."
+                    )
+                }
+            )
+        existing = FiscalDocument.objects.filter(manual_request_key=manual["request_key"]).first()
+        if existing:
+            return existing, existing.request_payload, False
+        source = None
+        source_fields = _manual_source_fields(manual)
+    else:
+        source = _get_source(source_type, source_id)
+        _validate_source(source)
+        if FiscalDocument.objects.filter(
+            **_source_filter(source), status__in=ACTIVE_STATUSES
+        ).exists():
+            raise ValidationError({"source_id": "Esta venda já possui uma emissão fiscal ativa."})
+        source_fields = _source_fields(source)
 
     document_type = _document_type(recipient)
-    source_fields = _source_fields(source)
     emitted_at, items, payments, payload = _build_payload(
-        document_type, source, source_fields, recipient, presence
+        document_type, source_fields, recipient, presence
     )
     environment = (
         FiscalDocument.Environment.PRODUCTION
@@ -271,8 +320,13 @@ def _create_pending_document(*, source_type, source_id, recipient, presence, act
     document = FiscalDocument.objects.create(
         document_type=document_type,
         environment=environment,
+        source_kind=source_type,
         lunch=source_fields["lunch"],
         package=source_fields["package"],
+        manual_description=manual["description"] if manual else "",
+        manual_value_cents=manual["value_cents"] if manual else None,
+        manual_payment_method=manual["payment_method"] if manual else "",
+        manual_request_key=manual["request_key"] if manual else None,
         sale_date=source_fields["sale_date"],
         recipient=recipient,
         items=items,
@@ -281,18 +335,23 @@ def _create_pending_document(*, source_type, source_id, recipient, presence, act
         emitted_at=emitted_at,
         created_by=actor,
     )
-    return document, payload
+    return document, payload, True
 
 
-def emit_fiscal_document(*, source_type, source_id, recipient, presence, actor, client=None):
+def emit_fiscal_document(
+    *, source_type, recipient, presence, actor, source_id=None, manual=None, client=None
+):
     validate_fiscal_settings()
-    document, payload = _create_pending_document(
+    document, payload, created = _create_pending_document(
         source_type=source_type,
         source_id=source_id,
+        manual=manual,
         recipient=recipient,
         presence=presence,
         actor=actor,
     )
+    if not created:
+        return document
 
     focus_client = client or FocusNFeClient()
     try:
@@ -340,6 +399,13 @@ def _access_key(value):
     return digits
 
 
+def _focus_resource_url(value):
+    value = str(value or "")
+    if not value or urlparse(value).scheme in {"http", "https"}:
+        return value
+    return urljoin(f"{settings.FOCUS_NFE_BASE_URL.rstrip('/')}/", value.lstrip("/"))
+
+
 def apply_focus_response(document, response):
     # Persist the complete provider response first. If a future mapping fails, the pending
     # document and its Focus reference remain available for a safe status recovery.
@@ -370,9 +436,13 @@ def apply_focus_response(document, response):
     document.access_key = _access_key(_first(response, "chave_nfe", "chave_nfce", "chave"))
     document.protocol = _limited_text(_first(response, "protocolo", "protocolo_autorizacao"), 30)
     document.xml_url = _limited_text(
-        _first(response, "caminho_xml_nota_fiscal", "caminho_xml", "url_xml"), 500
+        _focus_resource_url(_first(response, "caminho_xml_nota_fiscal", "caminho_xml", "url_xml")),
+        500,
     )
-    document.danfe_url = _limited_text(_first(response, "caminho_danfe", "url_danfe"), 500)
+    document.danfe_url = _limited_text(
+        _focus_resource_url(_first(response, "caminho_danfe", "url_danfe")),
+        500,
+    )
     document.sefaz_code = _limited_text(_first(response, "status_sefaz", "codigo_sefaz"), 20)
     document.error_message = str(_first(response, "mensagem_sefaz", "mensagem", "message", "erro"))
     if status == FiscalDocument.Status.AUTHORIZED and not document.authorized_at:

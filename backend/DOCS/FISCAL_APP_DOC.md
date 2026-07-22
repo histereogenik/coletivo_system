@@ -53,6 +53,8 @@ Configure uma URL HTTPS pública e um segredo forte:
 FOCUS_WEBHOOK_URL=https://api.exemplo.com/api/fiscal/webhooks/focus/
 FOCUS_WEBHOOK_SECRET=segredo-aleatorio-longo
 FOCUS_WEBHOOK_AUTHORIZATION_HEADER=X-Focus-Webhook-Token
+FISCAL_ALLOW_PACKAGE_EMISSION=False
+FISCAL_ALLOW_MANUAL_EMISSION=False
 ```
 
 Depois, registre o evento da NF-e na Focus de forma idempotente:
@@ -60,6 +62,12 @@ Depois, registre o evento da NF-e na Focus de forma idempotente:
 ```bash
 python manage.py configure_focus_webhook --event nfe
 ```
+
+Pacotes e lançamentos manuais possuem travas independentes. Em homologação, elas podem
+ser habilitadas para testes. Em produção, mantenha `FISCAL_ALLOW_PACKAGE_EMISSION` e
+`FISCAL_ALLOW_MANUAL_EMISSION` como `False` até a contabilidade confirmar o momento do
+fato gerador e se uma emissão consolidada pode ser utilizada. O lançamento manual registra
+data, descrição, valor, forma de pagamento e uma chave idempotente para auditoria.
 
 Na API pública atual da Focus, NFC-e normal é síncrona e não possui evento próprio na enumeração
 de webhooks; `nfce_contingencia` é destinado à contingência. Para NFC-e normal, o sistema usa a
