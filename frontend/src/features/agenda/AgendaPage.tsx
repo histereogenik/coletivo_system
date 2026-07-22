@@ -1,4 +1,13 @@
-﻿import { Button, Container, Group, Modal, MultiSelect, Select, TextInput, Title } from "@mantine/core";
+﻿import {
+  Button,
+  Container,
+  Group,
+  Modal,
+  MultiSelect,
+  Select,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { DateInput, TimeInput, type DateValue } from "@mantine/dates";
 import { Textarea } from "@mantine/core";
 import { IconCalendar, IconPlus } from "@tabler/icons-react";
@@ -18,7 +27,13 @@ import { API_BASE_URL } from "../../shared/api";
 import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
 import { fetchMembers } from "../lunch/membersApi";
-import { createAgendaEntry, deleteAgendaEntry, fetchAgenda, updateAgendaEntry, type AgendaEntry } from "./api";
+import {
+  createAgendaEntry,
+  deleteAgendaEntry,
+  fetchAgenda,
+  updateAgendaEntry,
+  type AgendaEntry,
+} from "./api";
 import { fetchAllDuties } from "../duties/api";
 
 void TextInput;
@@ -127,7 +142,8 @@ export function AgendaPage() {
     });
 
   const createMutation = useMutation({
-    mutationFn: (payload: Partial<AgendaEntry> & { member_ids?: number[] }) => createAgendaEntry(payload),
+    mutationFn: (payload: Partial<AgendaEntry> & { member_ids?: number[] }) =>
+      createAgendaEntry(payload),
     onSuccess: () => {
       invalidateAgenda();
       notifications.show({ message: "Registro criado na agenda.", color: "green" });
@@ -141,8 +157,13 @@ export function AgendaPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<AgendaEntry> & { member_ids?: number[] } }) =>
-      updateAgendaEntry(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: Partial<AgendaEntry> & { member_ids?: number[] };
+    }) => updateAgendaEntry(id, payload),
     onSuccess: () => {
       invalidateAgenda();
       notifications.show({ message: "Registro atualizado.", color: "green" });
@@ -233,7 +254,8 @@ export function AgendaPage() {
   const handleSelect = (info: DateSelectArg) => {
     const startDate = toIsoDateLocal(info.start);
     const startTime = info.startStr.split("T")[1]?.slice(0, 5) || "09:00";
-    const endTime = info.endStr && info.endStr.includes("T") ? info.endStr.split("T")[1]?.slice(0, 5) : "";
+    const endTime =
+      info.endStr && info.endStr.includes("T") ? info.endStr.split("T")[1]?.slice(0, 5) : "";
     setEditing(null);
     setFormState((prev) => ({
       ...prev,
@@ -353,14 +375,21 @@ export function AgendaPage() {
             data={(dutiesQuery.data || []).map((d) => ({ value: d.id.toString(), label: d.name }))}
             value={formState.duty ? formState.duty.toString() : null}
             allowDeselect={false}
-            onChange={(val) => setFormState((prev) => ({ ...prev, duty: val ? Number(val) : undefined }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, duty: val ? Number(val) : undefined }))
+            }
             placeholder="Selecione"
           />
           <MultiSelect
             label="Integrantes"
-            data={(membersQuery.data || []).map((m) => ({ value: m.id.toString(), label: m.full_name }))}
+            data={(membersQuery.data || []).map((m) => ({
+              value: m.id.toString(),
+              label: m.full_name,
+            }))}
             value={(formState.member_ids || []).map((id) => id.toString())}
-            onChange={(vals) => setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))}
+            onChange={(vals) =>
+              setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))
+            }
             searchable
             filter={accentInsensitiveOptionsFilter}
             placeholder="Escolha integrantes"
@@ -406,7 +435,10 @@ export function AgendaPage() {
             ) : (
               <span />
             )}
-            <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
               {editing ? "Salvar" : "Criar"}
             </Button>
           </Group>

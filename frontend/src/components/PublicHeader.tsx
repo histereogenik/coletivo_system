@@ -27,7 +27,13 @@ export function PublicHeader({ subtitle, mode = "landing" }: PublicHeaderProps) 
           </Button>
         </Group>
       ) : (
-        <Button component={Link} to="/" variant="subtle" color="dark" leftSection={<IconArrowLeft size={16} />}>
+        <Button
+          component={Link}
+          to="/"
+          variant="subtle"
+          color="dark"
+          leftSection={<IconArrowLeft size={16} />}
+        >
           Voltar para a página inicial
         </Button>
       )}

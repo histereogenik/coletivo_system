@@ -48,9 +48,7 @@ export async function fetchCreditSummary(owner: number) {
   return data;
 }
 
-export async function fetchCreditSummaries(
-  params?: Record<string, string | number | undefined>
-) {
+export async function fetchCreditSummaries(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get<PaginatedResponse<CreditSummary>>("/api/credits/summary/", {
     params,
   });

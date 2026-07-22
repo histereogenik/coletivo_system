@@ -230,7 +230,8 @@ export function PublicRegistrationPage() {
               <div>
                 <Title order={2}>Cadastro para o Almoço Coletivo</Title>
                 <Text c="dimmed" mt={4}>
-                  Preencha seus dados e, se quiser, já inclua o cadastro das crianças no mesmo envio.
+                  Preencha seus dados e, se quiser, já inclua o cadastro das crianças no mesmo
+                  envio.
                 </Text>
               </div>
             </Group>
@@ -241,7 +242,8 @@ export function PublicRegistrationPage() {
               <Alert color="red" title="Não foi possível carregar o formulário.">
                 <Stack gap="sm">
                   <Text size="sm">
-                    Tente novamente em instantes. Se o problema continuar, peça ajuda à equipe do coletivo.
+                    Tente novamente em instantes. Se o problema continuar, peça ajuda à equipe do
+                    coletivo.
                   </Text>
                   <Group>
                     <Button variant="outline" onClick={() => metaQuery.refetch()}>
@@ -281,7 +283,8 @@ export function PublicRegistrationPage() {
                     Seus dados
                   </Title>
                   <Text c="dimmed" size="sm">
-                    Os campos de categoria e dieta são obrigatórios. Os demais ajudam a equipe a conhecer melhor você.
+                    Os campos de categoria e dieta são obrigatórios. Os demais ajudam a equipe a
+                    conhecer melhor você.
                   </Text>
                 </div>
 
@@ -380,7 +383,8 @@ export function PublicRegistrationPage() {
                       <div>
                         <Text fw={600}>Nenhuma criança adicionada.</Text>
                         <Text size="sm" c="dimmed">
-                          Use o botão acima se quiser enviar os cadastros das crianças no mesmo formulário.
+                          Use o botão acima se quiser enviar os cadastros das crianças no mesmo
+                          formulário.
                         </Text>
                       </div>
                     </Group>

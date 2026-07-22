@@ -213,7 +213,14 @@ export function FinancialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters.entry_type, filters.category, filters.value, filters.date_from, filters.date_to, filters.search]);
+  }, [
+    filters.entry_type,
+    filters.category,
+    filters.value,
+    filters.date_from,
+    filters.date_to,
+    filters.search,
+  ]);
 
   useEffect(() => {
     setValueInput(filters.value);
@@ -337,7 +344,12 @@ export function FinancialPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
         {summaryStats.filtered &&
-        (filters.entry_type || filters.category || filters.date_from || filters.date_to || filters.value || filters.search) ? (
+        (filters.entry_type ||
+          filters.category ||
+          filters.date_from ||
+          filters.date_to ||
+          filters.value ||
+          filters.search) ? (
           <SummaryCard
             title="Balanço do filtro"
             value={formatCents(summaryStats.filtered.saldo_cents)}
@@ -465,7 +477,12 @@ export function FinancialPage() {
                 {isAuthenticated && (
                   <Table.Td ta="right">
                     <Group gap="xs" justify="flex-end">
-                      <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => openEdit(item)}
+                        aria-label="Editar"
+                      >
                         <IconPencil size={16} />
                       </Button>
                       <Button
@@ -558,7 +575,10 @@ export function FinancialPage() {
             locale="pt-br"
           />
           <Group justify="flex-end" mt="sm">
-            <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
               {editing ? "Salvar" : "Criar"}
             </Button>
           </Group>
@@ -567,5 +587,3 @@ export function FinancialPage() {
     </Container>
   );
 }
-
-

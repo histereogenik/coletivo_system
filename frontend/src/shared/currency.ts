@@ -17,4 +17,3 @@ export const parseReaisToCents = (value: string) => {
   if (Number.isNaN(parsed)) return NaN;
   return Math.round(parsed * 100);
 };
-

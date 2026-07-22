@@ -1,4 +1,14 @@
-import { Button, Card, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import {
+  Button,
+  Card,
+  Container,
+  Group,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { IconArrowRight, IconHeartHandshake, IconSoup, IconUsersGroup } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 import { PublicHeader } from "../../components/PublicHeader";
@@ -52,7 +62,12 @@ export function LandingPage() {
                 cotidiano, criando um ambiente onde cada encontro fortalece a vida em comunidade.
               </Text>
               <Group>
-                <Button component={Link} to="/cadastro" size="md" rightSection={<IconArrowRight size={16} />}>
+                <Button
+                  component={Link}
+                  to="/cadastro"
+                  size="md"
+                  rightSection={<IconArrowRight size={16} />}
+                >
                   Fazer cadastro
                 </Button>
                 <Button component={Link} to="/login" size="md" variant="outline">

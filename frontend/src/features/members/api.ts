@@ -84,7 +84,9 @@ export async function fetchPublicRegistrations(
 }
 
 export async function fetchPublicRegistration(id: number) {
-  const { data } = await api.get<PublicRegistration>(`/api/users/public-registrations-admin/${id}/`);
+  const { data } = await api.get<PublicRegistration>(
+    `/api/users/public-registrations-admin/${id}/`
+  );
   return data;
 }
 

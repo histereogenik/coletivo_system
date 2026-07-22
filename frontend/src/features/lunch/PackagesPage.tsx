@@ -215,11 +215,15 @@ export function PackagesPage() {
       modalHandlers.close();
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao criar pacote."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao criar pacote."),
+        color: "red",
+      }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Package> }) => updatePackage(id, payload),
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<Package> }) =>
+      updatePackage(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -227,7 +231,10 @@ export function PackagesPage() {
       modalHandlers.close();
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao atualizar pacote."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao atualizar pacote."),
+        color: "red",
+      }),
   });
 
   const deleteMutation = useMutation({
@@ -239,7 +246,10 @@ export function PackagesPage() {
       setPackageToDelete(null);
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao remover pacote."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao remover pacote."),
+        color: "red",
+      }),
   });
 
   const adjustMutation = useMutation({
@@ -550,20 +560,31 @@ export function PackagesPage() {
                 </Table.Td>
                 <Table.Td ta="right">
                   {formatCents(
-                    item.unit_value_cents ?? (item.quantity ? Math.round(item.value_cents / item.quantity) : 0)
+                    item.unit_value_cents ??
+                      (item.quantity ? Math.round(item.value_cents / item.quantity) : 0)
                   )}
                 </Table.Td>
                 <Table.Td ta="right">{formatCents(item.value_cents)}</Table.Td>
                 <Table.Td ta="right">
                   <Group gap="xs" justify="flex-end" wrap="nowrap">
                     <Tooltip label="Ver detalhes">
-                      <Button size="xs" variant="subtle" onClick={() => openDetails(item)} aria-label="Ver detalhes">
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => openDetails(item)}
+                        aria-label="Ver detalhes"
+                      >
                         <IconEye size={16} />
                       </Button>
                     </Tooltip>
                     <Group gap="xs" wrap="nowrap">
                       <Tooltip label="Editar">
-                        <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          onClick={() => openEdit(item)}
+                          aria-label="Editar"
+                        >
                           <IconPencil size={16} />
                         </Button>
                       </Tooltip>
@@ -614,7 +635,8 @@ export function PackagesPage() {
                 {selectedPackage?.member_name || `#${selectedPackage?.member ?? ""}`}
               </Title>
               <Text size="sm" c="dimmed">
-                Compra em {formatPtDate(selectedPackage?.date)} · Validade {formatPtDate(selectedPackage?.expiration)}
+                Compra em {formatPtDate(selectedPackage?.date)} · Validade{" "}
+                {formatPtDate(selectedPackage?.expiration)}
               </Text>
             </div>
             {selectedPackage && (
@@ -702,9 +724,7 @@ export function PackagesPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }}>
-                            Quantidade
-                          </Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>Quantidade</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
                           <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>
                           <Table.Th style={{ minWidth: 180 }}>Beneficiado</Table.Th>
@@ -766,7 +786,9 @@ export function PackagesPage() {
             nothingFoundMessage="Nenhum integrante"
             value={formState.member ? formState.member.toString() : null}
             allowDeselect={false}
-            onChange={(val) => setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, member: val ? Number(val) : undefined }))
+            }
           />
           <TextInput
             label="Valor (R$)"
@@ -777,7 +799,9 @@ export function PackagesPage() {
           <NumberInput
             label="Quantidade"
             value={formState.quantity ?? undefined}
-            onChange={(val) => setFormState((prev) => ({ ...prev, quantity: Number(val) || undefined }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, quantity: Number(val) || undefined }))
+            }
             min={1}
           />
           <TextInput label="Valor calculado" value={formatCents(totalValueCents)} readOnly />
@@ -804,7 +828,9 @@ export function PackagesPage() {
             ]}
             value={formState.payment_status}
             allowDeselect={false}
-            onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))
+            }
           />
           <Select
             label="Modo de pagamento"
@@ -819,7 +845,10 @@ export function PackagesPage() {
             onChange={(val) => setFormState((prev) => ({ ...prev, payment_mode: val || "PIX" }))}
           />
           <Group justify="flex-end" mt="sm">
-            <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
               {editing ? "Salvar" : "Criar"}
             </Button>
           </Group>

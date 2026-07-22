@@ -124,7 +124,7 @@ export function LunchesPage() {
     date_from: null,
     date_to: null,
   });
-  const [valueInput, setValueInput] = useState<string>("" );
+  const [valueInput, setValueInput] = useState<string>("");
   const [searchParams, setSearchParams] = useSearchParams();
   const processedNovoRef = useRef(false);
   const [page, setPage] = useState(1);
@@ -226,19 +226,30 @@ export function LunchesPage() {
       modalHandlers.close();
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao criar almoço."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao criar almoço."),
+        color: "red",
+      }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Lunch> & { use_package?: boolean } }) =>
-      updateLunch(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: Partial<Lunch> & { use_package?: boolean };
+    }) => updateLunch(id, payload),
     onSuccess: () => {
       invalidateLunchDependencies();
       notifications.show({ message: "Almoço atualizado.", color: "green" });
       modalHandlers.close();
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao atualizar almoço."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao atualizar almoço."),
+        color: "red",
+      }),
   });
 
   const deleteMutation = useMutation({
@@ -249,7 +260,10 @@ export function LunchesPage() {
       setLunchToDelete(null);
     },
     onError: (err: unknown) =>
-      notifications.show({ message: extractErrorMessage(err, "Erro ao remover almoço."), color: "red" }),
+      notifications.show({
+        message: extractErrorMessage(err, "Erro ao remover almoço."),
+        color: "red",
+      }),
   });
 
   const usingCredit = formState.payment_mode === "TROCA" && !formState.use_package;
@@ -261,7 +275,7 @@ export function LunchesPage() {
       notifications.show({ message: "Preencha integrante e data.", color: "red" });
       return;
     }
-    const creditOwner = usingCredit ? formState.credit_owner ?? formState.member : undefined;
+    const creditOwner = usingCredit ? (formState.credit_owner ?? formState.member) : undefined;
     if (usingCredit && !creditOwner) {
       notifications.show({ message: "Selecione a conta de trocas.", color: "red" });
       return;
@@ -273,9 +287,7 @@ export function LunchesPage() {
     }
     const dateIso = toIsoDate(dateValue) || "";
     const packageBeneficiary =
-      benefitingOtherMember && formState.package_beneficiary
-        ? formState.package_beneficiary
-        : null;
+      benefitingOtherMember && formState.package_beneficiary ? formState.package_beneficiary : null;
     if (benefitingOtherMember && !packageBeneficiary) {
       notifications.show({ message: "Selecione quem será beneficiado pelo pacote.", color: "red" });
       return;
@@ -395,7 +407,8 @@ export function LunchesPage() {
     );
   }
 
-  if (isLoading || membersQuery.isLoading || creditOwnersQuery.isLoading) return <Text>Carregando...</Text>;
+  if (isLoading || membersQuery.isLoading || creditOwnersQuery.isLoading)
+    return <Text>Carregando...</Text>;
   if (isError || !data || membersQuery.isError || !membersQuery.data || creditOwnersQuery.isError)
     return <Text c="red">Erro ao carregar almoços.</Text>;
 
@@ -428,7 +441,7 @@ export function LunchesPage() {
   const creditOwnerOptionsForForm =
     selectedCreditOwner &&
     !creditOwnerOptions.some((option) => option.value === selectedCreditOwner.id.toString())
-        ? [
+      ? [
           ...creditOwnerOptions,
           {
             value: selectedCreditOwner.id.toString(),
@@ -607,7 +620,12 @@ export function LunchesPage() {
                       </Tooltip>
                     )}
                     <Tooltip label="Editar">
-                      <Button size="xs" variant="subtle" onClick={() => openEdit(item)} aria-label="Editar">
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => openEdit(item)}
+                        aria-label="Editar"
+                      >
                         <IconPencil size={16} />
                       </Button>
                     </Tooltip>
@@ -652,28 +670,30 @@ export function LunchesPage() {
         title={editing ? "Editar almoço" : "Novo almoço"}
       >
         <div className="flex flex-col gap-3">
-            <Switch
-              label="Usar pacote"
-              checked={!!formState.use_package}
-              onChange={(e) =>
-                setFormState((prev) => ({
-                  ...prev,
-                  use_package: e.currentTarget.checked,
-                  member: e.currentTarget.checked ? undefined : prev.member,
-                  credit_owner: e.currentTarget.checked ? undefined : prev.credit_owner,
-                  package_beneficiary: undefined,
-                  payment_mode: e.currentTarget.checked ? "PIX" : prev.payment_mode,
-                  payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
-                  benefit_other_member: false,
-                }))
-              }
-            />
+          <Switch
+            label="Usar pacote"
+            checked={!!formState.use_package}
+            onChange={(e) =>
+              setFormState((prev) => ({
+                ...prev,
+                use_package: e.currentTarget.checked,
+                member: e.currentTarget.checked ? undefined : prev.member,
+                credit_owner: e.currentTarget.checked ? undefined : prev.credit_owner,
+                package_beneficiary: undefined,
+                payment_mode: e.currentTarget.checked ? "PIX" : prev.payment_mode,
+                payment_status: e.currentTarget.checked ? "PAGO" : prev.payment_status,
+                benefit_other_member: false,
+              }))
+            }
+          />
           <Select
             label={formState.use_package ? "Dono do pacote" : "Integrante"}
             data={memberOptionsSelect}
             searchable
             filter={accentInsensitiveOptionsFilter}
-            nothingFoundMessage={formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"}
+            nothingFoundMessage={
+              formState.use_package ? "Nenhum integrante com pacote" : "Nenhum integrante"
+            }
             value={formState.member ? formState.member.toString() : null}
             allowDeselect={false}
             onChange={(val) => {
@@ -718,7 +738,9 @@ export function LunchesPage() {
               searchable
               filter={accentInsensitiveOptionsFilter}
               nothingFoundMessage="Nenhum integrante encontrado"
-              value={formState.package_beneficiary ? formState.package_beneficiary.toString() : null}
+              value={
+                formState.package_beneficiary ? formState.package_beneficiary.toString() : null
+              }
               allowDeselect={false}
               onChange={(val) =>
                 setFormState((prev) => ({
@@ -751,7 +773,9 @@ export function LunchesPage() {
             value={formState.payment_status}
             disabled={usingPackage || usingCredit}
             allowDeselect={false}
-            onChange={(val) => setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, payment_status: val || "EM_ABERTO" }))
+            }
           />
           <Select
             label="Modo de pagamento"
@@ -769,7 +793,7 @@ export function LunchesPage() {
                 ...prev,
                 payment_mode: val || "PIX",
                 payment_status: val === "TROCA" ? "PAGO" : prev.payment_status,
-                credit_owner: val === "TROCA" ? prev.credit_owner ?? prev.member : undefined,
+                credit_owner: val === "TROCA" ? (prev.credit_owner ?? prev.member) : undefined,
               }))
             }
           />
@@ -791,7 +815,10 @@ export function LunchesPage() {
             />
           )}
           <Group justify="flex-end" mt="sm">
-            <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
               {editing ? "Salvar" : "Criar"}
             </Button>
           </Group>

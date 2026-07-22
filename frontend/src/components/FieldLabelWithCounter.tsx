@@ -5,10 +5,7 @@ type FieldLabelWithCounterProps = {
   counter: string;
 };
 
-export function FieldLabelWithCounter({
-  label,
-  counter,
-}: FieldLabelWithCounterProps) {
+export function FieldLabelWithCounter({ label, counter }: FieldLabelWithCounterProps) {
   return (
     <span
       style={{

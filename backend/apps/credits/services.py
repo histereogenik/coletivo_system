@@ -89,8 +89,7 @@ def sync_agenda_credit_entries(
     desired_owner_ids = {member.id for member in selected_members}
 
     description = (
-        f"Crédito por trabalho - {agenda_entry.duty.name} - "
-        f"{format_pt_date(agenda_entry.date)}"
+        f"Crédito por trabalho - {agenda_entry.duty.name} - " f"{format_pt_date(agenda_entry.date)}"
     )
 
     for member in selected_members:
@@ -168,8 +167,7 @@ def sync_lunch_credit_entry(
         )
 
     description = (
-        f"Almoço com crédito - {lunch.member.full_name} - "
-        f"{format_pt_date(lunch.date)}"
+        f"Almoço com crédito - {lunch.member.full_name} - " f"{format_pt_date(lunch.date)}"
     )
 
     if current_entry:

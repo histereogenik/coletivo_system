@@ -112,9 +112,7 @@ class PackageSerializer(serializers.ModelSerializer):
         ):
             used_quantity = self.instance.quantity - self.instance.remaining_quantity
             if quantity < used_quantity:
-                errors["quantity"] = (
-                    "Quantidade total não pode ser menor que refeições já usadas."
-                )
+                errors["quantity"] = "Quantidade total não pode ser menor que refeições já usadas."
             else:
                 remaining_quantity = quantity - used_quantity
         if (

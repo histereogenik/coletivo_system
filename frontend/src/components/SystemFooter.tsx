@@ -2,7 +2,7 @@ import { Anchor, Box, Container, Group, Image, Stack, Text } from "@mantine/core
 
 const currentYear = new Date().getFullYear();
 const trademark = "\u2122";
-const appVersion = "v1.1.1 - 04.05.2026";
+const appVersion = `v${__APP_VERSION__}`;
 
 const clientInfo = {
   companyName: `Alimento Imperativo${trademark}`,
@@ -52,12 +52,7 @@ export function SystemFooter() {
                 flexShrink: 0,
               }}
             >
-              <Image
-                src="/tusklogo.png"
-                alt="Logo da TUSK Sistemas"
-                w={106}
-                h={106}
-              />
+              <Image src="/tusklogo.png" alt="Logo da TUSK Sistemas" w={106} h={106} />
             </Box>
             <Stack gap={2}>
               <Text size="sm" c="dimmed">

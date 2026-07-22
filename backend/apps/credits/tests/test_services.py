@@ -38,8 +38,7 @@ def test_concluding_agenda_creates_credit_entries_for_each_member():
     assert all(entry.entry_type == CreditEntry.EntryType.CREDITO for entry in entries)
     assert all(entry.value_cents == 1800 for entry in entries)
     assert all(
-        entry.description == f"Crédito por trabalho - {duty.name} - 27/03/2026"
-        for entry in entries
+        entry.description == f"Crédito por trabalho - {duty.name} - 27/03/2026" for entry in entries
     )
 
 
@@ -235,12 +234,15 @@ def test_agenda_credit_offsets_existing_sustentador_debt():
     assert agenda_serializer.is_valid(), agenda_serializer.errors
     agenda_entry = agenda_serializer.save()
 
-    assert CreditEntry.objects.filter(
-        owner=member,
-        agenda_entry=agenda_entry,
-        entry_type=CreditEntry.EntryType.CREDITO,
-        value_cents=2500,
-    ).count() == 1
+    assert (
+        CreditEntry.objects.filter(
+            owner=member,
+            agenda_entry=agenda_entry,
+            entry_type=CreditEntry.EntryType.CREDITO,
+            value_cents=2500,
+        ).count()
+        == 1
+    )
     assert get_credit_balance(member.id) == 700
 
 

@@ -5,7 +5,7 @@ description = "Backend service for coletivo_system"
 authors = [
     {name = "Humberto Nacif",email = "gigantedeluz@gmail.com"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -14,10 +14,6 @@ dependencies = [
     "django-cors-headers (>=4.9.0,<5.0.0)",
     "psycopg2-binary (>=2.9.11,<3.0.0)",
     "djangorestframework-simplejwt (>=5.5.1,<6.0.0)",
-    "rest-framework-simplejwt (>=0.0.2,<0.0.3)",
-    "black (>=25.11.0,<26.0.0)",
-    "isort (>=7.0.0,<8.0.0)",
-    "ruff (>=0.14.6,<0.15.0)",
     "django-filter (>=25.2,<26.0)",
     "phonenumbers (>=9.0.19,<10.0.0)",
     "gunicorn (>=23.0.0,<24.0.0)",
@@ -29,10 +25,16 @@ dependencies = [
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+package-mode = false
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.1"
 pytest-django = "^4.11.1"
 factory-boy = "^3.3.3"
+black = "^26.3.1"
+isort = "^7.0.0"
+ruff = "^0.14.14"
 
 [tool.black]
 line-length = 100
@@ -47,7 +49,7 @@ skip_glob = ["*/migrations/*"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["apps", "ventus_backend"]
+src = ["apps", "config"]
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]

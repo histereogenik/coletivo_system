@@ -63,13 +63,21 @@ export function DutiesPage() {
     },
     onError: (err: unknown) => {
       const data = (err as { response?: { data?: unknown } })?.response?.data;
-      notifications.show({ message: data ? JSON.stringify(data) : "Erro ao criar função.", color: "red" });
+      notifications.show({
+        message: data ? JSON.stringify(data) : "Erro ao criar função.",
+        color: "red",
+      });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Duty> & { member_ids?: number[] } }) =>
-      updateDuty(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: Partial<Duty> & { member_ids?: number[] };
+    }) => updateDuty(id, payload),
     onSuccess: () => {
       invalidateDuties();
       notifications.show({ message: "Função atualizada.", color: "green" });
@@ -77,7 +85,10 @@ export function DutiesPage() {
     },
     onError: (err: unknown) => {
       const data = (err as { response?: { data?: unknown } })?.response?.data;
-      notifications.show({ message: data ? JSON.stringify(data) : "Erro ao atualizar função.", color: "red" });
+      notifications.show({
+        message: data ? JSON.stringify(data) : "Erro ao atualizar função.",
+        color: "red",
+      });
     },
   });
 
@@ -89,7 +100,10 @@ export function DutiesPage() {
     },
     onError: (err: unknown) => {
       const data = (err as { response?: { data?: unknown } })?.response?.data;
-      notifications.show({ message: data ? JSON.stringify(data) : "Erro ao remover função.", color: "red" });
+      notifications.show({
+        message: data ? JSON.stringify(data) : "Erro ao remover função.",
+        color: "red",
+      });
     },
   });
 
@@ -137,7 +151,6 @@ export function DutiesPage() {
   }, [dutiesData, totalPages]);
 
   const visibleDuties = duties;
-
 
   if (!isAuthenticated) {
     return (
@@ -208,7 +221,12 @@ export function DutiesPage() {
               </Table.Td>
               <Table.Td ta="right">
                 <Group gap="xs" justify="flex-end">
-                  <Button size="xs" variant="subtle" onClick={() => openEdit(duty)} aria-label="Editar">
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => openEdit(duty)}
+                    aria-label="Editar"
+                  >
                     <IconPencil size={16} />
                   </Button>
                   <Button
@@ -246,7 +264,11 @@ export function DutiesPage() {
         </Group>
       )}
 
-      <Modal opened={modalOpened} onClose={modalHandlers.close} title={editing ? "Editar função" : "Nova função"}>
+      <Modal
+        opened={modalOpened}
+        onClose={modalHandlers.close}
+        title={editing ? "Editar função" : "Nova função"}
+      >
         <div className="flex flex-col gap-3">
           <TextInput
             label="Nome"
@@ -273,15 +295,23 @@ export function DutiesPage() {
           />
           <MultiSelect
             label="Integrantes"
-            data={(membersQuery.data || []).map((m) => ({ value: m.id.toString(), label: m.full_name }))}
+            data={(membersQuery.data || []).map((m) => ({
+              value: m.id.toString(),
+              label: m.full_name,
+            }))}
             value={(formState.member_ids || []).map((id) => id.toString())}
-            onChange={(vals) => setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))}
+            onChange={(vals) =>
+              setFormState((prev) => ({ ...prev, member_ids: vals.map((v) => Number(v)) }))
+            }
             searchable
             filter={accentInsensitiveOptionsFilter}
             placeholder="Selecione integrantes"
           />
           <Group justify="flex-end" mt="sm">
-            <Button onClick={handleSubmit} loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              loading={createMutation.isPending || updateMutation.isPending}
+            >
               {editing ? "Salvar" : "Criar"}
             </Button>
           </Group>

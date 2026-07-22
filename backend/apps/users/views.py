@@ -1,5 +1,6 @@
-import django_filters
 import unicodedata
+
+import django_filters
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import status, viewsets
