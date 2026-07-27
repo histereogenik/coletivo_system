@@ -78,9 +78,7 @@ class PackageFilter(django_filters.FilterSet):
 class LunchViewSet(viewsets.ModelViewSet):
     queryset = Lunch.objects.select_related(
         "member", "credit_owner", "package", "package_beneficiary"
-    ).order_by(
-        "-date", "-created_at"
-    )
+    ).order_by("-date", "-created_at")
     serializer_class = LunchSerializer
     permission_classes = [SuperuserOnly]
     filterset_class = LunchFilter

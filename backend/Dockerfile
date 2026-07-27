@@ -7,6 +7,8 @@ WORKDIR /opt/app
 
 COPY pyproject.toml poetry.lock* ./
 
+ARG POETRY_INSTALL_OPTIONS="--only main"
+
 RUN apk update && \
     apk add --no-cache \
     build-base \
@@ -14,17 +16,17 @@ RUN apk update && \
     libffi-dev \
     openssl-dev \
     cargo && \
-    pip install --no-cache-dir poetry && \
+    python -m pip install --no-cache-dir --upgrade pip poetry && \
     poetry config virtualenvs.create false && \
-    poetry install --no-root --no-interaction --no-ansi && \
+    poetry install --no-root --no-interaction --no-ansi ${POETRY_INSTALL_OPTIONS} && \
     apk del build-base cargo
 
 COPY . .
 
 CMD ["sh", "-c", "\
     python manage.py migrate --no-input && \
-    python manage.py collectstatic --noinput || true && \
-    gunicorn config.wsgi:application \
+    python manage.py collectstatic --noinput && \
+    exec gunicorn config.wsgi:application \
       --bind 0.0.0.0:8000 \
       --workers ${GUNICORN_WORKERS:-4} \
       --timeout ${GUNICORN_TIMEOUT:-30} \

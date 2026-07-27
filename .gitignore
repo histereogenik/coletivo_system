@@ -237,3 +237,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local restore tests may contain production database dumps.
+/tmp/

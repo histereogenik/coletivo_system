@@ -1,4 +1,4 @@
-import { AppShell, Burger, Button, Group, Text, Title } from "@mantine/core";
+import { AppShell, Box, Burger, Button, Group, Image, Text } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +7,7 @@ const navItems = [
   { label: "Dashboard", to: "/painel" },
   { label: "Agenda", to: "/painel/agenda" },
   { label: "Financeiro", to: "/painel/financeiro" },
+  { label: "Notas fiscais", to: "/painel/notas-fiscais" },
   { label: "Trocas", to: "/painel/creditos" },
   { label: "Almoços", to: "/painel/lunches" },
   { label: "Pacotes", to: "/painel/pacotes" },
@@ -29,7 +30,7 @@ export function Layout() {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 68 }}
       navbar={{
         width: 220,
         breakpoint: "sm",
@@ -37,13 +38,31 @@ export function Layout() {
       }}
       padding="md"
     >
-      <AppShell.Header>
+      <AppShell.Header className="app-header-gradient">
         <Group h="100%" px="md" justify="space-between" gap="sm" wrap="wrap">
           <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={isMobile ? 4 : 3} lineClamp={1}>
-              Coletivo Dashboard
-            </Title>
+            <Box
+              component={Link}
+              to={isAuthenticated ? "/painel" : "/"}
+              aria-label={isAuthenticated ? "Ir para o dashboard" : "Ir para a página inicial"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                alignSelf: "stretch",
+                paddingInline: "14px 36px",
+                marginLeft: "-14px",
+                textDecoration: "none",
+              }}
+            >
+              <Image
+                src="/almologo.png"
+                alt="Almoço Coletivo"
+                h={isMobile ? 46 : 56}
+                w="auto"
+                fit="contain"
+              />
+            </Box>
           </Group>
           <Group gap={isMobile ? "xs" : "sm"} wrap="wrap">
             {isAuthenticated ? (
@@ -80,8 +99,9 @@ export function Layout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`rounded px-3 py-2 text-sm font-medium ${
-                  active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                aria-current={active ? "page" : undefined}
+                className={`sliding-underline rounded px-3 py-2 text-sm font-medium transition-colors ${
+                  active ? "text-blue-700" : "text-slate-700 hover:text-blue-700"
                 }`}
                 onClick={close}
               >

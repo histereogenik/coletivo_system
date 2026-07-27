@@ -151,17 +151,13 @@ export function CreditsPage() {
       owner: number;
       value_cents: number;
       description: string;
-    }) =>
-      payload.type === "CREDITO"
-        ? createManualCredit(payload)
-        : createManualDebit(payload),
+    }) => (payload.type === "CREDITO" ? createManualCredit(payload) : createManualDebit(payload)),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["credit-summaries"] });
       queryClient.invalidateQueries({ queryKey: ["credit-summary"] });
       queryClient.invalidateQueries({ queryKey: ["credit-entries"] });
       notifications.show({
-        message:
-          variables.type === "CREDITO" ? "Troca adicionada." : "Troca removida com sucesso.",
+        message: variables.type === "CREDITO" ? "Troca adicionada." : "Troca removida com sucesso.",
         color: "green",
       });
       setValueReais("");
@@ -205,10 +201,10 @@ export function CreditsPage() {
     label: member.full_name,
   }));
 
-  const selectedMember = selectedOwnerId ? memberById.get(selectedOwnerId) ?? null : null;
+  const selectedMember = selectedOwnerId ? (memberById.get(selectedOwnerId) ?? null) : null;
   const selectedSummaryRow =
     selectedOwnerId !== null
-      ? summaryRows.find((summary) => summary.owner === selectedOwnerId) ?? null
+      ? (summaryRows.find((summary) => summary.owner === selectedOwnerId) ?? null)
       : null;
 
   const openNewCreditsModal = () => {
@@ -325,9 +321,7 @@ export function CreditsPage() {
                   return (
                     <Table.Tr key={summary.owner}>
                       <Table.Td>{summary.owner_name}</Table.Td>
-                      <Table.Td>
-                        {member?.role ? memberRoleLabels[member.role] : "-"}
-                      </Table.Td>
+                      <Table.Td>{member?.role ? memberRoleLabels[member.role] : "-"}</Table.Td>
                       <Table.Td ta="right">{formatCents(summary.credits_cents)}</Table.Td>
                       <Table.Td ta="right">{formatCents(summary.debits_cents)}</Table.Td>
                       <Table.Td ta="right">
@@ -391,10 +385,7 @@ export function CreditsPage() {
               </Text>
             </div>
             {selectedOwnerId && selectedSummaryQuery.data && (
-              <Badge
-                size="lg"
-                color={getBalanceColor(selectedSummaryQuery.data.balance_cents)}
-              >
+              <Badge size="lg" color={getBalanceColor(selectedSummaryQuery.data.balance_cents)}>
                 {formatBalanceLabel(selectedSummaryQuery.data.balance_cents)}
               </Badge>
             )}
@@ -497,9 +488,7 @@ export function CreditsPage() {
                         <Table.Tr>
                           <Table.Th style={{ minWidth: 150 }}>Data</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Tipo</Table.Th>
-                          <Table.Th style={{ minWidth: 120 }}>
-                            Valor
-                          </Table.Th>
+                          <Table.Th style={{ minWidth: 120 }}>Valor</Table.Th>
                           <Table.Th style={{ minWidth: 120 }}>Origem</Table.Th>
                           <Table.Th style={{ minWidth: 180 }}>Beneficiário</Table.Th>
                           <Table.Th style={{ minWidth: 220 }}>Descrição</Table.Th>

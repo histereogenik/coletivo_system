@@ -2,7 +2,6 @@ import { Anchor, Box, Container, Group, Image, Stack, Text } from "@mantine/core
 
 const currentYear = new Date().getFullYear();
 const trademark = "\u2122";
-const appVersion = "v1.1.1 - 04.05.2026";
 
 const clientInfo = {
   companyName: `Alimento Imperativo${trademark}`,
@@ -12,7 +11,6 @@ const clientInfo = {
 
 const developerInfo = {
   companyName: `TUSK Sistemas${trademark}`,
-  email: "humberto.nacif@icloud.com",
   phone: "+55 62 93618-0408",
 };
 
@@ -29,20 +27,24 @@ export function SystemFooter() {
     >
       <Container size="xl" py="md">
         <Group justify="space-between" align="center" gap="lg">
-          <Stack gap={2}>
-            <Text size="sm">{clientInfo.companyName}</Text>
-            <Group gap="sm">
+          <Group gap="md" wrap="nowrap">
+            <Image
+              src="/almologo.png"
+              alt="Almoço Coletivo"
+              w={120}
+              h="auto"
+              fit="contain"
+              style={{ filter: "grayscale(1)", flexShrink: 0 }}
+            />
+            <Stack gap={2}>
               <Anchor href={`mailto:${clientInfo.email}`} size="sm" c="dimmed">
                 {clientInfo.email}
               </Anchor>
-              <Text size="sm" c="dimmed">
-                /
-              </Text>
               <Anchor href={`tel:${clientInfo.phone.replace(/\s+/g, "")}`} size="sm" c="dimmed">
                 {clientInfo.phone}
               </Anchor>
-            </Group>
-          </Stack>
+            </Stack>
+          </Group>
 
           <Group gap="sm" wrap="nowrap">
             <Box
@@ -52,42 +54,26 @@ export function SystemFooter() {
                 flexShrink: 0,
               }}
             >
-              <Image
-                src="/tusklogo.png"
-                alt="Logo da TUSK Sistemas"
-                w={106}
-                h={106}
-              />
+              <Image src="/tusklogo.png" alt="Logo da TUSK Sistemas" w={70} h={70} />
             </Box>
             <Stack gap={2}>
-              <Text size="sm" c="dimmed">
+              <Text fz={10} c="dimmed">
                 desenvolvido por {developerInfo.companyName}
               </Text>
-              <Group gap="sm">
-                <Anchor href={`mailto:${developerInfo.email}`} size="sm" c="dimmed">
-                  {developerInfo.email}
-                </Anchor>
-                <Text size="sm" c="dimmed">
-                  /
-                </Text>
-                <Anchor
-                  href={`tel:${developerInfo.phone.replace(/\s+/g, "")}`}
-                  size="sm"
-                  c="dimmed"
-                >
-                  {developerInfo.phone}
-                </Anchor>
-              </Group>
+              <Anchor
+                href={`tel:${developerInfo.phone.replace(/\s+/g, "")}`}
+                fz={10}
+                c="dimmed"
+              >
+                {developerInfo.phone}
+              </Anchor>
             </Stack>
           </Group>
         </Group>
 
-        <Group justify="space-between" gap="sm" mt="sm">
+        <Group gap="sm" mt="sm">
           <Text size="xs" c="dimmed">
             Copyright {currentYear} {clientInfo.companyName}.
-          </Text>
-          <Text size="8px" c="dimmed">
-            {appVersion}
           </Text>
         </Group>
       </Container>

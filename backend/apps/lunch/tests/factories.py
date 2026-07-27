@@ -1,6 +1,6 @@
-﻿import factory
+﻿from datetime import date, timedelta
 
-from datetime import date, timedelta
+import factory
 
 from apps.lunch.models import Lunch, Package
 from apps.users.tests.factories import MemberFactory

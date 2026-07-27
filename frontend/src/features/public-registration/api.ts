@@ -11,6 +11,9 @@ export async function fetchPublicRegistrationMeta() {
 }
 
 export async function submitPublicRegistration(payload: PublicRegistrationPayload) {
-  const { data } = await api.post<PublicRegistrationSubmitResponse>("/api/users/public-registrations/", payload);
+  const { data } = await api.post<PublicRegistrationSubmitResponse>(
+    "/api/users/public-registrations/",
+    payload
+  );
   return data;
 }

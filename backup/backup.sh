@@ -16,8 +16,14 @@ RETENTION_DAYS="${RETENTION_DAYS:-30}"
 DATE_UTC="$(date -u +%Y-%m-%d_%H-%M-%S)"
 FILE_NAME="${FILE_PREFIX}_${POSTGRES_DB}_${DATE_UTC}.sql.gz"
 FILE_PATH="${TMP_DIR}/${FILE_NAME}"
+SQL_FILE_PATH="${FILE_PATH%.gz}"
 
 mkdir -p "$TMP_DIR"
+
+cleanup() {
+  rm -f "$SQL_FILE_PATH" "$FILE_PATH"
+}
+trap cleanup EXIT HUP INT TERM
 
 echo "[backup] Starting pg_dump for database ${POSTGRES_DB}..."
 export PGPASSWORD="${POSTGRES_PASSWORD}"
@@ -28,7 +34,20 @@ pg_dump \
   --dbname="${POSTGRES_DB}" \
   --no-owner \
   --no-privileges \
-  | gzip > "$FILE_PATH"
+  > "$SQL_FILE_PATH"
+
+if [ ! -s "$SQL_FILE_PATH" ]; then
+  echo "[backup] pg_dump produced an empty file." >&2
+  exit 1
+fi
+
+echo "[backup] Compressing ${FILE_NAME%.gz}..."
+gzip -c "$SQL_FILE_PATH" > "$FILE_PATH"
+
+if [ ! -s "$FILE_PATH" ]; then
+  echo "[backup] Compression produced an empty file." >&2
+  exit 1
+fi
 
 echo "[backup] Uploading ${FILE_NAME} to ${GDRIVE_PATH}..."
 rclone copy "$FILE_PATH" "$GDRIVE_PATH"
@@ -38,5 +57,4 @@ if [ "$RETENTION_DAYS" -gt 0 ] 2>/dev/null; then
   rclone delete --min-age "${RETENTION_DAYS}d" "$GDRIVE_PATH"
 fi
 
-rm -f "$FILE_PATH"
 echo "[backup] Backup finished successfully."

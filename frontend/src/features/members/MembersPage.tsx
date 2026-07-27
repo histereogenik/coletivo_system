@@ -244,7 +244,8 @@ export function MembersPage() {
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Member> }) => updateMember(id, payload),
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<Member> }) =>
+      updateMember(id, payload),
     onSuccess: () => {
       invalidateMembers();
       notifications.show({ message: "Integrante atualizado.", color: "green" });
@@ -312,7 +313,10 @@ export function MembersPage() {
 
   const registrationResults = publicRegistrationsQuery.data?.results ?? [];
   const registrationTotalCount = publicRegistrationsQuery.data?.count ?? 0;
-  const registrationTotalPages = Math.max(1, Math.ceil(registrationTotalCount / registrationPageSize));
+  const registrationTotalPages = Math.max(
+    1,
+    Math.ceil(registrationTotalCount / registrationPageSize)
+  );
 
   const selectedRegistration =
     publicRegistrationDetailQuery.data ??
@@ -406,7 +410,7 @@ export function MembersPage() {
       email: memberFormState.is_child ? null : memberFormState.email?.trim() || null,
       address: memberFormState.is_child ? "" : memberFormState.address?.trim() || "",
       heard_about: memberFormState.is_child ? "" : memberFormState.heard_about?.trim() || "",
-      role: memberFormState.is_child ? null : memberFormState.role ?? null,
+      role: memberFormState.is_child ? null : (memberFormState.role ?? null),
       diet: memberFormState.diet,
       observations: memberFormState.observations?.trim() || "",
     };
@@ -589,7 +593,11 @@ export function MembersPage() {
                         <Table.Td>{memberDietLabels[member.diet]}</Table.Td>
                         <Table.Td ta="right">
                           <Group gap="xs" justify="flex-end">
-                            <Button size="xs" variant="subtle" onClick={() => openEditMember(member)}>
+                            <Button
+                              size="xs"
+                              variant="subtle"
+                              onClick={() => openEditMember(member)}
+                            >
                               <IconPencil size={16} />
                             </Button>
                             <Button
@@ -597,7 +605,8 @@ export function MembersPage() {
                               variant="outline"
                               color="red"
                               loading={
-                                deleteMemberMutation.isPending && deleteMemberMutation.variables === member.id
+                                deleteMemberMutation.isPending &&
+                                deleteMemberMutation.variables === member.id
                               }
                               onClick={() => setMemberToDelete(member)}
                             >
@@ -620,7 +629,12 @@ export function MembersPage() {
 
               {memberTotalCount > 0 && (
                 <Group justify="center" mt="md">
-                  <Pagination total={memberTotalPages} value={membersPage} onChange={setMembersPage} size="sm" />
+                  <Pagination
+                    total={memberTotalPages}
+                    value={membersPage}
+                    onChange={setMembersPage}
+                    size="sm"
+                  />
                 </Group>
               )}
             </>
@@ -667,7 +681,9 @@ export function MembersPage() {
           </Group>
 
           {publicRegistrationsQuery.isLoading && <Text size="sm">Carregando...</Text>}
-          {publicRegistrationsQuery.isError && <Text c="red">Erro ao carregar novos cadastros.</Text>}
+          {publicRegistrationsQuery.isError && (
+            <Text c="red">Erro ao carregar novos cadastros.</Text>
+          )}
 
           {!publicRegistrationsQuery.isLoading && !publicRegistrationsQuery.isError && (
             <>
@@ -799,12 +815,12 @@ export function MembersPage() {
               setMemberFormState((prev) => ({
                 ...prev,
                 is_child: nextIsChild,
-                responsible: nextIsChild ? prev.responsible ?? null : null,
-                phone: nextIsChild ? "" : prev.phone ?? "",
-                email: nextIsChild ? "" : prev.email ?? "",
-                address: nextIsChild ? "" : prev.address ?? "",
-                heard_about: nextIsChild ? "" : prev.heard_about ?? "",
-                role: nextIsChild ? null : prev.role ?? "AVULSO",
+                responsible: nextIsChild ? (prev.responsible ?? null) : null,
+                phone: nextIsChild ? "" : (prev.phone ?? ""),
+                email: nextIsChild ? "" : (prev.email ?? ""),
+                address: nextIsChild ? "" : (prev.address ?? ""),
+                heard_about: nextIsChild ? "" : (prev.heard_about ?? ""),
+                role: nextIsChild ? null : (prev.role ?? "AVULSO"),
               }));
             }}
           />
@@ -908,7 +924,10 @@ export function MembersPage() {
             styles={{ label: { width: "100%" } }}
           />
           <Group justify="flex-end">
-            <Button onClick={handleSubmitMember} loading={createMemberMutation.isPending || updateMemberMutation.isPending}>
+            <Button
+              onClick={handleSubmitMember}
+              loading={createMemberMutation.isPending || updateMemberMutation.isPending}
+            >
               {editingMember ? "Salvar" : "Criar"}
             </Button>
           </Group>
@@ -1055,7 +1074,11 @@ export function MembersPage() {
             <Button variant="outline" onClick={closeRejectRegistration}>
               Cancelar
             </Button>
-            <Button color="red" onClick={handleRejectRegistration} loading={rejectRegistrationMutation.isPending}>
+            <Button
+              color="red"
+              onClick={handleRejectRegistration}
+              loading={rejectRegistrationMutation.isPending}
+            >
               Confirmar rejeição
             </Button>
           </Group>

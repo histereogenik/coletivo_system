@@ -47,8 +47,11 @@ export function LoginPage() {
   const { isAuthenticated, isAuthResolved, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectState = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
-  const redirectTo = redirectState ? `${redirectState.pathname ?? "/painel"}${redirectState.search ?? ""}` : "/painel";
+  const redirectState = (location.state as { from?: { pathname?: string; search?: string } } | null)
+    ?.from;
+  const redirectTo = redirectState
+    ? `${redirectState.pathname ?? "/painel"}${redirectState.search ?? ""}`
+    : "/painel";
   const {
     register,
     handleSubmit,

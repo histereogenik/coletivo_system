@@ -1,4 +1,14 @@
-import { Badge, Button, Container, Group, ScrollArea, SimpleGrid, Table, Text, Title } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Container,
+  Group,
+  ScrollArea,
+  SimpleGrid,
+  Table,
+  Text,
+  Title,
+} from "@mantine/core";
 import { IconPackage, IconSoup, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -176,7 +186,8 @@ export function DashboardPage() {
             <div>
               <Title order={4}>Novos cadastros</Title>
               <Text size="sm" c="dimmed">
-                {pendingRegistrationsCount} pendente{pendingRegistrationsCount === 1 ? "" : "s"} aguardando revisão.
+                {pendingRegistrationsCount} pendente{pendingRegistrationsCount === 1 ? "" : "s"}{" "}
+                aguardando revisão.
               </Text>
             </div>
             <Button component={Link} to="/painel/integrantes?tab=novos-cadastros" variant="outline">
