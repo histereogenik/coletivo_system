@@ -34,7 +34,7 @@ import {
   updateAgendaEntry,
   type AgendaEntry,
 } from "./api";
-import { fetchAllDuties } from "../duties/api";
+import { fetchDutyOptions } from "../duties/api";
 
 void TextInput;
 
@@ -132,7 +132,7 @@ export function AgendaPage() {
 
   const dutiesQuery = useQuery({
     queryKey: ["duties-for-agenda"],
-    queryFn: () => fetchAllDuties(),
+    queryFn: () => fetchDutyOptions(),
     enabled: isAuthenticated,
   });
 

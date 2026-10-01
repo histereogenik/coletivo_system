@@ -23,6 +23,12 @@ export type LunchSummary = {
   count: number;
 };
 
+export type LunchCreditOwnerOption = {
+  owner: number;
+  owner_name: string;
+  balance_cents: number;
+};
+
 export type Package = {
   id: number;
   member: number;
@@ -62,6 +68,16 @@ export async function fetchLunches(params?: Record<string, string | number | und
 
 export async function fetchLunchSummary(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get<LunchSummary>("/api/lunch/lunches/summary/", { params });
+  return data;
+}
+
+export async function fetchLunchCreditOwnerOptions(
+  params?: Record<string, string | number | undefined>
+) {
+  const { data } = await api.get<PaginatedResponse<LunchCreditOwnerOption>>(
+    "/api/lunch/credit-owner-options/",
+    { params }
+  );
   return data;
 }
 

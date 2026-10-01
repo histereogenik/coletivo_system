@@ -91,7 +91,7 @@ export function DashboardPage() {
           </Button>
           <Button
             component={Link}
-            to="/painel/lunches?novo=1"
+            to="/painel/almocos?novo=1"
             fullWidth
             size="lg"
             color="teal"

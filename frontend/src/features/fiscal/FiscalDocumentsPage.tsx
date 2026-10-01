@@ -31,11 +31,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { formatCents } from "../../shared/currency";
 import { extractErrorMessage } from "../../shared/errors";
-import { fetchLunches, fetchPackages } from "../lunch/api";
 import {
   emitFiscalDocument,
   fetchFiscalConfiguration,
   fetchFiscalDocuments,
+  fetchFiscalSources,
   refreshFiscalDocument,
   type FiscalDocument,
   type FiscalEmissionPayload,
@@ -147,30 +147,25 @@ export function FiscalDocumentsPage() {
 
   const lunchesQuery = useQuery({
     queryKey: ["fiscal-source-lunches"],
-    queryFn: () =>
-      fetchLunches({ page: 1, page_size: 200, payment_status: "PAGO", has_package: "false" }),
+    queryFn: () => fetchFiscalSources("LUNCH"),
     enabled: opened,
   });
 
   const packagesQuery = useQuery({
     queryKey: ["fiscal-source-packages"],
-    queryFn: () => fetchPackages({ page: 1, page_size: 200, payment_status: "PAGO" }),
+    queryFn: () => fetchFiscalSources("PACKAGE"),
     enabled: opened,
   });
 
   const sourceOptions = useMemo(() => {
     if (sourceType === "MANUAL") return [];
     if (sourceType === "LUNCH") {
-      return (lunchesQuery.data?.results ?? [])
-        .filter((item) => item.value_cents > 0 && item.payment_mode !== "TROCA" && !item.package)
-        .map((item) => ({
+      return (lunchesQuery.data?.results ?? []).map((item) => ({
           value: String(item.id),
           label: `${formatDate(item.date)} · ${item.member_name ?? `Almoço #${item.id}`} · ${formatCents(item.value_cents)}`,
         }));
     }
-    return (packagesQuery.data?.results ?? [])
-      .filter((item) => item.value_cents > 0 && item.payment_mode !== "TROCA")
-      .map((item) => ({
+    return (packagesQuery.data?.results ?? []).map((item) => ({
         value: String(item.id),
         label: `${formatDate(item.date)} · ${item.member_name ?? `Pacote #${item.id}`} · ${item.quantity} refeições · ${formatCents(item.value_cents)}`,
       }));

@@ -86,6 +86,22 @@ export type FiscalConfiguration = {
   };
 };
 
+export type FiscalSource = {
+  id: number;
+  member_name: string;
+  value_cents: number;
+  date: string;
+  payment_mode: string;
+  quantity?: number;
+};
+
+export async function fetchFiscalSources(sourceType: "LUNCH" | "PACKAGE") {
+  const { data } = await api.get<PaginatedResponse<FiscalSource>>("/api/fiscal/sources/", {
+    params: { source_type: sourceType, page: 1, page_size: 200 },
+  });
+  return data;
+}
+
 export async function fetchFiscalConfiguration() {
   const { data } = await api.get<FiscalConfiguration>("/api/fiscal/documents/configuration/");
   return data;

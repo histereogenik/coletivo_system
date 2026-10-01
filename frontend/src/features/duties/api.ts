@@ -17,6 +17,11 @@ export async function fetchAllDuties() {
   return fetchAllPages<Duty>("/api/duties/duties/");
 }
 
+export async function fetchDutyOptions() {
+  const { data } = await api.get<Array<Pick<Duty, "id" | "name">>>("/api/duties/options/");
+  return data;
+}
+
 export async function createDuty(payload: Partial<Duty> & { member_ids?: number[] }) {
   const { data } = await api.post<Duty>("/api/duties/duties/", payload);
   return data;
