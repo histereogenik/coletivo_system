@@ -2,6 +2,8 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.common.dates import format_pt_date
+from apps.common.audit import changed_values, record_audit_event, snapshot
+from apps.common.models import AuditEvent
 from apps.common.roles import promote_role
 from apps.credits.services import sync_lunch_credit_entry
 from apps.financial.models import FinancialEntry
@@ -10,6 +12,8 @@ from apps.users.models import Member
 
 
 class PackageSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.get_username", read_only=True)
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
     unit_value_cents = serializers.IntegerField(required=False)
@@ -32,8 +36,20 @@ class PackageSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
+        ]
         extra_kwargs = {
             "value_cents": {"required": False},
             "remaining_quantity": {"required": False},
@@ -140,7 +156,14 @@ class PackageSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         instance = super().create(validated_data)
-        promote_role(instance.member, Member.Role.MENSALISTA)
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        promote_role(
+            instance.member,
+            Member.Role.MENSALISTA,
+            actor=actor,
+            request=request,
+        )
         self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
         return instance
 
@@ -175,6 +198,7 @@ class PackageSerializer(serializers.ModelSerializer):
                     entry.description = description
                     entry.entry_type = FinancialEntry.EntryType.ENTRADA
                     entry.category = FinancialEntry.EntryCategory.ALMOCO
+                    entry.updated_by = instance.updated_by
                     entry.save()
             else:
                 FinancialEntry.objects.create(
@@ -184,6 +208,8 @@ class PackageSerializer(serializers.ModelSerializer):
                     value_cents=instance.value_cents,
                     date=instance.date,
                     package=instance,
+                    created_by=instance.created_by,
+                    updated_by=instance.updated_by,
                 )
         elif was_paid and entry:
             entry.delete()
@@ -234,6 +260,8 @@ class ManualPackageEntrySerializer(serializers.Serializer):
 
 
 class LunchSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.get_username", read_only=True)
     member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
     member_name = serializers.CharField(source="member.full_name", read_only=True)
     credit_owner = serializers.PrimaryKeyRelatedField(
@@ -279,8 +307,20 @@ class LunchSerializer(serializers.ModelSerializer):
             "payment_mode",
             "created_at",
             "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
+        ]
 
     def validate_value_cents(self, value):
         if value < 0:
@@ -362,6 +402,32 @@ class LunchSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def _request_context(self):
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        return request, actor
+
+    def _change_package_balance(self, package, *, delta, operation):
+        request, actor = self._request_context()
+        before = snapshot(package)
+        package.remaining_quantity += delta
+        if actor is not None:
+            package.updated_by = actor
+        update_fields = ["remaining_quantity", "status", "updated_at"]
+        if actor is not None:
+            update_fields.append("updated_by")
+        package.save(update_fields=update_fields)
+        if request is not None:
+            record_audit_event(
+                request=request,
+                instance=package,
+                action=AuditEvent.Action.SPECIAL,
+                changes={
+                    "operation": operation,
+                    **changed_values(before, snapshot(package)),
+                },
+            )
+
     def create(self, validated_data):
         validated_data.pop("use_package", None)
         with transaction.atomic():
@@ -370,8 +436,11 @@ class LunchSerializer(serializers.ModelSerializer):
                 package = instance.package
                 if package.remaining_quantity <= 0:
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
-                package.remaining_quantity -= 1
-                package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+                self._change_package_balance(
+                    package,
+                    delta=-1,
+                    operation="lunch_package_consumption",
+                )
                 PackageEntry.objects.create(
                     package=package,
                     entry_type=PackageEntry.EntryType.DEBITO,
@@ -380,8 +449,15 @@ class LunchSerializer(serializers.ModelSerializer):
                     description=self._build_package_usage_description(instance),
                     lunch=instance,
                     beneficiary=instance.package_beneficiary,
+                    created_by=instance.created_by,
                 )
-            promote_role(instance.member, Member.Role.MENSALISTA)
+            request, actor = self._request_context()
+            promote_role(
+                instance.member,
+                Member.Role.MENSALISTA,
+                actor=actor,
+                request=request,
+            )
             self._sync_credit_entry(instance)
             self._sync_financial_entry(instance, prev_status=None, prev_value=None, prev_date=None)
         return instance
@@ -399,8 +475,11 @@ class LunchSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             instance = super().update(instance, validated_data)
             if old_package and package_changed:
-                old_package.remaining_quantity += 1
-                old_package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+                self._change_package_balance(
+                    old_package,
+                    delta=1,
+                    operation="lunch_package_switch_restore",
+                )
                 PackageEntry.objects.filter(
                     lunch=instance,
                     origin=PackageEntry.Origin.LUNCH,
@@ -408,10 +487,13 @@ class LunchSerializer(serializers.ModelSerializer):
             if new_package and package_changed:
                 if new_package.remaining_quantity <= 0:
                     raise serializers.ValidationError({"package": "Pacote sem saldo."})
-                new_package.remaining_quantity -= 1
-                new_package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+                self._change_package_balance(
+                    new_package,
+                    delta=-1,
+                    operation="lunch_package_switch_consume",
+                )
             if new_package:
-                PackageEntry.objects.update_or_create(
+                package_entry, package_entry_created = PackageEntry.objects.update_or_create(
                     lunch=instance,
                     defaults={
                         "package": new_package,
@@ -422,6 +504,9 @@ class LunchSerializer(serializers.ModelSerializer):
                         "beneficiary": instance.package_beneficiary,
                     },
                 )
+                if package_entry_created:
+                    package_entry.created_by = instance.updated_by
+                    package_entry.save(update_fields=["created_by", "updated_at"])
             self._sync_credit_entry(instance)
             self._sync_financial_entry(
                 instance, prev_status=prev_status, prev_value=prev_value, prev_date=prev_date
@@ -459,6 +544,7 @@ class LunchSerializer(serializers.ModelSerializer):
                     entry.description = description
                     entry.entry_type = FinancialEntry.EntryType.ENTRADA
                     entry.category = FinancialEntry.EntryCategory.ALMOCO
+                    entry.updated_by = instance.updated_by
                     entry.save()
             else:
                 FinancialEntry.objects.create(
@@ -468,6 +554,8 @@ class LunchSerializer(serializers.ModelSerializer):
                     value_cents=instance.value_cents,
                     date=instance.date,
                     lunch=instance,
+                    created_by=instance.created_by,
+                    updated_by=instance.updated_by,
                 )
         elif was_paid and entry:
             entry.delete()

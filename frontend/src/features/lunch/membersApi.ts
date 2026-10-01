@@ -9,6 +9,6 @@ export type MemberOption = {
 };
 
 export async function fetchMembers() {
-  const { data } = await api.get<MemberOption[]>("/api/users/members/");
+  const { data } = await api.get<MemberOption[]>("/api/users/member-options/");
   return data;
 }

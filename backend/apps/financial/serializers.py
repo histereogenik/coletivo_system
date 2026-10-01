@@ -13,6 +13,9 @@ SAIDA_CATEGORIES = {
 
 
 class FinancialEntrySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.get_username", read_only=True)
+
     class Meta:
         model = FinancialEntry
         fields = [
@@ -24,8 +27,20 @@ class FinancialEntrySerializer(serializers.ModelSerializer):
             "date",
             "created_at",
             "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
+        ]
 
     def validate_value_cents(self, value: int) -> int:
         if value <= 0:

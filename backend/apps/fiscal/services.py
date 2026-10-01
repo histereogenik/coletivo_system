@@ -351,7 +351,7 @@ def emit_fiscal_document(
         actor=actor,
     )
     if not created:
-        return document
+        return document, False
 
     focus_client = client or FocusNFeClient()
     try:
@@ -374,10 +374,10 @@ def emit_fiscal_document(
                 "updated_at",
             ]
         )
-        return document
+        return document, True
 
     apply_focus_response(document, response)
-    return document
+    return document, True
 
 
 def _first(payload, *keys):

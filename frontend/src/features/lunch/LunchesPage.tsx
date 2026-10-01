@@ -26,7 +26,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { SummaryCard } from "../../components/SummaryCard";
 import { useAuth } from "../../context/AuthContext";
-import { fetchCreditSummaries } from "../credits/api";
 import { API_BASE_URL } from "../../shared/api";
 import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCents, formatCentsInput, parseReaisToCents } from "../../shared/currency";
@@ -37,6 +36,7 @@ import {
   deleteLunch,
   fetchLunches,
   fetchLunchSummary,
+  fetchLunchCreditOwnerOptions,
   markLunchPaid,
   updateLunch,
   Lunch,
@@ -193,8 +193,12 @@ export function LunchesPage() {
 
   const creditOwnersQuery = useQuery({
     queryKey: ["lunch-credit-owners"],
-    queryFn: () => fetchCreditSummaries({ page_size: creditOwnerPageSize }),
-    enabled: isAuthenticated,
+    queryFn: () => fetchLunchCreditOwnerOptions({ page_size: creditOwnerPageSize }),
+    enabled:
+      isAuthenticated &&
+      modalOpened &&
+      formState.payment_mode === "TROCA" &&
+      !formState.use_package,
   });
 
   const invalidateLunchDependencies = () => {
@@ -407,9 +411,8 @@ export function LunchesPage() {
     );
   }
 
-  if (isLoading || membersQuery.isLoading || creditOwnersQuery.isLoading)
-    return <Text>Carregando...</Text>;
-  if (isError || !data || membersQuery.isError || !membersQuery.data || creditOwnersQuery.isError)
+  if (isLoading || membersQuery.isLoading) return <Text>Carregando...</Text>;
+  if (isError || !data || membersQuery.isError || !membersQuery.data)
     return <Text c="red">Erro ao carregar almoços.</Text>;
 
   const canMarkPaid = (lunch: Lunch) => lunch.payment_status !== "PAGO";
@@ -801,6 +804,7 @@ export function LunchesPage() {
             <Select
               label="Conta de trocas"
               data={creditOwnerOptionsForForm}
+              disabled={creditOwnersQuery.isLoading || creditOwnersQuery.isError}
               searchable
               filter={accentInsensitiveOptionsFilter}
               nothingFoundMessage="Nenhum integrante encontrado"
@@ -813,6 +817,11 @@ export function LunchesPage() {
                 }))
               }
             />
+          )}
+          {usingCredit && creditOwnersQuery.isError && (
+            <Text c="red" size="sm">
+              Não foi possível carregar as contas de trocas.
+            </Text>
           )}
           <Group justify="flex-end" mt="sm">
             <Button

@@ -15,6 +15,8 @@ class MemberSummarySerializer(serializers.ModelSerializer):
 
 
 class AgendaEntrySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_username", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.get_username", read_only=True)
     duty = serializers.PrimaryKeyRelatedField(queryset=Duty.objects.all())
     duty_name = serializers.CharField(source="duty.name", read_only=True)
     members = MemberSummarySerializer(many=True, read_only=True)
@@ -47,8 +49,22 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
             "members_input",
             "created_at",
             "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "members", "duty_name"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "members",
+            "duty_name",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
+        ]
 
     def validate_notes(self, value: str) -> str:
         return validate_text_length(value, field_label="Notas") or ""
@@ -114,8 +130,15 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
     def _sync_members(self, instance, selected):
         if selected is not None:
             instance.members.set(selected)
+            request = self.context.get("request")
+            actor = request.user if request and request.user.is_authenticated else None
             for m in instance.members.all():
-                promote_role(m, Member.Role.SUSTENTADOR)
+                promote_role(
+                    m,
+                    Member.Role.SUSTENTADOR,
+                    actor=actor,
+                    request=request,
+                )
 
     def create(self, validated_data):
         selected_members = validated_data.pop("_selected_members", None)
@@ -123,8 +146,6 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
         if selected_members:
             self._sync_members(instance, selected_members)
             instance.duty.members.add(*selected_members)
-            for m in selected_members:
-                promote_role(m, Member.Role.SUSTENTADOR)
         request = self.context.get("request")
         actor = request.user if request and request.user.is_authenticated else None
         sync_agenda_credit_entries(instance, actor=actor)
@@ -136,8 +157,6 @@ class AgendaEntrySerializer(serializers.ModelSerializer):
         if selected_members is not None:
             self._sync_members(instance, selected_members)
             instance.duty.members.add(*selected_members)
-            for m in selected_members:
-                promote_role(m, Member.Role.SUSTENTADOR)
         request = self.context.get("request")
         actor = request.user if request and request.user.is_authenticated else None
         sync_agenda_credit_entries(instance, actor=actor)

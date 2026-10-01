@@ -8,6 +8,7 @@ from django.test import override_settings
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
+from apps.common.models import AuditEvent
 from apps.fiscal.client import FocusNFeError
 from apps.fiscal.models import FiscalDocument
 from apps.lunch.models import Lunch
@@ -375,10 +376,15 @@ def test_emit_manual_consolidated_value_is_auditable_and_idempotent(
     }
 
     first = api_client.post(reverse("fiscal-document-emit"), payload, format="json")
+    retry_operator = User.objects.create_superuser(
+        username="retry-fiscal",
+        password="strong-password",
+    )
+    api_client.force_authenticate(user=retry_operator)
     second = api_client.post(reverse("fiscal-document-emit"), payload, format="json")
 
     assert first.status_code == 201
-    assert second.status_code == 201
+    assert second.status_code == 200
     assert mock_emit.call_count == 1
     document = FiscalDocument.objects.get()
     assert document.source_type == FiscalDocument.SourceType.MANUAL
@@ -388,6 +394,18 @@ def test_emit_manual_consolidated_value_is_auditable_and_idempotent(
     assert focus_payload["items"][0]["valor_bruto"] == "1250.00"
     assert focus_payload["formas_pagamento"][0]["forma_pagamento"] == "99"
     assert focus_payload["formas_pagamento"][0]["descricao_pagamento"]
+    assert AuditEvent.objects.filter(
+        action=AuditEvent.Action.CREATE,
+        entity_type="fiscal.FiscalDocument",
+        object_id=str(document.pk),
+    ).count() == 1
+    retry_event = AuditEvent.objects.get(
+        action=AuditEvent.Action.SPECIAL,
+        entity_type="fiscal.FiscalDocument",
+        object_id=str(document.pk),
+    )
+    assert retry_event.actor == retry_operator
+    assert retry_event.changes == {"operation": "idempotent_emission_retry"}
 
 
 @pytest.mark.django_db

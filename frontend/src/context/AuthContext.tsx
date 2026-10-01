@@ -11,13 +11,18 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router-dom";
 import { api, ensureCsrfCookie } from "../shared/api";
+import { subscribeToSessionExpired } from "../shared/authSession";
 import { fetchAuthStatus } from "../shared/authStatus";
+import type { AuthUser, CapabilityKey } from "../shared/authStatus";
+import { queryClient } from "../shared/queryClient";
 
 type AuthContextType = {
   isAuthenticated: boolean;
   isAuthResolved: boolean;
-  login: () => void;
+  user: AuthUser | null;
+  login: () => Promise<void>;
   logout: () => void;
+  hasCapability: (capability: CapabilityKey) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,10 +30,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthResolved, setIsAuthResolved] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const hydrated = useRef(false);
   const navigate = useNavigate();
 
-  const login = useCallback(() => {
+  const login = useCallback(async () => {
+    const authenticatedUser = await fetchAuthStatus();
+    setUser(authenticatedUser);
     setIsAuthenticated(true);
     setIsAuthResolved(true);
     sessionStorage.setItem("hasAuth", "true");
@@ -36,8 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setIsAuthenticated(false);
+    setUser(null);
     setIsAuthResolved(true);
     sessionStorage.removeItem("hasAuth");
+    queryClient.clear();
     void ensureCsrfCookie()
       .then(() => api.post("/api/auth/logout/", {}, { withCredentials: true }))
       .catch(() => {});
@@ -45,9 +55,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate("/login");
   }, [navigate]);
 
+  useEffect(
+    () =>
+      subscribeToSessionExpired(() => {
+        setIsAuthenticated(false);
+        setUser(null);
+        setIsAuthResolved(true);
+        sessionStorage.removeItem("hasAuth");
+        queryClient.clear();
+        navigate("/login", { replace: true });
+      }),
+    [navigate],
+  );
+
+  const hasCapability = useCallback(
+    (capability: CapabilityKey) =>
+      Boolean(user?.is_superuser || user?.capabilities.includes(capability)),
+    [user]
+  );
+
   const value = useMemo(
-    () => ({ isAuthenticated, isAuthResolved, login, logout }),
-    [isAuthenticated, isAuthResolved, login, logout]
+    () => ({ isAuthenticated, isAuthResolved, user, login, logout, hasCapability }),
+    [isAuthenticated, isAuthResolved, user, login, logout, hasCapability]
   );
 
   useEffect(() => {
@@ -62,11 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     fetchAuthStatus()
-      .then(() => {
+      .then((authenticatedUser) => {
+        setUser(authenticatedUser);
         setIsAuthenticated(true);
       })
       .catch(() => {
         setIsAuthenticated(false);
+        setUser(null);
         sessionStorage.removeItem("hasAuth");
       })
       .finally(() => {

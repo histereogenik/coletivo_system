@@ -16,7 +16,8 @@ body {
 }
 
 .app-header-gradient {
-  background: linear-gradient(
+  background-color: #f0f4ff;
+  background-image: linear-gradient(
     90deg,
     #dce4ff 0%,
     #f0f4ff 50%,
@@ -27,7 +28,8 @@ body {
 
 @media (max-width: 640px) {
   .app-header-gradient {
-    background: linear-gradient(
+    background-color: #f0f4ff;
+    background-image: linear-gradient(
       90deg,
       #dce4ff 0%,
       #f0f4ff 54%,

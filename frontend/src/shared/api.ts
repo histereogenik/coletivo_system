@@ -1,4 +1,6 @@
 import axios, { AxiosHeaders, type AxiosRequestConfig } from "axios";
+import { notifySessionExpired } from "./authSession";
+import { queryClient } from "./queryClient";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://api.sistemacoletivo.com.br";
@@ -43,7 +45,10 @@ api.interceptors.request.use((config) => {
 });
 
 let isRefreshing = false;
-let pendingRequests: Array<() => void> = [];
+let pendingRequests: Array<{
+  resolve: () => void;
+  reject: (reason: unknown) => void;
+}> = [];
 const logoutAndClear = async () => {
   try {
     await ensureCsrfCookie();
@@ -52,7 +57,8 @@ const logoutAndClear = async () => {
     // ignore logout errors
   }
   sessionStorage.removeItem("hasAuth");
-  pendingRequests = [];
+  queryClient.clear();
+  notifySessionExpired();
   isRefreshing = false;
 };
 
@@ -91,9 +97,10 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && hasAuth && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          pendingRequests.push(() => {
-            resolve(api(originalRequest));
+        return new Promise((resolve, reject) => {
+          pendingRequests.push({
+            resolve: () => resolve(api(originalRequest)),
+            reject,
           });
         });
       }
@@ -101,10 +108,12 @@ api.interceptors.response.use(
       isRefreshing = true;
       try {
         await api.post("/api/auth/cookie/token/refresh/");
-        pendingRequests.forEach((cb) => cb());
+        pendingRequests.forEach((request) => request.resolve());
         pendingRequests = [];
         return api(originalRequest);
       } catch (refreshErr) {
+        pendingRequests.forEach((request) => request.reject(refreshErr));
+        pendingRequests = [];
         await logoutAndClear();
         if (method === "get") {
           return api(originalRequest);

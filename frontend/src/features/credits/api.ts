@@ -27,6 +27,8 @@ export type CreditSummary = {
   balance_cents: number;
 };
 
+export type CreditOwnerOption = Pick<CreditSummary, "owner" | "owner_name" | "balance_cents">;
+
 export type ManualCreditPayload = {
   owner: number;
   value_cents: number;
@@ -52,6 +54,16 @@ export async function fetchCreditSummaries(params?: Record<string, string | numb
   const { data } = await api.get<PaginatedResponse<CreditSummary>>("/api/credits/summary/", {
     params,
   });
+  return data;
+}
+
+export async function fetchCreditOwnerOptions(
+  params?: Record<string, string | number | undefined>,
+) {
+  const { data } = await api.get<PaginatedResponse<CreditOwnerOption>>(
+    "/api/credits/owner-options/",
+    { params },
+  );
   return data;
 }
 

@@ -6,8 +6,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.common.exports import cents_to_reais, create_xlsx_response
+from apps.common.audit import (
+    AuthoredAuditViewSetMixin,
+    changed_values,
+    record_audit_event,
+    snapshot,
+)
+from apps.common.models import AuditEvent
 from apps.common.pagination import DefaultPagination, OptionalPagination
-from apps.common.permissions import SuperuserOnly
+from apps.common.permissions import AreaPermission
 from apps.lunch.models import Lunch, Package, PackageEntry
 from apps.lunch.serializers import (
     LunchSerializer,
@@ -75,12 +82,13 @@ class PackageFilter(django_filters.FilterSet):
         fields = ["payment_status", "status", "member", "date", "expiration"]
 
 
-class LunchViewSet(viewsets.ModelViewSet):
+class LunchViewSet(AuthoredAuditViewSetMixin, viewsets.ModelViewSet):
     queryset = Lunch.objects.select_related(
         "member", "credit_owner", "package", "package_beneficiary"
     ).order_by("-date", "-created_at")
     serializer_class = LunchSerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_lunches"
     filterset_class = LunchFilter
     pagination_class = OptionalPagination
 
@@ -95,10 +103,23 @@ class LunchViewSet(viewsets.ModelViewSet):
             credit_entry.delete()
         if instance.package_id:
             package = instance.package
+            before = snapshot(package)
             if package.remaining_quantity is None:
                 package.remaining_quantity = 0
             package.remaining_quantity = min(package.remaining_quantity + 1, package.quantity)
-            package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+            package.updated_by = self.request.user
+            package.save(
+                update_fields=["remaining_quantity", "status", "updated_by", "updated_at"]
+            )
+            record_audit_event(
+                request=self.request,
+                instance=package,
+                action=AuditEvent.Action.SPECIAL,
+                changes={
+                    "operation": "lunch_deletion_package_restore",
+                    **changed_values(before, snapshot(package)),
+                },
+            )
         super().perform_destroy(instance)
 
     @action(detail=False, methods=["get"], url_path="summary")
@@ -156,10 +177,11 @@ class LunchViewSet(viewsets.ModelViewSet):
         return create_xlsx_response("almocos", headers, rows)
 
 
-class PackageViewSet(viewsets.ModelViewSet):
+class PackageViewSet(AuthoredAuditViewSetMixin, viewsets.ModelViewSet):
     queryset = Package.objects.select_related("member").order_by("-date", "-created_at")
     serializer_class = PackageSerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_packages"
     filterset_class = PackageFilter
     pagination_class = OptionalPagination
 
@@ -201,8 +223,10 @@ class PackageViewSet(viewsets.ModelViewSet):
         return create_xlsx_response("pacotes", headers, rows)
 
     @action(detail=True, methods=["post"], url_path="decrement")
+    @transaction.atomic
     def decrement(self, request, pk=None):
         package = self.get_object()
+        before = snapshot(package)
         amount = int(request.data.get("amount", 1))
         if amount <= 0:
             return Response({"detail": "Quantidade deve ser maior que zero."}, status=400)
@@ -212,13 +236,22 @@ class PackageViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Saldo insuficiente no pacote."}, status=400)
 
         package.remaining_quantity -= amount
-        package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+        package.updated_by = request.user
+        package.save(update_fields=["remaining_quantity", "status", "updated_by", "updated_at"])
+        record_audit_event(
+            request=request,
+            instance=package,
+            action=AuditEvent.Action.SPECIAL,
+            changes=changed_values(before, snapshot(package)),
+        )
         serializer = self.get_serializer(package)
         return Response(serializer.data)
 
     @action(detail=True, methods=["post"], url_path="increment")
+    @transaction.atomic
     def increment(self, request, pk=None):
         package = self.get_object()
+        before = snapshot(package)
         amount = int(request.data.get("amount", 1))
         if amount <= 0:
             return Response({"detail": "Quantidade deve ser maior que zero."}, status=400)
@@ -231,7 +264,14 @@ class PackageViewSet(viewsets.ModelViewSet):
             )
 
         package.remaining_quantity = target
-        package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+        package.updated_by = request.user
+        package.save(update_fields=["remaining_quantity", "status", "updated_by", "updated_at"])
+        record_audit_event(
+            request=request,
+            instance=package,
+            action=AuditEvent.Action.SPECIAL,
+            changes=changed_values(before, snapshot(package)),
+        )
         serializer = self.get_serializer(package)
         return Response(serializer.data)
 
@@ -249,6 +289,7 @@ class PackageViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="adjust")
     def adjust(self, request, pk=None):
         package = self.get_object()
+        before = snapshot(package)
         serializer = ManualPackageEntrySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         entry_type = serializer.validated_data["entry_type"]
@@ -271,7 +312,8 @@ class PackageViewSet(viewsets.ModelViewSet):
             package.remaining_quantity = target
 
         with transaction.atomic():
-            package.save(update_fields=["remaining_quantity", "status", "updated_at"])
+            package.updated_by = request.user
+            package.save(update_fields=["remaining_quantity", "status", "updated_by", "updated_at"])
             PackageEntry.objects.create(
                 package=package,
                 entry_type=entry_type,
@@ -279,6 +321,12 @@ class PackageViewSet(viewsets.ModelViewSet):
                 quantity=quantity,
                 description=serializer.validated_data["description"],
                 created_by=request.user if request.user.is_authenticated else None,
+            )
+            record_audit_event(
+                request=request,
+                instance=package,
+                action=AuditEvent.Action.SPECIAL,
+                changes=changed_values(before, snapshot(package)),
             )
 
         return Response(self.get_serializer(package).data)

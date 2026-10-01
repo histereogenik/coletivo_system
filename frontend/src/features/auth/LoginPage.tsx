@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { PublicHeader } from "../../components/PublicHeader";
+import { firstAllowedRoute } from "../../components/RequireCapability";
 import { useAuth } from "../../context/AuthContext";
 import { api, ensureCsrfCookie } from "../../shared/api";
 
@@ -44,7 +45,7 @@ const highlights = [
 ];
 
 export function LoginPage() {
-  const { isAuthenticated, isAuthResolved, login } = useAuth();
+  const { isAuthenticated, isAuthResolved, user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectState = (location.state as { from?: { pathname?: string; search?: string } } | null)
@@ -61,8 +62,11 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!isAuthResolved || !isAuthenticated) return;
-    navigate("/painel", { replace: true });
-  }, [isAuthResolved, isAuthenticated, navigate]);
+    const destination = redirectState
+      ? redirectTo
+      : firstAllowedRoute(user?.capabilities ?? [], Boolean(user?.is_superuser));
+    navigate(destination, { replace: true });
+  }, [isAuthResolved, isAuthenticated, navigate, redirectState, redirectTo, user]);
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -70,12 +74,26 @@ export function LoginPage() {
       await api.post("/api/auth/cookie/token/", values, {
         withCredentials: true,
       });
-      login();
-      notifications.show({ message: "Login realizado com sucesso.", color: "green" });
-      navigate(redirectTo, { replace: true });
     } catch {
       setError("password", { message: "Usuário ou senha inválidos" });
       notifications.show({ message: "Usuário ou senha inválidos.", color: "red" });
+      return;
+    }
+
+    try {
+      await login();
+      notifications.show({ message: "Login realizado com sucesso.", color: "green" });
+      navigate(redirectTo, { replace: true });
+    } catch {
+      try {
+        await api.post("/api/auth/logout/", {}, { withCredentials: true });
+      } catch {
+        // O estado local continua desautenticado mesmo se a limpeza remota falhar.
+      }
+      const message =
+        "As credenciais foram aceitas, mas não foi possível carregar sua conta. Tente novamente.";
+      setError("root", { message });
+      notifications.show({ message, color: "red" });
     }
   };
 
@@ -156,6 +174,11 @@ export function LoginPage() {
                 <Button type="submit" loading={isSubmitting} mt="sm">
                   Entrar
                 </Button>
+                {errors.root?.message && (
+                  <Text c="red" size="sm" role="alert">
+                    {errors.root.message}
+                  </Text>
+                )}
               </form>
             </Stack>
           </Card>

@@ -22,7 +22,7 @@ class Package(models.Model):
         EXPIRADO = "EXPIRADO", "Expirado"
         ESGOTADO = "ESGOTADO", "Esgotado"
 
-    member = models.ForeignKey(Member, related_name="packages", on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, related_name="packages", on_delete=models.PROTECT)
     unit_value_cents = models.PositiveIntegerField(help_text="Valor unitário em centavos.")
     value_cents = models.PositiveIntegerField(help_text="Valor em centavos.")
     date = models.DateField(help_text="Data de compra do pacote.")
@@ -38,6 +38,20 @@ class Package(models.Model):
     status = models.CharField(max_length=10, choices=PackageStatus.choices)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_packages",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_packages",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["-date", "-created_at"]
@@ -105,7 +119,7 @@ class Lunch(models.Model):
         DINHEIRO = "DINHEIRO", "Dinheiro"
         TROCA = "TROCA", "Troca"
 
-    member = models.ForeignKey(Member, related_name="lunches", on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, related_name="lunches", on_delete=models.PROTECT)
     credit_owner = models.ForeignKey(
         Member,
         related_name="credit_paid_lunches",
@@ -137,6 +151,20 @@ class Lunch(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_lunches",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_lunches",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["-date", "-created_at"]

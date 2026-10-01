@@ -5,6 +5,7 @@ from uuid import UUID
 from django.db import transaction
 from django.utils import timezone
 
+from apps.common.audit import changed_values, snapshot
 from apps.fiscal.models import FiscalDocument, FiscalWebhookEvent
 from apps.fiscal.services import apply_focus_response
 
@@ -52,7 +53,7 @@ def process_focus_webhook(payload):
     event = FiscalWebhookEvent.objects.select_for_update().filter(payload_hash=payload_hash).first()
     created = event is None
     if event and event.status != FiscalWebhookEvent.Status.FAILED:
-        return event, False
+        return event, False, None
     if event is None:
         event = FiscalWebhookEvent.objects.create(
             payload_hash=payload_hash,
@@ -78,24 +79,26 @@ def process_focus_webhook(payload):
         event.error_message = "Referência não encontrada no Coletivo System."
         event.processed_at = timezone.now()
         event.save(update_fields=["error_message", "processed_at"])
-        return event, True
+        return event, True, None
 
     try:
         # The savepoint keeps the audit transaction usable even if persistence of
         # the provider response raises a database error.
         with transaction.atomic():
+            before = snapshot(document)
             apply_focus_response(document, _provider_data(payload))
+            document_changes = changed_values(before, snapshot(document))
     except Exception:  # The endpoint returns 500 so Focus retries this delivery.
         event.status = FiscalWebhookEvent.Status.FAILED
         event.document = document
         event.error_message = "Não foi possível aplicar a atualização recebida da Focus."
         event.processed_at = timezone.now()
         event.save(update_fields=["status", "document", "error_message", "processed_at"])
-        return event, created
+        return event, created, None
 
     event.status = FiscalWebhookEvent.Status.PROCESSED
     event.document = document
     event.processed_at = timezone.now()
     event.error_message = ""
     event.save(update_fields=["status", "document", "error_message", "processed_at"])
-    return event, created
+    return event, created, document_changes

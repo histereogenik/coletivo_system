@@ -65,6 +65,8 @@ def normalize_phone_value(value: str | None) -> str | None:
 
 
 class MemberSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.get_full_name", read_only=True)
     responsible_name = serializers.SerializerMethodField(read_only=True)
     has_package = serializers.SerializerMethodField(read_only=True)
 
@@ -86,8 +88,19 @@ class MemberSerializer(serializers.ModelSerializer):
             "has_package",
             "created_at",
             "updated_at",
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = [
+            "created_by",
+            "created_by_name",
+            "updated_by",
+            "updated_by_name",
+            "created_at",
+            "updated_at",
+        ]
         extra_kwargs = {
             "full_name": {
                 "error_messages": {
@@ -170,6 +183,18 @@ class MemberSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+
+class MemberOptionSerializer(serializers.ModelSerializer):
+    has_package = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Member
+        fields = ["id", "full_name", "is_child", "role", "has_package"]
+
+    def get_has_package(self, instance):
+        today = timezone.localdate()
+        return instance.packages.filter(remaining_quantity__gt=0, expiration__gte=today).exists()
 
 
 class PublicRegistrationChildSerializer(serializers.ModelSerializer):

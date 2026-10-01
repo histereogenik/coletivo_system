@@ -8,6 +8,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
 import { RequireAuth } from "./components/RequireAuth";
+import { RequireCapability, RequireSuperuser } from "./components/RequireCapability";
 import { SystemFooter } from "./components/SystemFooter";
 import { queryClient } from "./shared/queryClient";
 import { theme } from "./shared/theme";
@@ -20,6 +21,9 @@ const AgendaPage = lazy(() =>
 );
 const LoginPage = lazy(() =>
   import("./features/auth/LoginPage").then((module) => ({ default: module.LoginPage }))
+);
+const NoAccessPage = lazy(() =>
+  import("./features/auth/NoAccessPage").then((module) => ({ default: module.NoAccessPage }))
 );
 const CreditsPage = lazy(() =>
   import("./features/credits/CreditsPage").then((module) => ({ default: module.CreditsPage }))
@@ -59,6 +63,14 @@ const PublicRegistrationPage = lazy(() =>
     default: module.PublicRegistrationPage,
   }))
 );
+const OperatorsPage = lazy(() =>
+  import("./features/operators/OperatorsPage").then((module) => ({
+    default: module.OperatorsPage,
+  }))
+);
+const AuditPage = lazy(() =>
+  import("./features/audit/AuditPage").then((module) => ({ default: module.AuditPage }))
+);
 
 function RouteFallback() {
   return (
@@ -88,15 +100,99 @@ function App() {
 
                 <Route element={<RequireAuth />}>
                   <Route path="/painel" element={<Layout />}>
-                    <Route index element={<DashboardPage />} />
-                    <Route path="agenda" element={<AgendaPage />} />
-                    <Route path="financeiro" element={<FinancialPage />} />
-                    <Route path="notas-fiscais" element={<FiscalDocumentsPage />} />
-                    <Route path="creditos" element={<CreditsPage />} />
-                    <Route path="lunches" element={<LunchesPage />} />
-                    <Route path="pacotes" element={<PackagesPage />} />
-                    <Route path="integrantes" element={<MembersPage />} />
-                    <Route path="funcoes" element={<DutiesPage />} />
+                    <Route path="sem-acesso" element={<NoAccessPage />} />
+                    <Route
+                      index
+                      element={
+                        <RequireSuperuser>
+                          <DashboardPage />
+                        </RequireSuperuser>
+                      }
+                    />
+                    <Route
+                      path="agenda"
+                      element={
+                        <RequireCapability capability="agenda">
+                          <AgendaPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="financeiro"
+                      element={
+                        <RequireCapability capability="financial">
+                          <FinancialPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="notas-fiscais"
+                      element={
+                        <RequireCapability capability="fiscal">
+                          <FiscalDocumentsPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="creditos"
+                      element={
+                        <RequireCapability capability="credits">
+                          <CreditsPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="almocos"
+                      element={
+                        <RequireCapability capability="lunches">
+                          <LunchesPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="lunches"
+                      element={<LegacyPanelRedirect to="/painel/almocos" />}
+                    />
+                    <Route
+                      path="pacotes"
+                      element={
+                        <RequireCapability capability="packages">
+                          <PackagesPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="integrantes"
+                      element={
+                        <RequireCapability capability="members">
+                          <MembersPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="funcoes"
+                      element={
+                        <RequireCapability capability="duties">
+                          <DutiesPage />
+                        </RequireCapability>
+                      }
+                    />
+                    <Route
+                      path="contas"
+                      element={
+                        <RequireSuperuser>
+                          <OperatorsPage />
+                        </RequireSuperuser>
+                      }
+                    />
+                    <Route
+                      path="auditoria"
+                      element={
+                        <RequireSuperuser>
+                          <AuditPage />
+                        </RequireSuperuser>
+                      }
+                    />
                   </Route>
                 </Route>
 
@@ -110,7 +206,8 @@ function App() {
                   element={<LegacyPanelRedirect to="/painel/notas-fiscais" />}
                 />
                 <Route path="/creditos" element={<LegacyPanelRedirect to="/painel/creditos" />} />
-                <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/lunches" />} />
+                <Route path="/almocos" element={<LegacyPanelRedirect to="/painel/almocos" />} />
+                <Route path="/lunches" element={<LegacyPanelRedirect to="/painel/almocos" />} />
                 <Route path="/pacotes" element={<LegacyPanelRedirect to="/painel/pacotes" />} />
                 <Route
                   path="/integrantes"

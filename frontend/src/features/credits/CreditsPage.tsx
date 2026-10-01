@@ -28,7 +28,7 @@ import { accentInsensitiveOptionsFilter } from "../../shared/comboboxFilters";
 import { formatCents, parseReaisToCents } from "../../shared/currency";
 import { extractErrorMessage } from "../../shared/errors";
 import { formatCharacterCounter, TEXT_FIELD_MAX_LENGTH } from "../../shared/formLimits";
-import { fetchMembers, type Member } from "../members/api";
+import { fetchMembers, type MemberOption as Member } from "../lunch/membersApi";
 import {
   createManualCredit,
   createManualDebit,

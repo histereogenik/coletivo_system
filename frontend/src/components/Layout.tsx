@@ -2,17 +2,25 @@ import { AppShell, Box, Burger, Button, Group, Image, Text } from "@mantine/core
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import type { CapabilityKey } from "../shared/authStatus";
 
-const navItems = [
-  { label: "Dashboard", to: "/painel" },
-  { label: "Agenda", to: "/painel/agenda" },
-  { label: "Financeiro", to: "/painel/financeiro" },
-  { label: "Notas fiscais", to: "/painel/notas-fiscais" },
-  { label: "Trocas", to: "/painel/creditos" },
-  { label: "Almoços", to: "/painel/lunches" },
-  { label: "Pacotes", to: "/painel/pacotes" },
-  { label: "Integrantes", to: "/painel/integrantes" },
-  { label: "Funções", to: "/painel/funcoes" },
+const navItems: Array<{
+  label: string;
+  to: string;
+  capability?: CapabilityKey;
+  superuserOnly?: boolean;
+}> = [
+  { label: "Dashboard", to: "/painel", superuserOnly: true },
+  { label: "Agenda", to: "/painel/agenda", capability: "agenda" },
+  { label: "Financeiro", to: "/painel/financeiro", capability: "financial" },
+  { label: "Notas fiscais", to: "/painel/notas-fiscais", capability: "fiscal" },
+  { label: "Trocas", to: "/painel/creditos", capability: "credits" },
+  { label: "Almoços", to: "/painel/almocos", capability: "lunches" },
+  { label: "Pacotes", to: "/painel/pacotes", capability: "packages" },
+  { label: "Integrantes", to: "/painel/integrantes", capability: "members" },
+  { label: "Funções", to: "/painel/funcoes", capability: "duties" },
+  { label: "Contas", to: "/painel/contas", superuserOnly: true },
+  { label: "Auditoria", to: "/painel/auditoria", superuserOnly: true },
 ];
 
 const isActivePath = (pathname: string, itemPath: string) => {
@@ -26,7 +34,14 @@ export function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const isMobile = useMediaQuery("(max-width: 640px)");
   const location = useLocation();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user, hasCapability } = useAuth();
+  const visibleNavItems = navItems.filter((item) =>
+    item.superuserOnly
+      ? user?.is_superuser
+      : item.capability
+        ? hasCapability(item.capability)
+        : true
+  );
 
   return (
     <AppShell
@@ -69,7 +84,7 @@ export function Layout() {
               <>
                 {!isMobile && (
                   <Text size="sm" c="dimmed">
-                    Logado
+                    {user?.display_name ?? "Logado"}
                   </Text>
                 )}
                 <Button variant="light" size={isMobile ? "xs" : "sm"} onClick={logout} miw={72}>
@@ -93,7 +108,7 @@ export function Layout() {
 
       <AppShell.Navbar p="md">
         <nav className="flex flex-col gap-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActivePath(location.pathname, item.to);
             return (
               <Link

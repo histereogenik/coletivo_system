@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "apps.users",
     "apps.authentication",
@@ -153,6 +154,15 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()
 ]
+
+AUDIT_TRUSTED_PROXY_IPS = [
+    address.strip()
+    for address in os.getenv("AUDIT_TRUSTED_PROXY_IPS", "").split(",")
+    if address.strip()
+]
+AUDIT_RETENTION_DAYS = int(os.getenv("AUDIT_RETENTION_DAYS", "730"))
+if AUDIT_RETENTION_DAYS < 1:
+    raise RuntimeError("AUDIT_RETENTION_DAYS deve ser maior que zero.")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
