@@ -20,7 +20,7 @@ export function SystemFooter() {
       component="footer"
       style={{
         position: "relative",
-        zIndex: 300,
+        zIndex: 150,
         borderTop: "1px solid var(--mantine-color-gray-3)",
         backgroundColor: "var(--mantine-color-body)",
       }}

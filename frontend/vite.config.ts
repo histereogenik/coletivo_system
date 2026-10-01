@@ -7,6 +7,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
+  build: {
+    cssTarget: "chrome61",
+  },
   server: {
     host: true,
     port: 5173,
