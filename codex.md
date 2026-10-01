@@ -104,10 +104,12 @@ helpers compartilhados em `shared`.
 - `/painel/financeiro`;
 - `/painel/notas-fiscais`;
 - `/painel/creditos`;
-- `/painel/lunches`;
+- `/painel/almocos`;
 - `/painel/pacotes`;
 - `/painel/integrantes`;
 - `/painel/funcoes`.
+- `/painel/contas` (somente superusuário);
+- `/painel/auditoria` (somente superusuário).
 
 Rotas antigas sem o prefixo `/painel` redirecionam para as rotas atuais preservando a query
 string.
@@ -126,9 +128,11 @@ Endpoints de autenticação:
 - `POST /api/auth/logout/`;
 - `GET /api/auth/status/`.
 
-O cadastro público e seus metadados aceitam acesso anônimo. No estado atual, todos os recursos
-operacionais e o dashboard usam `SuperuserOnly`; não existe ainda uma matriz de perfis
-administrativos intermediários. A decisão e a matriz proposta para uma evolução futura estão em
+O cadastro público e seus metadados aceitam acesso anônimo. Cada operador possui uma conta Django
+individual e recebe capacidades independentes para almoços, pacotes, financeiro, notas fiscais,
+trocas/créditos, agenda, integrantes e funções. Dashboard, gestão de contas e auditoria são
+exclusivos do superusuário. A API valida todas as permissões; o frontend apenas reflete as
+capacidades para navegação. A arquitetura e a matriz estão em
 `backend/DOCS/PERMISSIONS_STRATEGY.md`.
 
 ## Apps e regras de domínio
@@ -234,6 +238,11 @@ Reúne paginação, permissões, exportação XLSX, validações, limites de tex
 papéis e o exception handler global. Exclusões bloqueadas por relações protegidas retornam
 `409 Conflict` com uma mensagem legível.
 
+O model `AuditEvent` mantém uma trilha append-only de criações, alterações, exclusões e ações
+especiais, incluindo operador, origem, objeto, horário, alterações seguras, IP e identificador da
+requisição. Os models principais registram `created_by` e `updated_by`; históricos anteriores à
+migration permanecem com autoria desconhecida.
+
 ## Variáveis de ambiente
 
 Use os arquivos versionados como referência:
@@ -273,6 +282,17 @@ frontend é compilado em Node e copiado para uma imagem Nginx.
 - o histórico financeiro, de créditos e de pacotes deve ser preservado.
 
 ## Problemas operacionais conhecidos
+
+### Compatibilidade do CSS gerado
+
+O build define `cssTarget: "chrome61"` para evitar sintaxe CSS incompatível com navegadores ou
+Android WebViews antigos. O cabeçalho também mantém uma cor sólida de fallback sob o degradê.
+
+### Contas administrativas e auditoria
+
+Contas operacionais não devem ser compartilhadas. O superusuário cria e desativa operadores,
+seleciona suas áreas e conserva a própria conta para administração principal. Autoria e eventos
+de auditoria dependem do uso correto dessas identidades individuais.
 
 ### CSRF entre apex, `www` e subdomínio da API
 
