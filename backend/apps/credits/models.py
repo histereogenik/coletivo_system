@@ -45,7 +45,7 @@ class CreditEntry(models.Model):
         related_name="credit_entries",
         null=True,
         blank=True,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
     lunch = models.OneToOneField(
         Lunch,

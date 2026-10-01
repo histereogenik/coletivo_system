@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
+from django.conf import settings
 from django.db import models
 
 from apps.common.text_limits import MAX_TEXT_LENGTH
@@ -16,12 +17,26 @@ class AgendaEntry(models.Model):
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField(null=True, blank=True)
-    duty = models.ForeignKey(Duty, related_name="agenda_entries", on_delete=models.CASCADE)
+    duty = models.ForeignKey(Duty, related_name="agenda_entries", on_delete=models.PROTECT)
     members = models.ManyToManyField(Member, related_name="agenda_entries", blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANEJADO)
     notes = models.TextField(blank=True, validators=[MaxLengthValidator(MAX_TEXT_LENGTH)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_agenda_entries",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_agenda_entries",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["date", "start_time", "duty__name"]

@@ -2,17 +2,40 @@ import logging
 
 from django.conf import settings
 from django.middleware.csrf import get_token
+from django.db import transaction
+from django.db.models import F
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework import viewsets
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from apps.authentication.authentication import enforce_csrf
+from apps.authentication.capabilities import CAPABILITIES, get_user_capabilities
+from apps.authentication.models import OperatorProfile
+from apps.authentication.serializers import (
+    CookieTokenObtainPairSerializer,
+    OperatorAccountSerializer,
+)
+from apps.common.audit import changed_values, record_audit_event, snapshot
+from apps.common.models import AuditEvent
+from apps.common.permissions import SuperuserOnly
 
 logger = logging.getLogger("apps.authentication")
+
+
+def revoke_user_refresh_tokens(user) -> int:
+    revoked = 0
+    for outstanding_token in OutstandingToken.objects.filter(user=user):
+        _, created = BlacklistedToken.objects.get_or_create(token=outstanding_token)
+        revoked += int(created)
+    return revoked
 
 
 def get_client_ip(request) -> str:
@@ -69,6 +92,7 @@ def build_cookie_auth_response(
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CookieTokenObtainPairSerializer
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth_login"
 
@@ -120,11 +144,13 @@ class CookieTokenRefreshView(TokenRefreshView):
         serializer = self.get_serializer(data={"refresh": refresh_token})
         try:
             serializer.is_valid(raise_exception=True)
-        except APIException:
+        except (APIException, TokenError) as exc:
             logger.warning(
                 "Refresh por cookie falhou por token invalido.",
                 extra={"client_ip": get_client_ip(request)},
             )
+            if isinstance(exc, TokenError):
+                raise InvalidToken(str(exc)) from exc
             raise
 
         access = serializer.validated_data.get("access")
@@ -157,6 +183,15 @@ class LogoutView(TokenRefreshView):
 
     def post(self, request, *args, **kwargs):
         enforce_csrf(request)
+        refresh_token = request.data.get("refresh") or request.COOKIES.get("refresh_token")
+        if refresh_token:
+            try:
+                RefreshToken(refresh_token).blacklist()
+            except TokenError:
+                logger.warning(
+                    "Logout recebeu refresh token invalido ou ja revogado.",
+                    extra={"client_ip": get_client_ip(request)},
+                )
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)
         set_csrf_cookie(response, request)
@@ -175,7 +210,15 @@ class AuthStatusView(APIView):
 
     def get(self, request):
         user = request.user
-        response = Response({"id": user.id, "username": user.get_username()})
+        response = Response(
+            {
+                "id": user.id,
+                "username": user.get_username(),
+                "display_name": user.get_full_name() or user.get_username(),
+                "is_superuser": user.is_superuser,
+                "capabilities": get_user_capabilities(user),
+            }
+        )
         set_csrf_cookie(response, request)
         return response
 
@@ -190,10 +233,74 @@ class CsrfCookieView(APIView):
         return response
 
 
+class OperatorAccountViewSet(viewsets.ModelViewSet):
+    serializer_class = OperatorAccountSerializer
+    permission_classes = [SuperuserOnly]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            self.request.user.__class__.objects.filter(
+                operator_profile__isnull=False,
+                is_superuser=False,
+            )
+            .order_by("first_name", "username")
+            .distinct()
+        )
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            instance = serializer.save()
+            record_audit_event(
+                request=self.request,
+                instance=instance,
+                action=AuditEvent.Action.CREATE,
+                changes={"capabilities": get_user_capabilities(instance)},
+            )
+
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            security_changed = any(
+                field in serializer.validated_data
+                for field in ("password", "capabilities", "is_active")
+            )
+            before = snapshot(serializer.instance)
+            before["capabilities"] = get_user_capabilities(serializer.instance)
+            instance = serializer.save()
+            after = snapshot(instance)
+            after["capabilities"] = get_user_capabilities(instance)
+            changes = changed_values(before, after)
+            if "password" in serializer.validated_data:
+                changes["password_changed"] = True
+            record_audit_event(
+                request=self.request,
+                instance=instance,
+                action=AuditEvent.Action.UPDATE,
+                changes=changes,
+            )
+            if security_changed:
+                OperatorProfile.objects.filter(user=instance).update(
+                    auth_version=F("auth_version") + 1
+                )
+                revoke_user_refresh_tokens(instance)
+
+
+class CapabilityListView(APIView):
+    permission_classes = [SuperuserOnly]
+
+    def get(self, request):
+        return Response(
+            [{"key": item.key, "label": item.label, "route": item.route} for item in CAPABILITIES]
+        )
+
+
 __all__ = [
     "CookieTokenObtainPairView",
     "CookieTokenRefreshView",
     "LogoutView",
     "AuthStatusView",
     "CsrfCookieView",
+    "OperatorAccountViewSet",
+    "CapabilityListView",
 ]

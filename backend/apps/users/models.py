@@ -1,4 +1,5 @@
 from django.core.validators import MaxLengthValidator
+from django.conf import settings
 from django.db import models
 
 from apps.common.text_limits import MAX_TEXT_LENGTH
@@ -37,6 +38,20 @@ class Member(models.Model):
     observations = models.TextField(blank=True, validators=[MaxLengthValidator(MAX_TEXT_LENGTH)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_members",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_members",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["full_name"]

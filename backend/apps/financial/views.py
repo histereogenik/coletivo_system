@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.exports import cents_to_reais, create_xlsx_response
-from apps.common.permissions import SuperuserOnly
+from apps.common.audit import AuthoredAuditViewSetMixin
+from apps.common.permissions import AreaPermission
 from apps.financial.models import FinancialEntry
 from apps.financial.serializers import FinancialEntrySerializer
 
@@ -50,10 +51,11 @@ class FinancialEntryFilter(django_filters.FilterSet):
         ]
 
 
-class FinancialEntryViewSet(viewsets.ModelViewSet):
+class FinancialEntryViewSet(AuthoredAuditViewSetMixin, viewsets.ModelViewSet):
     queryset = FinancialEntry.objects.all().order_by("-date", "-created_at")
     serializer_class = FinancialEntrySerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_financial"
     filterset_class = FinancialEntryFilter
 
     @action(detail=False, methods=["get"], url_path="export")
@@ -84,7 +86,8 @@ class FinancialEntryViewSet(viewsets.ModelViewSet):
 
 
 class FinancialSummaryView(APIView):
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_financial"
 
     def get(self, request):
         today = timezone.localdate()

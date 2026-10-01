@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import (
     AuthStatusView,
@@ -6,7 +7,12 @@ from apps.authentication.views import (
     CookieTokenRefreshView,
     CsrfCookieView,
     LogoutView,
+    OperatorAccountViewSet,
+    CapabilityListView,
 )
+
+router = DefaultRouter()
+router.register(r"operators", OperatorAccountViewSet, basename="operator-account")
 
 urlpatterns = [
     path("csrf/", CsrfCookieView.as_view(), name="auth_csrf"),
@@ -14,4 +20,6 @@ urlpatterns = [
     path("cookie/token/refresh/", CookieTokenRefreshView.as_view(), name="cookie_token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("status/", AuthStatusView.as_view(), name="auth_status"),
+    path("capabilities/", CapabilityListView.as_view(), name="auth_capabilities"),
+    path("", include(router.urls)),
 ]

@@ -1,4 +1,5 @@
 import django_filters
+from django.db import transaction
 from django.db.models import Case, F, IntegerField, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
@@ -7,7 +8,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.pagination import DefaultPagination
-from apps.common.permissions import SuperuserOnly
+from apps.common.audit import record_audit_event, snapshot
+from apps.common.models import AuditEvent
+from apps.common.permissions import AnyAreaPermission, AreaPermission
 from apps.credits.models import CreditEntry
 from apps.credits.serializers import (
     CreditEntrySerializer,
@@ -47,12 +50,14 @@ class CreditEntryViewSet(viewsets.ReadOnlyModelViewSet):
         "created_by",
     )
     serializer_class = CreditEntrySerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_credits"
     filterset_class = CreditEntryFilter
 
 
 class CreditSummaryView(APIView):
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_credits"
     pagination_class = DefaultPagination
 
     def get(self, request):
@@ -107,10 +112,66 @@ class CreditSummaryView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
+class CreditOwnerOptionView(APIView):
+    permission_classes = [AnyAreaPermission]
+    area_permissions = ("authentication.manage_lunches",)
+    pagination_class = DefaultPagination
+
+    def get(self, request):
+        queryset = (
+            Member.objects.filter(credit_entries__isnull=False)
+            .annotate(
+                credits_cents=Coalesce(
+                    Sum(
+                        Case(
+                            When(
+                                credit_entries__entry_type=CreditEntry.EntryType.CREDITO,
+                                then="credit_entries__value_cents",
+                            ),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+                debits_cents=Coalesce(
+                    Sum(
+                        Case(
+                            When(
+                                credit_entries__entry_type=CreditEntry.EntryType.DEBITO,
+                                then="credit_entries__value_cents",
+                            ),
+                            default=Value(0),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    0,
+                ),
+            )
+            .annotate(balance_cents=F("credits_cents") - F("debits_cents"))
+            .exclude(balance_cents=0)
+            .order_by("full_name")
+            .distinct()
+        )
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        data = [
+            {
+                "owner": member.id,
+                "owner_name": member.full_name,
+                "balance_cents": member.balance_cents,
+            }
+            for member in page
+        ]
+        return paginator.get_paginated_response(data)
+
+
 class ManualCreditCreateView(APIView):
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_credits"
     entry_type = CreditEntry.EntryType.CREDITO
 
+    @transaction.atomic
     def post(self, request):
         serializer = ManualCreditEntrySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -121,6 +182,12 @@ class ManualCreditCreateView(APIView):
             description=serializer.validated_data["description"],
             created_by=request.user,
             entry_type=self.entry_type,
+        )
+        record_audit_event(
+            request=request,
+            instance=entry,
+            action=AuditEvent.Action.CREATE,
+            changes={"created": snapshot(entry)},
         )
         response = CreditEntrySerializer(entry)
         return Response(response.data, status=status.HTTP_201_CREATED)

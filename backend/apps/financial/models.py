@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
+from django.conf import settings
 from django.db import models
 
 from apps.common.text_limits import MAX_TEXT_LENGTH
@@ -41,6 +42,20 @@ class FinancialEntry(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_financial_entries",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_financial_entries",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["-date", "-created_at"]

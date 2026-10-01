@@ -2,6 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 
 User = get_user_model()
 
@@ -121,3 +122,33 @@ def test_cookie_token_refresh_uses_cookie_and_hides_tokens(csrf_api_client, user
     assert "refresh" not in response.data
     assert "access_token" in response.cookies
     assert "refresh_token" in response.cookies
+
+
+@pytest.mark.django_db
+def test_logout_blacklists_refresh_token(csrf_api_client, user, user_password):
+    csrf_response = csrf_api_client.get(reverse("auth_csrf"))
+    csrf_token = csrf_response.cookies["csrftoken"].value
+    login_response = csrf_api_client.post(
+        reverse("cookie_token_obtain_pair"),
+        {"username": user.username, "password": user_password},
+        format="json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+    refresh_token = login_response.cookies["refresh_token"].value
+    refreshed_csrf_token = login_response.cookies["csrftoken"].value
+
+    logout_response = csrf_api_client.post(
+        reverse("logout"),
+        format="json",
+        HTTP_X_CSRFTOKEN=refreshed_csrf_token,
+    )
+
+    assert logout_response.status_code == 204
+    assert BlacklistedToken.objects.filter(token__token=refresh_token).exists()
+    refresh_response = csrf_api_client.post(
+        reverse("cookie_token_refresh"),
+        {"refresh": refresh_token},
+        format="json",
+        HTTP_X_CSRFTOKEN=logout_response.cookies["csrftoken"].value,
+    )
+    assert refresh_response.status_code == 401

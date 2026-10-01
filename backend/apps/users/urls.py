@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.users.views import (
     MemberViewSet,
+    MemberOptionListView,
     PublicRegistrationAdminViewSet,
     PublicRegistrationMetaView,
     PublicRegistrationSubmissionView,
@@ -17,6 +18,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("member-options/", MemberOptionListView.as_view(), name="member-options"),
     path(
         "public-registrations/",
         PublicRegistrationSubmissionView.as_view(),

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from apps.users.models import Member
@@ -11,6 +12,20 @@ class Duty(models.Model):
     members = models.ManyToManyField(Member, related_name="duties", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_duties",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_duties",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         ordering = ["name"]

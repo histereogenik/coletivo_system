@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
+from apps.common.models import AuditEvent
 from apps.fiscal.models import FiscalDocument, FiscalWebhookEvent
 from apps.lunch.tests.factories import LunchFactory
 
@@ -77,6 +78,19 @@ def test_webhook_updates_document_and_is_idempotent(api_client, document):
     assert document.status == FiscalDocument.Status.AUTHORIZED
     assert document.number == "7"
     assert document.access_key == "5" * 44
+    audit_event = AuditEvent.objects.get(
+        entity_type="fiscal.FiscalDocument",
+        object_id=str(document.pk),
+        source=AuditEvent.Source.WEBHOOK,
+    )
+    assert audit_event.actor is None
+    assert audit_event.action == AuditEvent.Action.UPDATE
+    assert audit_event.changes["operation"] == "focus_webhook_update"
+    assert audit_event.changes["status"] == {
+        "before": FiscalDocument.Status.PROCESSING,
+        "after": FiscalDocument.Status.AUTHORIZED,
+    }
+    assert AuditEvent.objects.count() == 1
 
 
 @pytest.mark.django_db
@@ -92,6 +106,7 @@ def test_unknown_reference_is_audited_without_retry_loop(api_client):
     assert response.status_code == 200
     event = FiscalWebhookEvent.objects.get()
     assert event.status == FiscalWebhookEvent.Status.IGNORED
+    assert AuditEvent.objects.get().changes["operation"] == "focus_webhook_ignored"
     assert "não encontrada" in event.error_message
 
 
@@ -114,6 +129,7 @@ def test_failed_webhook_is_audited_and_can_be_retried(api_client, document):
     assert first.status_code == 500
     event = FiscalWebhookEvent.objects.get()
     assert event.status == FiscalWebhookEvent.Status.FAILED
+    assert AuditEvent.objects.get().changes["operation"] == "focus_webhook_failed"
 
     second = api_client.post(reverse("focus-webhook"), payload, format="json", **headers)
 

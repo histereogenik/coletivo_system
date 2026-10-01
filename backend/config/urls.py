@@ -29,4 +29,5 @@ urlpatterns = [
     path("api/credits/", include("apps.credits.urls")),
     path("api/dashboard/", include("apps.dashboard.urls")),
     path("api/fiscal/", include("apps.fiscal.urls")),
+    path("api/common/", include("apps.common.urls")),
 ]

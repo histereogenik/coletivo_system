@@ -11,15 +11,33 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.common.exports import create_xlsx_response
+from apps.common.audit import AuthoredAuditViewSetMixin, record_audit_event, snapshot
+from apps.common.models import AuditEvent
 from apps.common.pagination import OptionalPagination
-from apps.common.permissions import SuperuserOnly
+from apps.common.permissions import AnyAreaPermission, AreaPermission
 from apps.users.models import Member, PublicRegistration
 from apps.users.serializers import (
     MemberSerializer,
+    MemberOptionSerializer,
     PublicRegistrationAdminSerializer,
     PublicRegistrationRejectSerializer,
     PublicRegistrationSubmitSerializer,
 )
+
+
+class MemberOptionListView(APIView):
+    permission_classes = [AnyAreaPermission]
+    area_permissions = (
+        "authentication.manage_lunches",
+        "authentication.manage_packages",
+        "authentication.manage_credits",
+        "authentication.manage_agenda",
+        "authentication.manage_duties",
+    )
+
+    def get(self, request):
+        queryset = Member.objects.all().order_by("full_name")
+        return Response(MemberOptionSerializer(queryset, many=True).data)
 
 
 class PublicRegistrationThrottle(AnonRateThrottle):
@@ -106,10 +124,11 @@ class PublicRegistrationFilter(django_filters.FilterSet):
         return queryset.filter(Q(full_name__icontains=value) | Q(email__icontains=value))
 
 
-class MemberViewSet(viewsets.ModelViewSet):
+class MemberViewSet(AuthoredAuditViewSetMixin, viewsets.ModelViewSet):
     queryset = Member.objects.all().order_by("full_name")
     serializer_class = MemberSerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_members"
     filterset_class = MemberFilter
     pagination_class = OptionalPagination
 
@@ -151,7 +170,8 @@ class MemberViewSet(viewsets.ModelViewSet):
 class PublicRegistrationAdminViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PublicRegistration.objects.prefetch_related("children").all()
     serializer_class = PublicRegistrationAdminSerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_members"
     filterset_class = PublicRegistrationFilter
 
     @action(detail=True, methods=["post"], url_path="approve")
@@ -179,10 +199,13 @@ class PublicRegistrationAdminViewSet(viewsets.ReadOnlyModelViewSet):
                 role=registration.role,
                 diet=registration.diet,
                 observations=registration.observations,
+                created_by=request.user,
+                updated_by=request.user,
             )
+            created_members = [adult_member]
 
             for child in registration.children.all():
-                Member.objects.create(
+                child_member = Member.objects.create(
                     full_name=child.full_name,
                     is_child=True,
                     responsible=adult_member,
@@ -193,16 +216,33 @@ class PublicRegistrationAdminViewSet(viewsets.ReadOnlyModelViewSet):
                     role=None,
                     diet=child.diet,
                     observations=child.observations,
+                    created_by=request.user,
+                    updated_by=request.user,
                 )
+                created_members.append(child_member)
 
             registration.status = PublicRegistration.Status.APROVADO
             registration.save(update_fields=["status", "updated_at"])
+            for member in created_members:
+                record_audit_event(
+                    request=request,
+                    instance=member,
+                    action=AuditEvent.Action.CREATE,
+                    changes={"created": snapshot(member)},
+                )
+            record_audit_event(
+                request=request,
+                instance=registration,
+                action=AuditEvent.Action.SPECIAL,
+                changes={"operation": "approve", "member_ids": [m.id for m in created_members]},
+            )
 
         registration.refresh_from_db()
         serializer = self.get_serializer(registration)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="reject")
+    @transaction.atomic
     def reject(self, request, pk=None):
         registration = self.get_object()
         if registration.status != PublicRegistration.Status.PENDENTE:
@@ -217,6 +257,12 @@ class PublicRegistrationAdminViewSet(viewsets.ReadOnlyModelViewSet):
         registration.status = PublicRegistration.Status.REJEITADO
         registration.review_notes = serializer.validated_data.get("review_notes", "")
         registration.save(update_fields=["status", "review_notes", "updated_at"])
+        record_audit_event(
+            request=request,
+            instance=registration,
+            action=AuditEvent.Action.SPECIAL,
+            changes={"operation": "reject"},
+        )
 
         response_serializer = self.get_serializer(registration)
         return Response(response_serializer.data, status=status.HTTP_200_OK)

@@ -5,7 +5,8 @@ from rest_framework.decorators import action
 from apps.agenda.models import AgendaEntry
 from apps.agenda.serializers import AgendaEntrySerializer
 from apps.common.exports import create_xlsx_response
-from apps.common.permissions import SuperuserOnly
+from apps.common.audit import AuthoredAuditViewSetMixin
+from apps.common.permissions import AreaPermission
 
 
 class AgendaEntryFilter(django_filters.FilterSet):
@@ -22,14 +23,15 @@ class AgendaEntryFilter(django_filters.FilterSet):
         fields = ["date", "status", "duty", "member", "date_range", "date_from", "date_to"]
 
 
-class AgendaEntryViewSet(viewsets.ModelViewSet):
+class AgendaEntryViewSet(AuthoredAuditViewSetMixin, viewsets.ModelViewSet):
     queryset = (
         AgendaEntry.objects.select_related("duty")
         .prefetch_related("members")
         .order_by("date", "start_time", "duty__name")
     )
     serializer_class = AgendaEntrySerializer
-    permission_classes = [SuperuserOnly]
+    permission_classes = [AreaPermission]
+    area_permission = "authentication.manage_agenda"
     filterset_class = AgendaEntryFilter
 
     @action(detail=False, methods=["get"], url_path="export")
