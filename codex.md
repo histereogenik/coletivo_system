@@ -6,6 +6,18 @@ Este arquivo descreve o estado atual do `coletivo_system`. Ele deve ser atualiza
 uma regra de domínio, endpoint, variável de ambiente, serviço de infraestrutura ou fluxo de
 autenticação mudar. A implementação e as migrations continuam sendo a fonte de verdade.
 
+## Regras de colaboração e Git
+
+- Nunca executar `git commit`, `git commit --amend`, merge, rebase, criação de tag ou push sem
+  uma aprovação explícita e imediata do usuário para aquela operação e para o conjunto exato de
+  mudanças envolvido.
+- Uma autorização anterior para criar commits não se estende automaticamente a mudanças feitas
+  depois dela, mesmo que pertençam à mesma tarefa ou branch.
+- Depois de implementar uma mudança, apresentar ao usuário o resumo, os arquivos alterados, as
+  validações executadas e o diff relevante. Aguardar a revisão e uma nova autorização antes de
+  criar o commit.
+- Se houver dúvida sobre o alcance da autorização, considerar que o commit não está autorizado.
+
 ## Visão geral
 
 O `coletivo_system` é uma aplicação web para administrar um almoço coletivo. O produto possui
